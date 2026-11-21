@@ -256,8 +256,8 @@ The parts can be run alone:
 | `node tools/op.mjs app starter` | STARTER: `build/apps/starter/starter.bin`, `starter-PocketX_901.fwsc`, `starter-BlackBox_901.fwsc`, `manifest.json`, `SHA256SUMS`. |
 | `node tools/op.mjs test --built` | The host tests, also with those packages. |
 
-An app's outputs go to `build/apps/<name>/`. The OpenPocket build's outputs are not touched, and the public installer
-never offers an app.
+An app's outputs go to `build/apps/<name>/`. The OpenPocket build's outputs are not touched. The installer offers an app
+only when `firmware/catalog.json` lists it, or with `?app=<name>` ([ALT-FIRMWARE.md](ALT-FIRMWARE.md)).
 
 **The release pin.** `tests/release.sha256` holds the SHA-256 of OpenPocket's image, both packages, and the
 manifest. They are the sums of upstream's published v42 packages with the bass tuner fix (the tuner reads a bass's
@@ -298,8 +298,10 @@ requests, or 0.
 
 The tools use this as follows:
 
-- **The installer page** names the product a pedal runs. It offers an app only with `index.html?app=<name>`, in a
-  card of its own beside OpenPocket. While a pedal runs an app, the button of step 2 reads "Back to OpenPocket".
+- **The installer page** names the product a pedal runs. It offers each firmware of its catalog in a card of its own
+  (`release.json`, written by the build from `firmware/catalog.json`), and any other app only with
+  `index.html?app=<name>`. While a pedal runs one firmware, the button of another one's card reads "Back to" with
+  that firmware's name.
 - **The flasher** installs an app only with `--app <name>`. It names the product a pedal runs, checks after an
   install that the pedal runs the product that was installed, and ends with the way back.
 - **The web editor** says which product answered and how to put OpenPocket back. It does not open.

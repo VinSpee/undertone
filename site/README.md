@@ -47,6 +47,11 @@ The path says where the page will ask for the file, for example `firmware/manife
 file's name in the GitHub release. The two are separate because a release's assets have no folders. Take each SHA-256
 from the build that made the release, not from a download of the release.
 
+The installer offers one card per firmware of the release's catalog, `firmware/release.json` (`tools/catalog.py`).
+Pin that file and each package it lists, at its path under `firmware/`, for example
+`firmware/apps/palette/palette-PocketX_9NN.fwsc`. Without a catalog, the installer offers only the firmware of
+`firmware/manifest.json`.
+
 The build stops, and nothing is deployed, when a download fails, when a file is not the pinned bytes, when a path is
 already a page of the site, and when the two files disagree about whether a release is pinned. Going back to the
 previous release is reverting the pull request.
