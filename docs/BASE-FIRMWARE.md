@@ -256,8 +256,8 @@ The parts can be run alone:
 | `node tools/op.mjs app starter` | STARTER: `build/apps/starter/starter.bin`, `starter-PocketX_901.fwsc`, `starter-BlackBox_901.fwsc`, `manifest.json`, `SHA256SUMS`. |
 | `node tools/op.mjs test --built` | The host tests, also with those packages. |
 
-An app's outputs go to `build/apps/<name>/`. The OpenPocket build's outputs are not touched, and the public installer
-never offers an app.
+An app's outputs go to `build/apps/<name>/`. The OpenPocket build's outputs are not touched. The installer offers an app
+only when `firmware/catalog.json` lists it, or with `?app=<name>` ([ALT-FIRMWARE.md](ALT-FIRMWARE.md)).
 
 **The release pin.** `tests/release.sha256` holds the SHA-256 of OpenPocket's image, both packages, and the
 manifest. They are the sums of upstream's published v42 packages with the bass tuner fix (the tuner reads a bass's
