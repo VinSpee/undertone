@@ -21,8 +21,8 @@ RUN python3 /src/rescue/build_kit.py /kit && cd /kit && sha256sum -c /src/rescue
 FROM python:3.13.18-alpine@sha256:9ef1a599f863231c3d91e941389bfdc4a2d6070557243d54df1a4e57015b960e AS pin
 COPY site/RELEASE site/release.sha256 site/latest.py /pin/
 ARG RELEASE_URL=https://github.com/VinSpee/undertone/releases/download
-ARG RELEASE_API=https://api.github.com/repos/VinSpee/undertone/releases
-RUN python3 /pin/latest.py /pin "$RELEASE_API" "$RELEASE_URL" && rm /pin/latest.py
+ARG RELEASE_FEED=https://github.com/VinSpee/undertone/releases.atom
+RUN python3 /pin/latest.py /pin "$RELEASE_FEED" "$RELEASE_URL" && rm /pin/latest.py
 
 # The pages and the rescue kit, then the release's files beside them, each checked against its SHA-256 in the
 # release's list.

@@ -36,7 +36,10 @@ anyone can see which release a running site holds.
 `RELEASE` says which release the site serves. It says `latest`.
 
 - **`latest`**: the newest published release of `VinSpee/undertone`, pre-releases included, never a draft. The build
-  asks the GitHub releases API for it, then downloads its asset `site.sha256` and serves the files that list names.
+  reads the repository's releases feed, `https://github.com/VinSpee/undertone/releases.atom`, which lists the
+  published releases newest first. Unlike the GitHub REST API, the feed has no rate limit for a build without a token.
+  The build then downloads the newest release's asset `site.sha256` and serves the files that list names. Each read is
+  tried three times.
   Publishing a release therefore reaches the site without a commit: the `deploy-site` workflow asks Coolify to
   rebuild ([Deploying](#deploying)). While the repository has no published release, the site serves the pages only.
 - **A tag**, for example `v1.0.0-beta.1`: that release, with the files that `release.sha256` in this folder lists. Use
@@ -61,7 +64,7 @@ List that file and each package it lists, at its path under `firmware/`, for exa
 
 The build stops, and nothing is deployed, when a download fails, when a file is not the bytes its list names, when a
 path is already a page of the site or leaves the site's folder, and when `RELEASE` and `release.sha256` disagree about
-whether a release is pinned. With `latest`, it also stops when the releases API does not answer and when the newest
+whether a release is pinned. With `latest`, it also stops when the releases feed cannot be read and when the newest
 published release has no `site.sha256`. A release published without that list therefore stops every build of the
 site, including those of the pages, until a newer release carries one or `RELEASE` pins a tag.
 
@@ -80,11 +83,14 @@ The check is `tests/test_site.mjs`, and the `site` job of `.github/workflows/bui
 It needs Docker and Playwright. It does three things:
 
 1. It builds the image as it will be deployed and reads the pages, the release's files and the rescue kit back from a
-   running container. With `latest`, this build asks the real GitHub for the newest published release.
-2. It builds the image again against a stand-in GitHub, which is the test's fixture packages and a releases API on a
-   local server, given to the build with `--build-arg RELEASE_URL=...` and `--build-arg RELEASE_API=...`. A pinned
-   release and the newest of several releases must arrive as their lists name them, no published release must give the
-   pages only, and six wrong pins and four broken cases of `latest` must stop the build.
+   running container. With `latest`, this build reads a stand-in feed without a release, so it serves the pages only.
+2. It builds the image again against a stand-in GitHub, which is the test's fixture packages and a releases feed on a
+   local server, given to the build with `--build-arg RELEASE_URL=...` and `--build-arg RELEASE_FEED=...`. A pinned
+   release and the newest release of a feed must arrive as their lists name them, `none` and a feed without a release
+   must give the pages only, and six wrong pins and five broken cases of `latest` must stop the build.
+
+No build of the check reads the real GitHub, so the check does not depend on its rate limits or on which releases are
+published.
 3. It runs the installer and editor page tests against the container. The installer test needs packages that fit its
    simulated pedal, so the container's `firmware/` folder is the test's own folder for that run. The checks that
    change the kit's manifest run only against the test's own server.
@@ -101,7 +107,8 @@ Coolify builds the container from the public repository. It needs these settings
 | Dockerfile location | `/site/Dockerfile` |
 | Port | 80 |
 
-The build needs to reach Docker Hub for the base image, and `api.github.com` and `github.com` for the release.
+The build needs to reach Docker Hub for the base image, and `github.com` for the releases feed and the release's
+files.
 
 The workflow `.github/workflows/deploy-site.yml` deploys the site each time a release is published, and when it is
 run by hand from the Actions tab. It sends one request to Coolify's deploy endpoint:
@@ -127,10 +134,10 @@ prints the request and sends nothing.
 Tested on an arm64 Mac: the check above passes; and a build with upstream's `v42` release pinned downloaded
 `BlackBox_942.fwsc` from GitHub and served the same bytes.
 
-Tested for `latest`: the check above, against the stand-in GitHub and against the real one, which has no published
-release yet. The step of the deploy workflow was run locally against a stand-in endpoint (a 2xx answer, a 401, a
-500, no answer), with the secret or the variable missing, with `dry_run`, and once against the real endpoint with a
-wrong token, which answered 401.
+Tested for `latest`: the check above, against the stand-in GitHub. `latest.py` also read the real feeds: this
+repository's feed, which has no release yet, gave `none`, and upstream's feed gave `v42`. The step of the deploy
+workflow was run locally against a stand-in endpoint (a 2xx answer, a 401, a 500, no answer), with the secret or the
+variable missing, with `dry_run`, and once against the real endpoint with a wrong token, which answered 401.
 
 Not tested: the build on Coolify, the site behind its proxy and Cloudflare, and the workflow on GitHub with the real
 token. The download from a release of this repository is not tested either, because the repository has no release
