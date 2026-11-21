@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // OpenPocket — the site container (site/Dockerfile, site/README.md), built and run with Docker on this computer:
-//   1. the image as it will be deployed, with the release that site/RELEASE pins: the pages, their types, the pinned bytes,
-//      the rescue kit;
-//   2. the build's release step against a stand-in release (the fixture packages, served here): every file is the
-//      pinned one, and a build with a wrong pin stops;
+//   1. the image as it will be deployed, with the release that site/RELEASE pins, or the newest published one when it
+//      says latest: the pages, their types, the release's bytes, the rescue kit;
+//   2. the build's release step against a stand-in GitHub (the fixture packages as release assets, and a releases API,
+//      served here): every file is the pinned one, latest finds the newest published release and checks its files
+//      against the list it publishes, and a build with a wrong pin or list stops;
 //   3. the installer and editor page tests (tests/test_page.mjs, tests/test_editor_page.mjs) against the container.
 // It needs Docker, Playwright (NODE_PATH) and the simulators in build/: `sh .claude/skills/verify/scripts/pages.sh site`.
 //   node tests/test_site.mjs [OUT_DIR]     (the page tests' screenshots in OUT_DIR, default build/site)
@@ -56,7 +57,7 @@ try {
   const tag = readFileSync(join(ROOT, "site", "RELEASE"), "utf8").trim();
   const lines = pinned(readFileSync(join(ROOT, "site", "release.sha256"), "utf8"));
   const deployed = await build(`${IMAGE}:deployed`, ROOT);
-  ok(deployed.status === 0, `site/Dockerfile builds with the pinned release (${tag}, ${lines.length} files)${deployed.status ? ":\n" + deployed.end : ""}`);
+  ok(deployed.status === 0, `site/Dockerfile builds with the release site/RELEASE names (${tag})${deployed.status ? ":\n" + deployed.end : ""}`);
   if (deployed.status) throw new Error("no image to test");
   const live = await run(`${IMAGE}:deployed`);
   for (const [path, type] of [["", "text/html"], ["editor.html", "text/html"], ["pxota.js", "text/javascript"], ["editor.css", "text/css"], ["RESCUE.md", "text/markdown"]]) {
@@ -65,37 +66,54 @@ try {
       `the site serves /${path} as ${type}, and it is this checkout's file`);
   }
   ok((await fetch(live)).headers.get("cache-control") === "no-cache", "a browser asks again before it reuses a file (Cache-Control: no-cache)");
-  await servesPin(live, tag, lines, "the deployed image");
-  ok((await (await fetch(live + "release.sha256")).text()) === readFileSync(join(ROOT, "site", "release.sha256"), "utf8"), "/release.sha256 is the pin of this checkout");
+  const servedTag = (await (await fetch(live + "RELEASE")).text()).trim();
+  const servedSums = await (await fetch(live + "release.sha256")).text();
+  if (tag === "latest") ok(/^(v\S+|none)$/.test(servedTag), `site/RELEASE says latest: the image serves the newest published release, ${servedTag}`);
+  else ok(servedSums === readFileSync(join(ROOT, "site", "release.sha256"), "utf8"), "/release.sha256 is the pin of this checkout");
+  await servesPin(live, servedTag, tag === "latest" ? pinned(servedSums) : lines, "the deployed image");
   const [kitSum, kitFile] = readFileSync(join(ROOT, "rescue", "kit.sha256"), "utf8").trim().split(/\s+/);
   const kitManifest = await (await fetch(live + "rescue/manifest.json")).json();
   const kitZip = await fetch(live + "rescue/" + kitFile);
   ok(kitManifest.file === kitFile && kitManifest.sha256 === kitSum && kitZip.status === 200 && sha256(Buffer.from(await kitZip.arrayBuffer())) === kitSum,
     `the site serves the rescue kit its build made, ${kitFile}, and it is the pinned kit (rescue/kit.sha256)`);
-  if (tag === "none") ok((await fetch(live + "firmware/manifest.json")).status === 404, "no release is pinned: the site serves no package, also none a local build left in docs/firmware");
+  if (servedTag === "none") ok((await fetch(live + "firmware/manifest.json")).status === 404, "no release is served: the site serves no package, also none a local build left in docs/firmware");
 
-  // 2. the release step, against a stand-in release: the fixture packages as release assets on a server here
+  // 2. the release step, against a stand-in GitHub on a server here: the fixture packages as the assets of stand-in
+  // releases, the checksum list site.sha256 that some of them publish, and a releases API for each case of latest
   const FIX = join(TMP, "fixtures");
   execFileSync("python3", [join(ROOT, "tests", "fixtures.py"), FIX], { stdio: ["ignore", "ignore", "inherit"] });
   const STAND_IN = "v0.0.0-test";
   const assets = { "manifest.json": "manifest.json", "PocketX_924.fwsc": "PocketX_924.fwsc", "BlackBox_924.fwsc": "BlackBox_924.fwsc", "starter-manifest.json": "alt/manifest.json" };
+  const github = {};   // URL path: the body it answers, or an HTTP status
   const release = createServer((req, res) => {
-    const file = req.url.startsWith(`/${STAND_IN}/`) && assets[req.url.slice(STAND_IN.length + 2)];
-    if (!file) { res.writeHead(404); res.end(); return; }
-    res.writeHead(200); res.end(readFileSync(join(FIX, file)));
+    const answer = github[req.url.split("?")[0]];
+    if (answer === undefined || typeof answer === "number") { res.writeHead(answer || 404); res.end(); return; }
+    res.writeHead(200); res.end(answer);
   }).listen(0);   // on every interface: the build's container reaches it through the Docker host's gateway
-  const from = ["--add-host", "host.docker.internal:host-gateway", "--build-arg", `RELEASE_URL=http://host.docker.internal:${release.address().port}`];
+  const host = `http://host.docker.internal:${release.address().port}`;
+  const from = ["--add-host", "host.docker.internal:host-gateway", "--build-arg", `RELEASE_URL=${host}`];
+  const publish = (tag, list) => {   // a stand-in release with the fixture assets, and its site.sha256 when there is a list
+    for (const [asset, file] of Object.entries(assets)) github[`/${tag}/${asset}`] = readFileSync(join(FIX, file));
+    if (list) github[`/${tag}/site.sha256`] = "# the files of " + tag + "\n" + list.map((l) => l.join("  ")).join("\n") + "\n";
+  };
+  publish(STAND_IN);
   const sum = (asset) => sha256(readFileSync(join(FIX, assets[asset])));
   const good = [[sum("manifest.json"), "firmware/manifest.json", "manifest.json"], [sum("PocketX_924.fwsc"), "firmware/PocketX_924.fwsc", "PocketX_924.fwsc"],
     [sum("BlackBox_924.fwsc"), "firmware/BlackBox_924.fwsc", "BlackBox_924.fwsc"], [sum("starter-manifest.json"), "firmware/apps/starter/manifest.json", "starter-manifest.json"]];
   const CONTEXT = join(TMP, "context");
   for (const part of ["docs", "site", "rescue", "tools/uboot_rescue.py", "tools/pocketx_fw.py", "RESCUE.bat", "LICENSE"])
     cpSync(join(ROOT, part), join(CONTEXT, part), { recursive: true });
-  const withPin = (name, pinTag, pinLines) => {
+  const withPin = (name, pinTag, pinLines, ...args) => {
     writeFileSync(join(CONTEXT, "site", "RELEASE"), pinTag + "\n");
     writeFileSync(join(CONTEXT, "site", "release.sha256"), "# a comment\n\n" + pinLines.map((l) => l.join("  ")).join("\n"));   // no newline at the end
-    return build(`${IMAGE}:${name}`, CONTEXT, ...from);
+    return build(`${IMAGE}:${name}`, CONTEXT, ...from, ...args);
   };
+  // site/RELEASE says latest: the releases API of the case named, at its own path so that no build reuses another's step
+  const latest = (name, api) => {
+    github[`/api/${name}`] = typeof api === "number" ? api : JSON.stringify(api);
+    return withPin(name, "latest", [], "--build-arg", `RELEASE_API=${host}/api/${name}`);
+  };
+  const at = (tag, day, draft = false) => ({ tag_name: tag, draft, published_at: draft ? null : `2026-11-${day}T12:00:00Z` });
   const standIn = await withPin("release", STAND_IN, good);
   ok(standIn.status === 0, `a build with a pinned release downloads its ${good.length} assets${standIn.status ? ":\n" + standIn.end : ""}`);
   if (standIn.status === 0) await servesPin(await run(`${IMAGE}:release`), STAND_IN, good, "the image of the stand-in release");
@@ -109,6 +127,35 @@ try {
     ["a release with no file listed", STAND_IN, [], /lists no file/]]) {
     const r = await withPin("refused", pinTag, pinLines);
     ok(r.status !== 0 && says.test(r.log), `the build stops on ${what}${r.status === 0 ? ": it built" : says.test(r.log) ? "" : ":\n" + r.end}`);
+  }
+
+  // latest: the newest published release, a pre-release too, never a draft, with the files its own site.sha256 lists
+  const NEWEST = "v0.0.2-test";
+  publish("v0.0.1-test", good);
+  publish(NEWEST, good);
+  const newest = await latest("newest", [at("v0.0.1-test", "01"), at("v0.0.3-test", "", true), at(NEWEST, "02")]);
+  ok(newest.status === 0, `latest: a build finds the newest published release, ${NEWEST}, and downloads the ${good.length} files of its list${newest.status ? ":\n" + newest.end : ""}`);
+  if (newest.status === 0) {
+    const url = await run(`${IMAGE}:newest`);
+    await servesPin(url, NEWEST, good, "the image of latest");
+    ok((await (await fetch(url + "release.sha256")).text()) === github[`/${NEWEST}/site.sha256`], "latest: /release.sha256 is the list the release publishes");
+  }
+  const nothing = await latest("nothing", [at("v0.0.3-test", "", true)]);
+  ok(nothing.status === 0, `latest: a build with no published release serves the pages only${nothing.status ? ":\n" + nothing.end : ""}`);
+  if (nothing.status === 0) {
+    const url = await run(`${IMAGE}:nothing`);
+    ok((await (await fetch(url + "RELEASE")).text()).trim() === "none" && (await fetch(url + "firmware/manifest.json")).status === 404, "latest: with no published release, /RELEASE says none and no package is served");
+  }
+  publish("v0.0.4-test");
+  publish("v0.0.5-test", wrong(good, 1, ([s, p, a]) => [s.replace(/^./, (c) => (c === "0" ? "1" : "0")), p, a]));
+  publish("v0.0.6-test", wrong(good, 2, ([s, , a]) => [s, "../etc/BlackBox_924.fwsc", a]));
+  for (const [what, name, api, says] of [
+    ["a releases API that does not answer", "down", 500, /could not read the list of releases/],
+    ["a newest release without site.sha256", "nolist", [at("v0.0.4-test", "04")], /could not read the checksum list site\.sha256 of v0\.0\.4-test/],
+    ["a file that is not the one its release's list names", "mismatch", [at("v0.0.5-test", "05")], /PocketX_924\.fwsc of v0\.0\.5-test is not the pinned file/],
+    ["a list that names a path outside the site", "outside", [at("v0.0.6-test", "06")], /site\.sha256 of v0\.0\.6-test names a path outside the site: \.\.\/etc/]]) {
+    const r = await latest(name, api);
+    ok(r.status !== 0 && says.test(r.log), `latest: the build stops on ${what}${r.status === 0 ? ": it built" : says.test(r.log) ? "" : ":\n" + r.end}`);
   }
   release.close();
 

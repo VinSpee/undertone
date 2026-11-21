@@ -1,10 +1,11 @@
 #!/bin/sh
 # The release step of site/Dockerfile: downloads the files of the pinned release into the site and checks every byte.
 #   release.sh PIN_DIR SITE_DIR BASE_URL
-# PIN_DIR holds RELEASE (one line: a release tag, or none) and release.sha256 (one line per file: its SHA-256, its path
-# on the site, the name of its release asset). Each asset is read from BASE_URL/<tag>/<asset>. The step fails, and the
-# build with it, when a download fails, when a file is not the pinned bytes, when a path is already a page of the
-# site, and when RELEASE and release.sha256 disagree about whether a release is pinned.
+# PIN_DIR holds RELEASE (one line: a release tag, or none; latest.py has already replaced latest) and release.sha256
+# (one line per file: its SHA-256, its path on the site, the name of its release asset). Each asset is read from
+# BASE_URL/<tag>/<asset>. The step fails, and the build with it, when a download fails, when a file is not the pinned
+# bytes, when a path is already a page of the site, and when RELEASE and release.sha256 disagree about whether a release
+# is pinned.
 set -eu
 pin=$1 site=$2 base=$3
 tag=$(cat "$pin/RELEASE")

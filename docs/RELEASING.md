@@ -72,20 +72,35 @@ The draft release has no files yet. Attaching them is a second job in `.github/w
   created the draft.
 - It checks out that tag, builds and tests as the `build` workflow does, compares the outputs with the pins, and
   uploads them to the draft with `gh release upload "$TAG" <files>`. It needs `contents: write` and no secret.
+- Among the files it uploads is `site.sha256`, the checksum list the site serves the release from: one line per file,
+  its SHA-256, its path on the site and its asset name ([site/README.md](../site/README.md)). A release published
+  without it stops every build of the site.
 
 It has to be a job of this workflow. A tag created with the workflow's token does not start a workflow that waits for
 `push: tags`.
 
 ## Putting a release on the site
 
-The site serves the files of one pinned release beside the pages of `main`. Publishing a release does not change the
-site. A pull request that moves the pin does: [site/README.md](../site/README.md).
+Publishing a release puts it on the site. The `deploy-site` workflow (`.github/workflows/deploy-site.yml`) starts
+when a release is published, never for a draft, and asks Coolify to rebuild the site container. `site/RELEASE` says
+`latest`, so the build serves the newest published release: it downloads the release's `site.sha256` and each file
+that list names, and stops when a file is not the bytes its list names. Pinning one release instead, and the rest of
+the site, are in [site/README.md](../site/README.md).
+
+The workflow can also run by hand from the Actions tab, to deploy again; with `dry_run` it prints the request and
+sends nothing.
 
 ## Repository settings
 
 - **Settings, Actions, General: "Allow GitHub Actions to create and approve pull requests"** must be on. Without it
   the workflow cannot open the Version Packages pull request. It was off when this was written.
-- The workflows use only the token GitHub gives each run. There is no secret to create.
+- The release workflows use only the token GitHub gives each run. The `deploy-site` workflow needs one secret and
+  one variable, under Settings, Secrets and variables, Actions:
+  - `COOLIFY_DEPLOY_TOKEN`, a secret: a Coolify API token that can start a deployment and nothing more.
+  - `COOLIFY_APP_UUID`, a variable: the uuid of the site's application in Coolify.
+
+  It sends `POST https://deploy.vinspee.me/api/v1/deploy?uuid=<COOLIFY_APP_UUID>&force=true` with the token, and
+  fails with a message when either one is missing or Coolify does not answer with a 2xx status.
 - The `changeset` check is not a required check. To make it one, add it to the branch protection of `main`.
 - `.changeset/config.json` names the repository (`VinSpee/undertone`) for the links in the changelogs. Change it
   when the repository is renamed again.
