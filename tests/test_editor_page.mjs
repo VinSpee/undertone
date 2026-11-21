@@ -39,7 +39,7 @@ const page = await ctx.newPage();
 let sim = null, buf = "";
 const states = [];
 const FLASH = join(TMP, "flash.bin");
-await page.exposeFunction("simSend", (hex) => sim && sim.stdin.write(hex + "\n"));
+await page.exposeFunction("simSend", (hex) => sim && sim.stdin.writable && sim.stdin.write(hex + "\n"));
 page.on("console", (m) => { if (m.type() === "error" && !/fonts\.g|ERR_TUNNEL|net::|Failed to load resource/.test(m.text())) { console.log("page error:", m.text()); failed++; } });
 page.on("pageerror", (e) => { console.log("page exception:", e.message); failed++; });
 await page.addInitScript(() => {
