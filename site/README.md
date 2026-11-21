@@ -3,7 +3,7 @@
 `site/Dockerfile` builds the site of `undertone.vinspee.me`: a small container with a static file server. It serves
 three things.
 
-- **The pages of this commit.** Everything in `docs/`: the installer (`index.html`), the editor (`editor.html`) and
+- **The pages of this commit.** Everything in `docs/`: the home page (`index.html`), the installer (`install.html`), the editor (`editor.html`) and
   the documents. A correction to a page reaches the site through an ordinary pull request, without a release.
 - **The rescue kit of this commit.** The build makes it with `rescue/build_kit.py` and stops when it is not the kit
   pinned in `rescue/kit.sha256`. The installer's Rescue card offers it at `rescue/`.

@@ -59,7 +59,7 @@ try {
   ok(deployed.status === 0, `site/Dockerfile builds with the pinned release (${tag}, ${lines.length} files)${deployed.status ? ":\n" + deployed.end : ""}`);
   if (deployed.status) throw new Error("no image to test");
   const live = await run(`${IMAGE}:deployed`);
-  for (const [path, type] of [["", "text/html"], ["editor.html", "text/html"], ["pxota.js", "text/javascript"], ["editor.css", "text/css"], ["RESCUE.md", "text/markdown"]]) {
+  for (const [path, type] of [["", "text/html"], ["install.html", "text/html"], ["editor.html", "text/html"], ["pxota.js", "text/javascript"], ["editor.css", "text/css"], ["RESCUE.md", "text/markdown"]]) {
     const r = await fetch(live + path);
     ok(r.status === 200 && r.headers.get("content-type") === `${type}; charset=utf-8` && (await r.text()) === readFileSync(join(ROOT, "docs", path || "index.html"), "utf8"),
       `the site serves /${path} as ${type}, and it is this checkout's file`);

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
-// OpenPocket — the install page (docs/index.html) in a real browser (headless Chromium, Playwright), its Web MIDI
+// OpenPocket — the install page (docs/install.html) in a real browser (headless Chromium, Playwright), its Web MIDI
 // bridged to the simulated pedal (tests/devsim.c): Connect, then Install, as a user would; screenshots in OUTDIR.
 // The site has no catalog at first (one firmware, from its manifest), then a firmware offered by ?app= only, then a
 // catalog of two firmwares (release.json, tools/catalog.py): install each, switch, go back, and what is refused.
@@ -39,6 +39,7 @@ const server = SITE_URL ? null : createServer((req, res) => {
   } catch (_) { res.writeHead(404); res.end(); }
 }).listen(0);
 const url = SITE_URL || `http://127.0.0.1:${server.address().port}/`;
+const INSTALL = url + "install.html";   // the installer; the site's home page (index.html) sends ?app= and ?channel= links here
 
 let sim = null;
 const simLog = [];
@@ -92,7 +93,7 @@ const shown = () => page.$$eval("#fws [data-fw]", (c) => c.map((e) => e.dataset.
 const step2 = () => simLog.filter((l) => /step2 rc=0/.test(l)).length;
 let failed = 0;
 const ok = (c, what) => { console.log(`${what.padEnd(64)} ${c ? "ok" : "FAIL"}`); if (!c) failed++; };
-await page.goto(url);
+await page.goto(INSTALL);
 await page.waitForTimeout(300);
 startSim();
 await page.waitForTimeout(300);
@@ -223,7 +224,7 @@ sim.stdin.end(); sim = null; simLog.length = 0; buf = "";
   if (!SITE_URL) {
     const no = await browser.newPage({ viewport: { width: 820, height: 900 } });
     writeFileSync(join(SITE, "rescue", "manifest.json"), JSON.stringify({ ...kit, file: "../firmware/x.zip" }));
-    await no.goto(url);
+    await no.goto(INSTALL);
     await no.waitForSelector("#kitnone:not([hidden])", { timeout: 5000 });
     ok(!(await no.isVisible("#kit")) && !(await no.isVisible("#kitinfo")), "a kit manifest that names a path: no download is offered");
     renameSync(join(SITE, "rescue", "manifest.json"), join(SITE, "rescue", "manifest.off"));
@@ -239,13 +240,13 @@ sim.stdin.end(); sim = null; simLog.length = 0; buf = "";
 cpSync(join(FIX, "firmware"), join(FW, "midi-test"), { recursive: true });
 {
   const ch = await browser.newPage({ viewport: { width: 820, height: 900 } });
-  await ch.goto(url + "?channel=midi-test");
+  await ch.goto(INSTALL + "?channel=midi-test");
   await ch.waitForSelector(card("openpocket"), { timeout: 5000 });
   ok(await ch.isVisible("#testchan"), "test channel: the banner says it is a test build");
   ok((await ch.textContent(`${card("openpocket")} small`)) === "v24 (midi-test)", "test channel: the packages come from firmware/midi-test/");
   const asked = [];
   ch.on("request", (r) => asked.push(new URL(r.url()).pathname));
-  await ch.goto(url + "?channel=../../etc");
+  await ch.goto(INSTALL + "?channel=../../etc");
   await ch.waitForSelector("#nofw:not([hidden])", { timeout: 5000 });
   ok(asked.includes("/firmware/etc/manifest.json") && !(await ch.$("#fws [data-fw]")), "test channel: a path in the name is cleaned (firmware/etc/ is asked for, nothing outside firmware/); no firmware is offered");
   await ch.screenshot({ path: join(OUT, "page_5_test_channel.png"), fullPage: true });
@@ -257,8 +258,18 @@ cpSync(join(FIX, "firmware"), join(FW, "midi-test"), { recursive: true });
 // a firmware that is not on the site's list (an app on the base firmware): only through ?app=NAME, in a card of its
 // own after the listed one; the page says which product the pedal runs, and the first card is the way back
 cpSync(join(FIX, "firmware", "alt"), join(FW, "apps", "starter"), { recursive: true });
+{
+  // a link made when the installer was the home page: the home page sends its ?app= and ?channel= to install.html
+  const fwd = await browser.newPage();
+  await fwd.goto(url + "?app=starter#rescueCard");
+  await fwd.waitForURL(/install\.html/, { timeout: 5000 }).catch(() => {});
+  ok(fwd.url() === INSTALL + "?app=starter#rescueCard", `the home page sends ?app= to the installer, the anchor kept: ${fwd.url()}`);
+  await fwd.goto(url);
+  ok(fwd.url() === url && await fwd.$("#connect") === null, "the home page without ?app= or ?channel= stays the home page");
+  await fwd.close();
+}
 sim.stdin.end(); sim = null; simLog.length = 0; buf = "";
-await page.goto(url + "?app=starter");
+await page.goto(INSTALL + "?app=starter");
 await page.waitForSelector(card("starter"), { timeout: 5000 });
 ok(await shown() === "openpocket,starter" && /STARTER\s+v01/.test(await page.textContent(`${card("starter")} h3`)) && /by this link only/.test(await page.textContent(card("starter"))),
   "?app=starter: its own card names STARTER v01 and says it is offered by this link only");
@@ -284,7 +295,7 @@ ok(await page.isEnabled("#uboot"), "the UBOOT soft key is the base firmware's: o
 await page.screenshot({ path: join(OUT, "page_7_alt_running.png"), fullPage: true });
 {
   const pub = await browser.newPage({ viewport: { width: 820, height: 900 } });   // (a second page: no MIDI access of its own)
-  await pub.goto(url);
+  await pub.goto(INSTALL);
   await pub.waitForSelector(card("openpocket"), { timeout: 5000 });
   ok(!(await pub.$(card("starter"))), "without the link the same site offers the listed firmware only");
   await pub.close();
@@ -298,10 +309,10 @@ ok(step2() === 2, "the simulated pedal wrote both firmwares");
 await page.screenshot({ path: join(OUT, "page_8_back_on_openpocket.png"), fullPage: true });
 {
   const no = await browser.newPage({ viewport: { width: 820, height: 900 } });
-  await no.goto(url + "?app=nosuch");
+  await no.goto(INSTALL + "?app=nosuch");
   await no.waitForFunction(() => document.getElementById("msg").textContent !== "", null, { timeout: 5000 });
   ok(/No firmware by this name on this site: nosuch$/.test(await no.textContent("#msg")) && !(await no.$(card("nosuch"))), "?app= with a name the site does not have: said so, nothing to install");
-  await no.goto(url + "?app=../../etc");
+  await no.goto(INSTALL + "?app=../../etc");
   await no.waitForFunction(() => document.getElementById("msg").textContent !== "", null, { timeout: 5000 });
   ok(/: etc$/.test(await no.textContent("#msg")), "a path in the name is cleaned (firmware/apps/etc/ is asked for, nothing outside it)");
   await no.close();
@@ -318,7 +329,7 @@ await page.screenshot({ path: join(OUT, "page_8_back_on_openpocket.png"), fullPa
   execFileSync("python3", [join(ROOT, "tools", "catalog.py"), "--source", source, "--site", FW, "--apps", join(FW, "apps")], { stdio: "inherit" });
 }
 sim.stdin.end(); sim = null; simLog.length = 0; buf = "";
-await page.goto(url);
+await page.goto(INSTALL);
 await page.waitForSelector(card("starter"), { timeout: 5000 });
 ok(await shown() === "openpocket,starter", "a site with a catalog: one card per firmware, in the catalog's order, with no link");
 ok(/The first firmware of the test site\./.test(await page.textContent(card("openpocket"))) && /The second firmware of the test site\./.test(await page.textContent(card("starter"))) &&
@@ -349,7 +360,7 @@ await page.waitForFunction(() => /STARTER/.test(document.getElementById("d-fw").
 ok(/STARTER v01 \(PocketX_901\)/.test(await page.textContent("#msg")) && step2() === 3, "chooser: and back to the second firmware; the simulated pedal wrote each of the three installs");
 {
   const also = await browser.newPage({ viewport: { width: 820, height: 900 } });
-  await also.goto(url + "?app=starter");
+  await also.goto(INSTALL + "?app=starter");
   await also.waitForSelector(card("starter"), { timeout: 5000 });
   ok(await also.$$eval("#fws [data-fw]", (c) => c.length) === 2 && !/by this link only/.test(await also.textContent("#fws")), "?app= with a firmware of the catalog: no second card for it");
   await also.setViewportSize({ width: 360, height: 800 });

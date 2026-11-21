@@ -13,7 +13,7 @@
 ## How to get to it (user POV)
 A maintainer changes a file under `firmware/base/`, or `px_usb.h`, `app.ld`, `build.sh`. A user of OpenPocket sees no
 difference. A user of an alternative firmware installs it from its card on the installer page (a firmware of
-`firmware/catalog.json`; any other with `index.html?app=NAME`) or with `flash --app NAME`, and goes back with the
+`firmware/catalog.json`; any other with `install.html?app=NAME`) or with `flash --app NAME`, and goes back with the
 button "Back to OpenPocket" or with `flash` without `--app`.
 
 ## Driving it with op.mjs

@@ -6,7 +6,7 @@ description: Build, dry-run and flash an OpenPocket package to a connected Donne
 # Flash a pedal from the command line
 
 `node tools/op.mjs flash` (or `make flash ARGS="..."`) runs the same update protocol as the browser installer
-(`docs/index.html`): the code is `docs/pxota.js` and `docs/pxpkg.js`, shared with the page; `tools/flash.mjs` only adds the
+(`docs/install.html`): the code is `docs/pxota.js` and `docs/pxpkg.js`, shared with the page; `tools/flash.mjs` only adds the
 command line. Run everything from the repository root. The command runs on the host, not in the container: the pedal is a USB
 device.
 

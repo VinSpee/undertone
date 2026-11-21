@@ -9,7 +9,7 @@ REM   INSTALL-OFFLINE.bat build    rebuilds the firmware first (build.bat)
 REM   INSTALL-OFFLINE.bat editor   opens the web editor instead of the installer
 setlocal
 cd /d "%~dp0"
-set PAGE=index.html
+set PAGE=install.html
 set BUILD=
 for %%a in (%*) do (
   if /i "%%~a"=="editor" set PAGE=editor.html

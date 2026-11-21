@@ -44,7 +44,7 @@ Prove a screen claim by reading `screen.png`, not only the state.
 footswitches, drag or wheel the knobs, click PARA for PUSH, or use the keys listed on the page. Scripts on the page have
 `window.pedal` (`down`, `up`, `tap`, `turn`, `master`, `state`); a control is `[data-control=NAME]`, `#master` or `#para`.
 `$U/plain` is the plain page with the screen, every control as a button, the battery, the tuner pitch and the state.
-`$U/site/index.html` (installer) and `$U/site/editor.html`
+`$U/site/install.html` (installer) and `$U/site/editor.html`
 (editor) are `docs/` with a virtual Web MIDI injected, so Connect finds the simulated pedal in any browser; drive them with
 `chrome-devtools-axi` or Playwright. For the installer use the update flow instead of the pedal:
 `node tools/op.mjs sim --update FLASH.bin` (an image such as `flash_old.bin` from `python3 tests/fixtures.py DIR`).

@@ -356,8 +356,8 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
   try {
     const sim = await startSim(o);
     console.log(`OpenPocket simulator (${sim.kind}${sim.app ? " " + sim.app : ""}) listening on ${sim.url}/`);
-    if (sim.kind === "app") console.log(`  the pedal: ${sim.url}/    installer: ${sim.url}/site/index.html (it names the product)`);
-    else console.log(`  the pedal: ${sim.url}/    plain controls: ${sim.url}/plain    installer: ${sim.url}/site/index.html    editor: ${sim.url}/site/editor.html`);
+    if (sim.kind === "app") console.log(`  the pedal: ${sim.url}/    installer: ${sim.url}/site/install.html (it names the product)`);
+    else console.log(`  the pedal: ${sim.url}/    plain controls: ${sim.url}/plain    installer: ${sim.url}/site/install.html    editor: ${sim.url}/site/editor.html`);
     if (sim.kind !== "update") console.log(`  flash: ${sim.flash}`);
     const quit = async () => { await sim.close(); process.exit(0); };
     process.on("SIGINT", quit); process.on("SIGTERM", quit);

@@ -2,7 +2,7 @@
 # OpenPocket - offline installer: serves the docs\ folder (installer, editor, firmware packages) on this computer only,
 # at http://localhost:8765/, and opens it in Chrome or Edge. No internet needed: Web MIDI works on localhost.
 # Started by INSTALL-OFFLINE.bat. Close the window to stop it.
-param([int]$Port = 8765, [string]$Page = "index.html")
+param([int]$Port = 8765, [string]$Page = "install.html")
 $ErrorActionPreference = "Stop"
 $root = (Resolve-Path (Join-Path $PSScriptRoot "..\docs")).Path.TrimEnd('\')
 $types = @{
