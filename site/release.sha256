@@ -1,4 +1,5 @@
-# The files the site serves from the release that site/RELEASE names (site/README.md). One line per file:
+# The files the site serves from the release that site/RELEASE pins (site/README.md). One line per file:
 #   <SHA-256>  <path on the site>  <name of the release asset>
 # The build downloads each asset, stops when its SHA-256 is not the one written here, and never replaces a page.
-# No release is pinned yet (site/RELEASE says none), so there is no line.
+# site/RELEASE says latest: the build reads this list from the newest published release (its asset site.sha256)
+# instead, so there is no line here. A pinned tag in site/RELEASE needs its lines here.

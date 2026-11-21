@@ -1,0 +1,44 @@
+name: deploy-site
+# Deploys the site of undertone.vinspee.me (site/README.md) when a release is published: it asks Coolify to rebuild the
+# site container without its cache, and the build then serves the newest published release (site/RELEASE says latest).
+# A draft release does not start it. Run by hand, it deploys again, or with dry_run it prints the request and sends
+# nothing. It needs the secret COOLIFY_DEPLOY_TOKEN and the variable COOLIFY_APP_UUID (docs/RELEASING.md).
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Print the request without sending it
+        type: boolean
+        default: false
+permissions: {}
+concurrency:
+  group: deploy-site
+jobs:
+  deploy:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Ask Coolify to deploy the site
+        env:
+          TOKEN: ${{ secrets.COOLIFY_DEPLOY_TOKEN }}
+          APP_UUID: ${{ vars.COOLIFY_APP_UUID }}
+          DRY_RUN: ${{ inputs.dry_run }}
+        run: |
+          fail() { echo "::error title=Site not deployed::$*"; exit 1; }
+          [ -n "$TOKEN" ] || fail "The secret COOLIFY_DEPLOY_TOKEN is missing. Add it under Settings, Secrets and variables, Actions (docs/RELEASING.md)."
+          [ -n "$APP_UUID" ] || fail "The variable COOLIFY_APP_UUID is missing. Add it under Settings, Secrets and variables, Actions, Variables (docs/RELEASING.md)."
+          case "$APP_UUID" in *[!A-Za-z0-9]*) fail "The variable COOLIFY_APP_UUID holds more than letters and digits: it must be the uuid of the site's application in Coolify." ;; esac
+          url="https://deploy.vinspee.me/api/v1/deploy?uuid=$APP_UUID&force=true"
+          echo "POST $url"
+          echo "Authorization: Bearer (the secret COOLIFY_DEPLOY_TOKEN)"
+          if [ "$DRY_RUN" = true ]; then echo "Dry run: nothing sent."; exit 0; fi
+          # the token goes to curl in a file, never on its command line
+          printf 'Authorization: Bearer %s\n' "$TOKEN" > "$RUNNER_TEMP/auth"
+          status=$(curl --silent --show-error --max-time 60 -X POST -H @"$RUNNER_TEMP/auth" -o "$RUNNER_TEMP/answer" -w '%{http_code}' "$url") || status=000
+          rm -f "$RUNNER_TEMP/auth"
+          [ "$status" != 000 ] || fail "Coolify did not answer at deploy.vinspee.me: the site was not deployed."
+          echo "Coolify answered $status:"; cat "$RUNNER_TEMP/answer"; echo
+          case "$status" in 2??) ;; *) fail "Coolify answered $status, not 2xx: the site was not deployed. A 401 is a wrong or revoked token; any other answer is in the text above." ;; esac
+          echo "Coolify is building the site. The token cannot read the deployment, so its result is in Coolify, and the site's /RELEASE names the release it serves."
