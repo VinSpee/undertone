@@ -29,8 +29,8 @@ Three numbers exist. Changesets own the first one and never touch the other two.
 | Number | Example | Where | Who changes it |
 | --- | --- | --- | --- |
 | The release | `v1.0.0-beta.1` | `changelog/*/package.json`, the tag, the GitHub release | Changesets, in the Version Packages pull request |
-| A firmware's version | `v42` for OpenPocket, `v01` for PALETTE | `OP_VERSION_NUM` in `firmware/openpocket.c` and `firmware/apps/palette/palette.c`; on the boot screen | A person, in the pull request that changes that firmware |
-| The package identity | `BlackBox_942`, `PocketX_901` | Derived: 900 plus the firmware's version (`tools/pxpkg.py`). The installer tells builds apart by it | It follows the firmware's version |
+| A firmware's version | `v43` for OpenPocket, `v01` for PALETTE | `OP_VERSION_NUM` in `firmware/openpocket.c` and `firmware/apps/palette/palette.c`; on the boot screen | A person, in the pull request that changes that firmware |
+| The package identity | `BlackBox_943`, `PocketX_901` | Derived: 900 plus the firmware's version (`tools/pxpkg.py`). The installer tells builds apart by it | It follows the firmware's version |
 
 One release carries several firmwares, and each keeps its own version and identity inside it. The release therefore
 needs a number of its own. It is a semantic version, so `v1.0.0-beta.1` cannot be mistaken for a firmware version

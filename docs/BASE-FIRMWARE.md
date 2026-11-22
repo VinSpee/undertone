@@ -14,7 +14,7 @@ This document is the reference for the base. To start an alternative firmware, r
 [ALT-FIRMWARE.md](ALT-FIRMWARE.md) first. It also covers the install, the way back and the recovery.
 
 OpenPocket itself does not change when the base changes. `firmware/openpocket.bin` and both packages are the same
-bytes as the pinned release, upstream's published v42 with the bass tuner fix, trails, the editor watch fix, the flash hold fix and the built-in amps and cabinets removed, and the build fails when they are not
+bytes as the pinned release, upstream's published v42 with the bass tuner fix, trails, the editor watch fix, the flash hold fix, the built-in amps and cabinets removed and slot IR1's factory IR, numbered v43, and the build fails when they are not
 (section 9).
 
 ## 1. What the base holds
@@ -67,7 +67,7 @@ The app's file defines these names before `base/board.h`:
 | `AUDIO_PROBE` | `0`. `1` builds the audio test in place of the app. |
 | `DSP_CPU1` | `1` starts the second core for the DSP. `build.sh` reads this line to link the second core's entry. |
 | `OP_NAME` | The product's name: the boot screen, the installer. |
-| `OP_VERSION_NUM`, `OP_VERSION` | The package's number (`"42"` gives `PocketX_942`) and the text on the screens. |
+| `OP_VERSION_NUM`, `OP_VERSION` | The package's number (`"43"` gives `PocketX_943`) and the text on the screens. |
 | `OP_APP_ID` | An app other than OpenPocket: its folder's name under `firmware/apps`. OpenPocket defines none. |
 | `A_CH` | `2` when the app's sound has a left and a right side. The default is `1`. |
 
@@ -265,7 +265,7 @@ low strings), trails (the delay and the reverb ring out over a new preset), the 
 the editor no longer cancels a push the pedal owes it) and the flash hold fix (a save or an erase of a NAM model or an
 IR reads the slots' names with the audio still held) and store format 6 (the built-in amps and cabinets removed:
 the AMP block plays NAM only, the CAB block USER IR only) and slot IR1's factory IR (ML Sound Lab's "BEST IR IN THE
-WORLD", with the factory presets' levels set for it). `package` ends with `tests/release_pin.sh`, which fails when a sum differs. The build is deterministic: CI and a local build give the same bytes.
+WORLD", with the factory presets' levels set for it), numbered v43 (`PocketX_943`, `BlackBox_943`). `package` ends with `tests/release_pin.sh`, which fails when a sum differs. The build is deterministic: CI and a local build give the same bytes.
 
 The same sums mean that nothing in OpenPocket needs a check on a pedal. A change to a base file changes every app,
 so run `package` after one. A change that only moves code, or that adds lines for a case OpenPocket does not
@@ -284,7 +284,7 @@ which product runs. Three other things do.
 | Where | OpenPocket | An app |
 | --- | --- | --- |
 | In the image | No product descriptor. | A descriptor found by its mark `OP-APP:`: id, name, version, what it can do. |
-| In the package | `PocketX_942.fwsc`. The manifest has no `app`. | `starter-PocketX_901.fwsc`. The manifest's `app` holds the descriptor. |
+| In the package | `PocketX_943.fwsc`. The manifest has no `app`. | `starter-PocketX_901.fwsc`. The manifest's `app` holds the descriptor. |
 | On the pedal | INFO answers protocol 1 to 4. | INFO answers protocol 0, then the descriptor. |
 
 INFO is the first request of the editor protocol, `F0 7D 4F 50 01 F7` ([EDITOR-PROTOCOL.md](EDITOR-PROTOCOL.md)).
