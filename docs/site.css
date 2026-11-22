@@ -1,0 +1,90 @@
+/* SPDX-License-Identifier: GPL-3.0-only
+   The look of undertone.vinspee.me, shared by the home page (index.html), the installer (install.html) and the
+   editor's top bar (editor.html): Full Volume, printed out of register. Bone paper, black ink and the lime of the
+   pedal's REV tile; Anybody (its width axis runs from 50 to 150) for display, Archivo for text. Big headings are
+   printed in black over two riso inks, lime and teal, that drift off the black plate by --mx and --my. Warnings,
+   steps and body text are never printed off register. */
+
+@property --mx { syntax: '<length>'; inherits: true; initial-value: 4px; }
+@property --my { syntax: '<length>'; inherits: true; initial-value: 3px; }
+
+:root {
+  --bone: #f2f0e9; --ink: #0b0b0a; --lime: #c4f542; --teal: #00747a; --teal-lt: #3fa9a3;
+  --grey: #55534d; --soft: #c9c6bb; --rule: #d6d2c4;
+  --ok: #1d6b34; --err: #b3261e; --warn: #7a4a00;
+  --disp: "Anybody", "Arial Black", system-ui, sans-serif;
+  --text: "Archivo", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  --edge: clamp(16px, 3.4vw, 48px);
+  --ink-a: var(--lime); --ink-b: var(--teal-lt);
+  --ease: cubic-bezier(.2, .8, .2, 1);
+  color-scheme: light;
+  accent-color: var(--ink);
+}
+*, *::before, *::after { box-sizing: border-box; }
+html { scroll-padding-top: 88px; }
+body {
+  margin: 0; background: var(--bone); color: var(--ink); font: 400 18px/1.5 var(--text); -webkit-font-smoothing: antialiased;
+  /* the paper's grain */
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.75' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .1 0 0 0 0 .09 0 0 0 0 .08 0 0 0 .08 0'/%3E%3C/filter%3E%3Crect width='220' height='220' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+a { color: inherit; text-underline-offset: .18em; text-decoration-thickness: 2px; }
+code { font: 500 .85em var(--mono); }
+:focus-visible { outline: 3px solid var(--ink); outline-offset: 3px; box-shadow: 0 0 0 6px var(--lime); }
+.skip { position: absolute; left: -999px; top: 8px; z-index: 30; background: var(--lime); color: var(--ink); padding: 10px 14px; font-weight: 700; }
+.skip:focus { left: 8px; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+[hidden] { display: none !important; }
+
+/* out of register: two inks printed off the black plate */
+.reg { text-shadow: calc(var(--mx) * -1) var(--my) 0 var(--ink-a), var(--mx) calc(var(--my) * -1) 0 var(--ink-b); }
+.on-lime { --ink-a: var(--teal-lt); --ink-b: #fff8e6; }
+.on-ink { --ink-a: var(--lime); --ink-b: var(--teal); }
+.reg-in { animation: reg-in 1s .15s var(--ease) both; }
+@keyframes reg-in { from { --mx: 18px; --my: -12px; } }
+
+/* the site's bar */
+.site-nav {
+  position: sticky; top: 0; z-index: 20; display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  padding: 10px var(--edge); background: var(--ink); color: var(--bone);
+}
+.site-nav__mark {
+  --mx: 2px; --my: 2px; font: 900 20px/1 var(--disp); font-variation-settings: "wdth" 130; letter-spacing: -.01em;
+  text-decoration: none; padding: 12px 0; white-space: nowrap;
+}
+.site-nav__links { display: flex; gap: 4px; margin-left: auto; }
+.site-nav__links a {
+  font: 500 15px/1 var(--text); text-decoration: none; padding: 14px 10px;
+  background: linear-gradient(var(--lime), var(--lime)) left bottom / 0 3px no-repeat; transition: background-size .2s;
+}
+.site-nav__links a:hover, .site-nav__links a[aria-current] { background-size: 100% 3px; }
+.site-nav .btn { min-height: 44px; padding: 0 16px; font-size: 15px; border-color: var(--lime); }
+
+/* buttons: printed blocks with a hard edge */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; min-height: 52px; padding: 0 24px;
+  font: 800 17px/1.1 var(--disp); font-variation-settings: "wdth" 112; text-decoration: none; text-align: center;
+  border: 3px solid var(--ink); background: var(--lime); color: var(--ink); cursor: pointer;
+  transition: transform .12s var(--ease);
+}
+.btn:hover:not(:disabled) { transform: translateY(-3px); }
+.btn:active:not(:disabled) { transform: translateY(1px); }
+.btn:disabled { opacity: .45; cursor: default; }
+.btn--ink { background: var(--ink); color: var(--bone); }
+.btn--ghost { background: transparent; color: inherit; border-color: currentColor; }
+.btn--bone { background: var(--bone); }
+
+.site-foot { background: var(--ink); color: var(--soft); padding: 28px var(--edge) 36px; font-size: 15px; }
+.site-foot > div { max-width: 1400px; margin: 0 auto; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px 28px; }
+.site-foot a { display: inline-block; padding: 8px 0; }
+
+@media (max-width: 860px) { .site-nav__links .wide { display: none; } }
+@media (max-width: 560px) {
+  .site-nav { gap: 8px; }
+  .site-nav__mark { font-size: 17px; }
+  .site-nav__links a { padding: 14px 6px; font-size: 14px; }
+  .site-nav .btn { font-size: 13px; padding: 0 10px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}

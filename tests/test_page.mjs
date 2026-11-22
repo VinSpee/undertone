@@ -29,7 +29,7 @@ if (!SITE_URL) rmSync(FW, { recursive: true, force: true });   // (not what a bu
 cpSync(join(FIX, "firmware"), FW, { recursive: true });
 if (!SITE_URL) execFileSync("python3", [join(ROOT, "rescue", "build_kit.py"), join(SITE, "rescue")], { stdio: "inherit" });
 
-const TYPES = { ".html": "text/html", ".js": "text/javascript", ".json": "application/json", ".fwsc": "application/octet-stream", ".zip": "application/zip" };
+const TYPES = { ".html": "text/html", ".css": "text/css", ".js": "text/javascript", ".json": "application/json", ".fwsc": "application/octet-stream", ".zip": "application/zip" };
 const server = SITE_URL ? null : createServer((req, res) => {
   try {
     const p = join(SITE, decodeURIComponent(req.url.split("?")[0]).replace(/\/$/, "/index.html"));

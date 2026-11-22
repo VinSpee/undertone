@@ -1,10 +1,8 @@
-# The home page's layout kit
+# The site's pictures and sound
 
-`index.html` is built with the layout kit of tasteskill 2.5.1 (MIT, `LICENSE` in this folder): `system.css` and
-`system.js` (the grid, type, buttons, nav and footer), `layout/` (the hero), `motion/` (hover, press and the hero's
-entrance), `ui/` (cards and panels), `backgrounds/`, `effects/painterly-landscape` (the hero window's ground) and `moments/` (the two scroll moments). Only the parts the page uses are here, as the kit ships them; change
-the page, not these files.
+`img/` holds captures of this repository's own software: the editor against the simulator (`tools/sim.mjs`), Gamut's
+play screen (the "after" half of `docs/ui-overhaul/play.png`) and PALETTE's home screen
+(`docs/screens/palette/01-home.png`).
 
-`img/` holds captures of this repository's own software (the editor and the installer against the simulator,
-`tools/sim.mjs`, and the pedal's screens). `icons/` holds the Chrome, Edge and GitHub marks
-(`icons-credits.json`).
+`audio/riff.wav` is `assets/loops/riff.wav`, the clean riff the home page's wordmark follows: Guitar-TECHS, CC BY 4.0,
+credited in `assets/loops/ATTRIBUTION.md`.

@@ -2,125 +2,101 @@
 <!-- SPDX-License-Identifier: GPL-3.0-only
      The installer of undertone.vinspee.me: connect a pedal over Web MIDI, install one of the firmwares of the site's
      catalog (firmware/release.json), go back to the official firmware, rescue a pedal. Its look is the site's
-     (index.html): the editor's green-black and the pedal's amber, Instrument Sans and DM Mono. Every id, class and
-     data-t below is read by the script at the end of this file or by tests/test_page.mjs. -->
+     (site.css): bone paper, black ink and lime, Anybody and Archivo. Only the page's h1 and the step numbers are printed
+     out of register; warnings, steps, messages and the rescue guide never are. Every id, class and data-t below is read
+     by the script at the end of this file or by tests/test_page.mjs. -->
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="color-scheme" content="dark">
-<meta name="theme-color" content="#0d0f0e">
-<title>Undertone installer: firmware for the Pocket X and BlackBox</title>
-<meta name="description" content="Install the OpenPocket firmware or PALETTE on a Donner Pocket X or M-VAVE BlackBox from Chrome or Edge, over USB, and rescue a pedal that will not start.">
+<meta name="theme-color" content="#0b0b0a">
+<title>Install Gamut or PALETTE on a Pocket X or BlackBox</title>
+<meta name="description" content="Install Gamut (the OpenPocket firmware) or PALETTE on a Donner Pocket X or M-VAVE BlackBox from Chrome or Edge, over USB, and rescue a pedal that will not start.">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wdth,wght@75..100,400..700&family=DM+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anybody:wdth,wght@50..150,300..900&family=Archivo:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="site.css">
 <style>
-:root{--bg:#0d0f0e;--panel:#161a18;--raised:#1d2220;--ink:#f2f1ec;--dim:#a3a39e;--line:#2a302d;--acc:#f2a93b;--acc-ink:#0d0f0e;
-  --ok:#6fd08c;--err:#ff7b6b;--warn:#f2c14e;--bar:#232926;--code:#1d2220;
-  --sans:"Instrument Sans",system-ui,-apple-system,"Segoe UI",sans-serif;--mono:"DM Mono",ui-monospace,Menlo,Consolas,monospace;
-  --ease:cubic-bezier(.2,.8,.2,1);color-scheme:dark;accent-color:var(--acc)}
-*{box-sizing:border-box}
-html{scroll-padding-top:88px}
-body{margin:0;background:var(--bg);color:var(--ink);font:400 16px/1.6 var(--sans);-webkit-font-smoothing:antialiased;
-  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-bottom:64px}
-a{color:var(--ink);text-underline-offset:.2em;text-decoration-thickness:1px}
-a:hover{text-decoration-color:var(--acc)}
-:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
-.skip{position:absolute;left:16px;top:-48px;z-index:20;background:var(--acc);color:var(--acc-ink);padding:10px 16px;border-radius:999px;font-weight:500;text-decoration:none}
-.skip:focus{top:12px}
-/* the site's header: the same words and look as the home page's bar */
-.site{position:sticky;top:0;z-index:10;background:var(--bg);border-bottom:1px solid var(--line);margin-inline:calc(-1 * max(16px,env(safe-area-inset-left,0px)))}
-.site>div{max-width:1120px;margin:0 auto;min-height:64px;padding-inline:max(16px,env(safe-area-inset-left,0px));display:flex;align-items:center;gap:24px}
-.logo{display:inline-flex;align-items:center;gap:10px;font:500 20px/1 var(--sans);letter-spacing:-.02em;text-decoration:none;color:var(--ink)}
-.logo i{display:inline-grid;place-items:center;width:28px;height:28px;border-radius:6px;background:var(--acc);color:var(--acc-ink);font:600 16px/1 var(--sans);font-style:normal}
-.site nav{display:flex;gap:4px;margin-left:auto;flex-wrap:wrap}
-.site nav a{font:500 15px/1 var(--sans);text-decoration:none;color:var(--dim);padding:10px 12px;border-radius:999px}
-.site nav a:hover,.site nav a[aria-current]{color:var(--ink)}
-.site nav a[aria-current]{background:var(--raised)}
-@media (max-width:639px){.site nav .wide{display:none}.site>div{gap:8px}}
-.wrap{max-width:880px;margin:0 auto;display:flex;flex-direction:column;gap:20px;padding-top:48px}
-header.page{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:12px}
-h1{margin:0;font:500 clamp(36px,6vw,56px)/1.02 var(--sans);letter-spacing:-.035em;text-wrap:balance}
-.tag{margin:12px 0 0;color:var(--dim);max-width:58ch;font-size:18px;line-height:1.55;text-wrap:pretty}
-a.edlink{font:500 15px/1 var(--sans);padding:13px 20px;border-radius:999px;border:1px solid var(--line);color:var(--ink);text-decoration:none;transition:border-color .2s var(--ease),transform .2s var(--ease)}
-a.edlink:hover{border-color:var(--dim);transform:translateY(-1px)}
-.card{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:24px;display:flex;flex-direction:column;gap:14px;min-width:0}
-.card h2{margin:0;font:500 22px/1.2 var(--sans);letter-spacing:-.015em;display:flex;align-items:baseline;gap:14px}
-.card h2 b{font:500 14px/1 var(--mono);color:var(--acc);letter-spacing:0;min-width:2ch}
+body{font-size:17px;line-height:1.55;padding-bottom:64px}
+.wrap{max-width:900px;margin:0 auto;display:flex;flex-direction:column;gap:22px;padding:clamp(32px,6vh,56px) max(16px,env(safe-area-inset-left,0px)) 0 max(16px,env(safe-area-inset-right,0px))}
+header.page{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;border-bottom:6px solid var(--ink);padding-bottom:20px;margin-bottom:8px}
+h1{--mx:4px;--my:3px;margin:0;font:900 clamp(48px,8.4vw,104px)/.86 var(--disp);font-variation-settings:"wdth" 66;letter-spacing:-.01em;text-transform:uppercase;text-wrap:balance}
+.tag{margin:16px 0 0;max-width:56ch;font-size:19px;line-height:1.5;text-wrap:pretty}
+a.edlink{font:800 16px/1 var(--disp);font-variation-settings:"wdth" 112;padding:14px 18px;border:3px solid var(--ink);text-decoration:none;transition:transform .12s var(--ease)}
+a.edlink:hover{transform:translateY(-3px)}
+.card{background:#f9f8f3;border:3px solid var(--ink);padding:24px;display:flex;flex-direction:column;gap:14px;min-width:0}
+.card h2{margin:0;font:850 clamp(24px,2.6vw,32px)/1.05 var(--disp);font-variation-settings:"wdth" 88;text-transform:uppercase;display:flex;align-items:baseline;gap:16px}
+.card h2 b{--mx:3px;--my:2px;font:900 clamp(44px,5vw,60px)/.8 var(--disp);font-variation-settings:"wdth" 120;min-width:1.1ch}
 .row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
-button.go,a.go{font:500 16px/1 var(--sans);min-height:44px;padding:13px 22px;border-radius:999px;border:0;background:var(--acc);color:var(--acc-ink);cursor:pointer;
-  transition:filter .2s var(--ease),transform .12s var(--ease)}
-button.go:hover:not(:disabled),a.go:hover{filter:brightness(1.08)}
+button.go,a.go{display:inline-flex;align-items:center;min-height:48px;padding:12px 22px;font:800 16px/1.25 var(--disp);font-variation-settings:"wdth" 108;text-align:left;
+  border:3px solid var(--ink);background:var(--lime);color:var(--ink);cursor:pointer;text-decoration:none;overflow-wrap:anywhere;transition:transform .12s var(--ease)}
+button.go:hover:not(:disabled),a.go:hover{transform:translateY(-3px)}
 button.go:active:not(:disabled),a.go:active{transform:translateY(1px)}
-a.go{text-decoration:none;line-height:1.3;overflow-wrap:anywhere;display:inline-flex;align-items:center}
-button.alt{font:500 15px/1 var(--sans);min-height:44px;padding:12px 20px;border-radius:999px;border:1px solid var(--line);background:transparent;color:var(--ink);cursor:pointer;transition:border-color .2s var(--ease)}
-button.alt:hover:not(:disabled){border-color:var(--dim)}
-button:disabled{opacity:.42;cursor:default}
-.dev{display:grid;grid-template-columns:auto 1fr;gap:6px 18px;font-size:15px;margin:0;padding:14px 16px;border-radius:6px;background:var(--raised)}
-.dev dt{color:var(--dim)}
-.dev dd{margin:0;font:500 14px/1.6 var(--mono);min-width:0;overflow-wrap:anywhere}
-.pill{display:inline-block;font:500 13px/1 var(--mono);padding:7px 11px;border-radius:999px;border:1px solid var(--line);color:var(--dim)}
+button.alt{min-height:48px;padding:12px 20px;font:700 15px/1.2 var(--text);border:3px solid var(--ink);background:transparent;color:var(--ink);cursor:pointer}
+button.alt:hover:not(:disabled){background:var(--ink);color:var(--bone)}
+button:disabled{opacity:.4;cursor:default}
+.dev{display:grid;grid-template-columns:auto 1fr;gap:6px 18px;font-size:15px;margin:0;padding:14px 16px;background:var(--ink);color:var(--bone)}
+.dev dt{color:var(--soft)}
+.dev dd{margin:0;font:500 14px/1.6 var(--mono);min-width:0;overflow-wrap:anywhere;color:var(--lime)}
+.pill{display:inline-block;font:600 13px/1 var(--mono);padding:8px 11px;border:2px solid var(--ink)}
 .pill.ok{color:var(--ok);border-color:currentColor}.pill.err{color:var(--err);border-color:currentColor}.pill.warn{color:var(--warn);border-color:currentColor}
-.bar{height:8px;border-radius:999px;background:var(--bar);overflow:hidden}
-.bar i{display:block;height:100%;width:0;background:var(--acc);transition:width .2s}
-.steps{display:flex;flex-wrap:wrap;gap:6px;font:500 13px/1 var(--mono);color:var(--dim)}
-.steps span{padding:7px 10px;border-radius:999px;background:var(--bar)}
-.steps span.on{background:var(--acc);color:var(--acc-ink)}
-.steps span.done{background:transparent;color:var(--ok);outline:1px solid currentColor}
-.note{font-size:15px;color:var(--dim);margin:0;max-width:68ch;text-wrap:pretty}
-.note strong{color:var(--ink);font-weight:500}
-.warnbox{border-left:2px solid var(--warn);padding:2px 0 2px 14px}
+.bar{height:14px;border:2px solid var(--ink);background:var(--bone)}
+.bar i{display:block;height:100%;width:0;background:var(--ink);transition:width .2s}
+.steps{display:flex;flex-wrap:wrap;gap:6px;font:600 13px/1 var(--mono)}
+.steps span{padding:7px 10px;border:2px solid var(--rule);color:var(--grey)}
+.steps span.on{background:var(--ink);border-color:var(--ink);color:var(--lime)}
+.steps span.done{border-color:currentColor;color:var(--ok)}
+.note{font-size:16px;margin:0;max-width:68ch;text-wrap:pretty}
+.note strong{font-weight:700}
+/* a warning is marked like a highlighter pass over the text, never printed off register */
+.warnbox{border-left:6px solid var(--ink);padding:10px 14px;background:color-mix(in srgb,var(--lime) 38%,var(--bone));font-weight:500}
 .fws{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:14px}
-.fw{border:1px solid var(--line);background:var(--raised);border-radius:8px;padding:20px;display:flex;flex-direction:column;gap:10px;min-width:0;transition:border-color .2s var(--ease)}
-.fw.on{border-color:var(--ok)}
-.fw h3{margin:0;font:500 20px/1.2 var(--sans);letter-spacing:-.01em;display:flex;flex-wrap:wrap;align-items:center;gap:10px;overflow-wrap:anywhere}
-.fw h3 small{font:400 14px/1 var(--mono);color:var(--dim)}
+.fw{border:3px solid var(--ink);background:var(--bone);padding:20px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.fw.on{border-color:var(--ok);box-shadow:6px 6px 0 var(--ok)}
+.fw h3{margin:0;font:900 clamp(30px,3.4vw,40px)/.9 var(--disp);font-variation-settings:"wdth" 70;text-transform:uppercase;display:flex;flex-wrap:wrap;align-items:center;gap:10px;overflow-wrap:anywhere}
+.fw h3 small{font:600 14px/1 var(--mono);text-transform:none}
 .fw .what{flex:1}
-.fw button{align-self:flex-start;text-align:left;line-height:1.25}
-.msg{font-weight:500;min-height:1.6em;overflow-wrap:anywhere;margin:0}
+.fw button{align-self:flex-start}
+.msg{font-weight:600;min-height:1.6em;overflow-wrap:anywhere;margin:0}
 .msg.ok{color:var(--ok)}.msg.err{color:var(--err)}
-input[type=file]{font:inherit;font-size:15px;color:var(--dim);max-width:100%}
-input[type=file]::file-selector-button{font:500 15px/1 var(--sans);min-height:44px;padding:12px 20px;margin-right:14px;border-radius:999px;border:1px solid var(--line);background:transparent;color:var(--ink);cursor:pointer}
-label.chk{display:flex;gap:10px;align-items:flex-start;font-size:15px}
-label.chk input{width:18px;height:18px;margin:3px 0 0;flex:none}
-details summary{cursor:pointer;color:var(--dim);font-size:15px;min-height:32px;display:list-item}
-.guide{margin-top:8px;display:flex;flex-direction:column;gap:10px;border-top:1px solid var(--line);padding-top:14px}
-.guide summary{color:var(--ink);font-weight:500}
-.guide h3{margin:10px 0 0;font:500 17px/1.3 var(--sans);color:var(--ink)}
-.card h3.way{margin:10px 0 0;font:500 18px/1.3 var(--sans);letter-spacing:-.01em}
-.guide ol,.guide ul{padding-left:22px;display:flex;flex-direction:column;gap:6px}
+input[type=file]{font:inherit;font-size:15px;max-width:100%}
+input[type=file]::file-selector-button{font:700 15px/1 var(--text);min-height:48px;padding:12px 20px;margin-right:14px;border:3px solid var(--ink);background:transparent;color:var(--ink);cursor:pointer}
+label.chk{display:flex;gap:10px;align-items:flex-start;font-size:16px}
+label.chk input{width:20px;height:20px;margin:2px 0 0;flex:none}
+details summary{cursor:pointer;font-weight:600;font-size:16px;min-height:32px;display:list-item}
+.guide{margin-top:8px;display:flex;flex-direction:column;gap:10px;border-top:3px solid var(--ink);padding-top:14px}
+.guide h3{margin:12px 0 0;font:850 22px/1.1 var(--disp);font-variation-settings:"wdth" 90}
+.card h3.way{margin:12px 0 0;font:850 22px/1.1 var(--disp);font-variation-settings:"wdth" 90}
+.guide ol,.guide ul{padding-left:24px;display:flex;flex-direction:column;gap:8px}
 .guide code,#kitinfo code{overflow-wrap:anywhere}
-pre#log{margin:12px 0 0;background:var(--code);border:1px solid var(--line);border-radius:6px;padding:14px;font:13px/1.55 var(--mono);max-height:260px;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere}
-code{font:13.5px var(--mono);background:var(--code);padding:1px 6px;border-radius:4px}
-#rescueCard{border-color:color-mix(in srgb,var(--warn) 35%,var(--line))}
-#rescueCard h2 b{color:var(--warn)}
-footer{color:var(--dim);font-size:14px;display:flex;flex-direction:column;gap:8px;border-top:1px solid var(--line);padding-top:20px;margin-top:12px}
-footer a,.note a{color:inherit}
-[hidden]{display:none!important}
-@media (prefers-reduced-motion:reduce){*{transition:none!important}}
-@media (max-width:639px){.card{padding:18px}.wrap{padding-top:32px}a.edlink{display:none}}
+pre#log{margin:12px 0 0;background:var(--ink);color:var(--bone);padding:14px;font:13px/1.55 var(--mono);max-height:260px;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere}
+code{font:500 14px var(--mono);background:var(--ink);color:var(--lime);padding:1px 6px}
+#rescueCard{background:var(--lime)}
+#rescueCard a.go{background:var(--ink);color:var(--bone)}
+#rescueCard .warnbox{background:var(--bone)}
+#rescueCard h2 b{--ink-a:var(--teal-lt);--ink-b:#fff8e6}
+[hidden]{display:none!important}   /* here as well as in site.css: the script's hidden states must hold without it */
+.page-foot{font-size:14px;display:flex;flex-direction:column;gap:8px;border-top:3px solid var(--ink);padding-top:20px;margin-top:12px}
+@media (max-width:639px){.card{padding:18px}a.edlink{display:none}h1{--mx:2px;--my:2px}}
 </style>
 </head>
 <body>
 <a class="skip" href="#main">Skip to the installer</a>
-<header class="site">
-  <div>
-    <a class="logo" href="./"><i aria-hidden="true">U</i>Undertone</a>
-    <nav aria-label="Main">
-      <a class="wide" href="./#firmwares">Firmwares</a>
-      <a href="install.html" aria-current="page">Install</a>
-      <a href="editor.html">Editor</a>
-      <a href="#rescueCard">Rescue</a>
-      <a class="wide" href="https://github.com/VinSpee/undertone">Source</a>
-    </nav>
-  </div>
+<header class="site-nav">
+  <a class="site-nav__mark reg on-ink" href="./" aria-label="Undertone, home">UNDERTONE</a>
+  <nav class="site-nav__links" aria-label="Main">
+    <a class="wide" href="./#firmwares">Gamut and PALETTE</a>
+    <a href="install.html" aria-current="page">Install</a>
+    <a href="editor.html">Editor</a>
+    <a href="#rescueCard">Rescue</a>
+    <a class="wide" href="https://github.com/VinSpee/undertone">Source</a>
+  </nav>
 </header>
 <main class="wrap" id="main">
   <header class="page">
     <div>
-      <h1>Install a firmware</h1>
+      <h1 class="reg reg-in">Install a firmware</h1>
       <p class="tag" data-t="tag"></p>
     </div>
     <a class="edlink" id="toeditor" href="editor.html" data-t="toeditor"></a>
@@ -131,7 +107,7 @@ footer a,.note a{color:inherit}
   </section>
 
   <section class="card">
-    <h2><b>1</b><span data-t="s1"></span></h2>
+    <h2><b class="reg">1</b><span data-t="s1"></span></h2>
     <p class="note" data-t="s1note"></p>
     <div class="row">
       <button class="go" id="connect" data-t="connect"></button>
@@ -145,7 +121,7 @@ footer a,.note a{color:inherit}
   </section>
 
   <section class="card" id="installCard">
-    <h2><b>2</b><span data-t="s2"></span></h2>
+    <h2><b class="reg">2</b><span data-t="s2"></span></h2>
     <p class="note" data-t="s2note"></p>
     <p class="note warnbox" data-t="s2warn"></p>
     <p class="note warnbox" id="bbwarn" hidden data-t="bbwarn"></p>
@@ -164,7 +140,7 @@ footer a,.note a{color:inherit}
   </section>
 
   <section class="card">
-    <h2><b>3</b><span data-t="s3"></span></h2>
+    <h2><b class="reg">3</b><span data-t="s3"></span></h2>
     <p class="note" data-t="s3note"></p>
     <input type="file" id="offfile" accept=".fwsc">
     <p class="msg" id="offmsg"></p>
@@ -181,7 +157,7 @@ footer a,.note a{color:inherit}
   </section>
 
   <section class="card" id="rescueCard">
-    <h2><b>!</b><span data-t="rescue"></span></h2>
+    <h2><b class="reg">!</b><span data-t="rescue"></span></h2>
     <p class="note" data-t="rescueintro"></p>
     <h3 class="way" data-t="r1"></h3>
     <label class="chk"><input type="checkbox" id="rescueOn"><span data-t="rescueon"></span></label>
@@ -250,7 +226,7 @@ footer a,.note a{color:inherit}
     </details>
   </section>
 
-  <footer>
+  <footer class="page-foot">
     <span data-t="foot1"></span>
     <span data-t="foot2"></span>
   </footer>
@@ -294,7 +270,7 @@ const T = {
     rescuedocs: "The SD-card route (fm1buddy, flash/) is the second choice.",
     uboot: "Enter UBOOT mode", logt: "Log",
     foot1: "Undertone is an independent project, not affiliated with Donner or M-VAVE. Install at your own risk. Source code: GPL-3.0.",
-    foot2: "Update protocol and loader from Felucca and felucca-bsp (Hügelton Instruments, GPL-3.0 / MPL-2.0). JieLi AC79 SDK files: Apache-2.0. Instrument Sans and DM Mono typefaces: SIL OFL 1.1.",
+    foot2: "Update protocol and loader from Felucca and felucca-bsp (Hügelton Instruments, GPL-3.0 / MPL-2.0). JieLi AC79 SDK files: Apache-2.0. Anybody and Archivo typefaces: SIL OFL 1.1.",
     e_notfound: "Pedal not found. Check the cable (data), close other MIDI apps (on Windows only one program at a time can use the pedal: M-EFCS, M-UPGRADE, a DAW, another tab with this page), then try again.",
     testchan: "TEST CHANNEL: this installs a test build, not the release. It is for people who agreed to try it, and it is not the version the normal installer page offers. To go back, open this page without ?channel=… and press Install.",
     bbwarn: "M-VAVE BlackBox: v31 is the fix for issue #1 (OpenPocket restarted every 4 s after the pedal was switched off and on), still being tested on the BlackBox. Please report how it goes on GitHub. If your BlackBox restarts in a loop, use the rescue mode below.",
