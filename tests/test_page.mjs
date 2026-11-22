@@ -72,8 +72,9 @@ await page.addInitScript(() => {
   navigator.requestMIDIAccess = async () => access;
 });
 let buf = "";
-function startSim(...args) {
-sim = spawn(join(ROOT, "build", "devsim"), [join(FIX, "firmware", "flash_old.bin"), ...args], { stdio: ["pipe", "pipe", "inherit"] });
+function startSim(...args) { startSimOn("flash_old.bin", ...args); }
+function startSimOn(flash, ...args) {
+sim = spawn(join(ROOT, "build", "devsim"), [join(FIX, "firmware", flash), ...args], { stdio: ["pipe", "pipe", "inherit"] });
 sim.stdout.on("data", (d) => {
   buf += d.toString();
   let i;
@@ -170,6 +171,31 @@ await page.waitForSelector(`${OP}:enabled`, { timeout: 15000 });
 await page.click(OP);
 await page.waitForFunction(() => /PocketX_924/.test(document.getElementById("msg").textContent), null, { timeout: 240000 });
 ok(simLog.some((l) => /step2 rc=0/.test(l)), "official PocketX_017, confirmed: the install completes on the simulated pedal");
+
+// M-VAVE's BlackBox V22 and later: refused in words, with no box that lifts it, and nothing sent to the pedal
+sim.stdin.end(); sim = null; simLog.length = 0; buf = "";
+await page.reload();
+startSimOn("flash_v22.bin", "--stock", "BlackBox_022");
+await page.click("#connect");
+await page.waitForSelector("#layoutwarn:not([hidden])", { timeout: 15000 });
+ok(/BlackBox_022.*no longer switch on.*cannot install/s.test(await page.textContent("#layoutwarn")) && await page.isHidden("#newerconfirm"),
+  "official BlackBox_022: the page says it cannot install on it, with no box to tick");
+ok(await page.isDisabled(OP) && /Nothing can be installed/.test(await page.textContent("#fwwhy")) && !simLog.some((l) => /step[12]/.test(l)),
+  "official BlackBox_022: Install stays disabled and says why, nothing sent to the pedal");
+await page.screenshot({ path: join(OUT, "page_4c_layout_refused.png"), fullPage: true });
+// the update loader's own refusal of a flash head it does not know, behind an identity the page lets through
+sim.stdin.end(); sim = null; simLog.length = 0; buf = "";
+await page.reload();
+startSimOn("flash_v22.bin", "--stock", "BlackBox_021");
+await page.click("#connect");
+await page.waitForSelector(`${OP}:enabled`, { timeout: 15000 });
+ok(await page.isHidden("#layoutwarn"), "official BlackBox_021: no layout refusal on the page");
+await page.click(OP);
+await page.waitForSelector("#msg.err", { timeout: 60000 });
+ok(/memory layout.*wrote nothing and restarted the pedal on its own firmware/s.test(await page.textContent("#msg")) &&
+   simLog.some((l) => /step2 rc=-6[1-5]/.test(l)) && simLog.some((l) => /refused record=none/.test(l)),
+  "a V22 head behind BlackBox_021: the update loader refuses, the page says nothing was written");
+await page.screenshot({ path: join(OUT, "page_4d_head_refused.png"), fullPage: true });
 
 // a package that is not the manifest's (one byte changed on the site): refused by its SHA-256, before the pedal is asked
 sim.stdin.end(); sim = null; simLog.length = 0; buf = "";

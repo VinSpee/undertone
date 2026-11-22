@@ -1,7 +1,7 @@
 #!/bin/sh
 # The release pin: OpenPocket's image and packages must be the bytes of the pinned release (upstream's published v42
 # with the bass tuner fix, trails, the editor watch fix, the flash hold fix, the built-in amps and cabinets removed and
-# slot IR1's factory IR, numbered v43),
+# slot IR1's factory IR, numbered v43, its update loader refusing a flash head it does not know),
 # whatever changed in the base firmware or in another app (docs/BASE-FIRMWARE.md, section 9).
 # tests/release.sha256 holds their SHA-256.
 #   tests/release_pin.sh [SUMS]   compare SUMS (default build/SHA256SUMS, which `tools/op.mjs package` writes) with the pin

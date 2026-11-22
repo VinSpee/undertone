@@ -7,8 +7,10 @@ USB cable and a Mac or a Windows PC. The first run only checks the pedal and sav
 second run.
 
 > **Warning.** Do not install OpenPocket on a pedal that ran M-VAVE V22 or V23, not even after a successful rescue.
-> Today's OpenPocket installer writes from `0x4000`, over the end of the V22/V23 boot loader, and the pedal goes dark
-> again. Wait for an installer that supports V22 and V23. It is not released yet.
+> OpenPocket's installer writes from `0x4000`, over the end of the V22/V23 boot loader, and the pedal goes dark again.
+> This project's installer page, `node tools/op.mjs flash` and the update loader in its packages now refuse such a pedal
+> and write nothing; older installers, upstream's among them, do not. Wait for an installer that supports V22 and V23.
+> It is not released yet.
 
 > **Status.** Path A's tool has restored one real pedal, from a Mac. Path B (V22 and V23) is verified in simulation
 > only: the kit's files were run against a simulated pedal with M-VAVE's real V22 and V23 packages, and the pedal ended

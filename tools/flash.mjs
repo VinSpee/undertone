@@ -9,7 +9,7 @@ import { readFileSync } from "node:fs";
 import { webcrypto } from "node:crypto";
 import { basename, dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { Updater, IS_OTA, OUR_LOADER, MODELS, TIMING, OPENPOCKET, firmwareName, newerOfficialWarning } from "../docs/pxota.js";
+import { Updater, IS_OTA, OUR_LOADER, MODELS, TIMING, OPENPOCKET, firmwareName, newerOfficialWarning, layoutRefusal } from "../docs/pxota.js";
 import { verifyPackage } from "../docs/pxpkg.js";
 
 globalThis.crypto ??= webcrypto;                             // Node 18 has no global; the page's browser does
@@ -27,7 +27,8 @@ const USAGE = `usage: node tools/op.mjs flash --dry-run [--package FILE] [--mani
   --timeout SECONDS  how long --rescue waits for the pedal (default 180); an install that has started is never cut short
   --manifest FILE  the manifest that lists the package and its SHA-256 (default: docs/firmware/manifest.json)
   --accept-newer-official  install over an official firmware newer than this installer has been checked with. Without it
-                   the flash stops (exit 2) before anything is sent; the version check is a precaution
+                   the flash stops (exit 2) before anything is sent; the version check is a precaution. It never
+                   lifts the refusal of a BlackBox on M-VAVE's V22 or later, whose boot loader the install would overwrite
   --app NAME       install the alternative firmware NAME (built with \`node tools/op.mjs app NAME\`: its manifest is
                    build/apps/NAME/manifest.json) in place of OpenPocket. Without it only OpenPocket is installed,
                    which is also the way back from an alternative firmware`;
@@ -119,9 +120,13 @@ const WHY = {
   timeout: "the pedal never answered", pkg: "no package for this pedal",
   badreq: "the pedal asked for data outside the package", foreign: "the pedal is in another firmware's update mode",
 };
+const REFUSED = ["untested", "layout", "head"];             // Updater's own refusals: nothing was written
 
-// the precaution for a pedal on an official firmware newer than the installer knows: a refusal (exit 2) unless the flag was given
+// a pedal on an official firmware whose flash head the update loader cannot write behind: a refusal (exit 2), always.
+// The precaution for one newer than the installer knows: a refusal unless the flag was given
 const newerNote = (id, product, args, say) => {
+  const no = parseInt(product.split("_")[1], 10) >= 900 && layoutRefusal(id);
+  if (no) throw refuse(`${no} Nothing was sent.`);
   const why = parseInt(product.split("_")[1], 10) >= 900 && newerOfficialWarning(id);
   if (!why) return;
   if (!args.acceptNewer) throw refuse(`${why} Nothing was sent. To install anyway, add --accept-newer-official.`);
@@ -233,7 +238,7 @@ export async function main(argv, { access, say = console.log, timing } = {}) {
     wayBack(pkg, say);
     return 0;
   } catch (e) {
-    if (e instanceof Refusal || e.code === "untested") { say(`REFUSED: ${e.message}${e.code === "untested" ? " To install anyway, add --accept-newer-official." : ""}`); return 2; }   // (untested: Updater's own start check)
+    if (e instanceof Refusal || REFUSED.includes(e.code)) { say(`REFUSED: ${e.message}${e.code === "untested" ? " To install anyway, add --accept-newer-official." : ""}`); return 2; }   // (Updater's own refusals)
     say(`FAILED: ${WHY[e.code] || "error"}: ${e.message}${e.detail ? ` [${e.detail}]` : ""}`);
     say(RECOVERY);
     return 1;
