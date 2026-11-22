@@ -132,7 +132,7 @@ replaces the files with this folder's.
 - the sound engine with the pedal's own math library: every block × model × extreme setting, no NaN, nothing runs away;
 - the package builder: it rebuilds the official PocketX 016 app area **byte for byte** (with the official file);
 - the installer against a **simulated pedal** that runs the pedal's real update code (`ota.c`, then the loader's
-  `ldr_core.c`) on a simulated flash: update, install over the official firmware, wrong model refused, damaged package
+  `ldr_core.c`) on a simulated flash: update, install over the official firmware, wrong model refused, a flash head the loader does not know (BlackBox V22 and later) refused, damaged package
   refused before anything is erased, way back to the official firmware (its loader staged and checked);
 - the page itself in headless Chromium (Playwright), clicking Connect and Install.
 - the preset editor against a simulated pedal that runs the pedal's real editor code (`px_editor.h`) and preset store

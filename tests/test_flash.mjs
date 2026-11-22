@@ -95,6 +95,22 @@ for (const argv of [["--confirm-flash"], ["--rescue", "--confirm-flash", "--time
   ok(r.code === 0 && /done: the pedal reports PocketX_924/.test(r.out) && !untouched(r), `${argv.join(" ")} --accept-newer-official over PocketX_017: the update completes`);
 }
 
+// 4c. M-VAVE's BlackBox V22 and later: refused before the upgrade command, --accept-newer-official or not; the update
+//     loader refuses a flash head it does not know behind any identity, and writes nothing
+{
+  const v22 = join(TMP, "flash_v22.bin");
+  const same = (r) => r.dump.equals(readFileSync(v22)) && !r.log.some((l) => /step[12]/.test(l));
+  for (const argv of [["--dry-run"], ["--confirm-flash"], ["--rescue", "--confirm-flash", "--timeout", "5"]]) {
+    const r = await run([...argv, "--accept-newer-official", "--package", bb, "--manifest", man], { flash: v22, stock: "BlackBox_022" });
+    ok(r.code === 2 && /REFUSED: .*BlackBox_022.*no longer switch on.*Nothing was sent/s.test(r.out) && same(r), `${argv.join(" ")} over official BlackBox_022: refused, flash unchanged`);
+  }
+  const r = await run(["--confirm-flash", "--package", bb, "--manifest", man], { flash: v22, stock: "BlackBox_021" });
+  const d = readFileSync(v22);
+  ok(r.code === 2 && /REFUSED: .*boot loader runs past 0x4000.*wrote nothing/s.test(r.out) &&
+     r.dump.subarray(0, 0xE0000).equals(d.subarray(0, 0xE0000)) && r.dump.subarray(0xE5000).equals(d.subarray(0xE5000)),
+    "a V22 head behind BlackBox_021: the loader refuses, exit 2, nothing written outside the staging area");
+}
+
 // 5. damaged or unlisted package: refused before any MIDI
 {
   const d2 = join(TMP, "PocketX_925.fwsc");

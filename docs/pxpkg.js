@@ -71,6 +71,10 @@ export const OFFICIAL = [
   { model: "BlackBox", product: "BlackBox_021", size: 676884, sha256: "1dc7bc50db2b8ac3468509a8c43eb871fead262ebe7727e28e4df882fad5bb87" },
 ];
 
+// The first official firmware, per model, whose flash head moved the app area from 0x4000 to 0x6000, behind a boot
+// loader that runs to 0x5CA0 (M-VAVE's BlackBox V22, then V23). The update loader of this project writes from 0x4000.
+export const MOVED_HEAD = { BlackBox: 22 };
+
 // an official package for the way back: { product, model, known, image } or an Error.
 // known = its SHA-256 is one of OFFICIAL; otherwise it must at least be a well-formed official package (identity
 // Model_0NN, flash.bin and ota.bin present, their CRCs right): the page asks for a confirmation then

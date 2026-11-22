@@ -5,7 +5,7 @@
 // Step 1: the running firmware (the official one, or OpenPocket's ota.c) reads parts of the package and stages its
 // update loader, then resets into it. Step 2: the loader reads the whole image and writes it. In both steps the
 // device sends cmd 0x30 read requests on the package's logical image and the page answers them.
-import { OFFICIAL } from "./pxpkg.js";
+import { OFFICIAL, MOVED_HEAD } from "./pxpkg.js";
 
 const HS_QUERY = [0xF0, 0x00, 0x32, 0x45, 0x00, 0x00, 0x00, 0x40, 0x7F, 0xF7];
 const UPGRADE = [0xF0, 0x22, 0x24, 0x35, 0x7F, 0xF7];
@@ -29,8 +29,18 @@ export const IS_OFFICIAL = (id) => MODELS.includes(id.model) && id.version < 900
 export const PORT_RE = /openpocket|pocket|blackbox|black.?box|ota|usb.?midi|composite|jieli|sinco|m-?vave|donner/i;
 
 // errors carry a code the page translates: notfound, model, stopped, noloader, lost, noreturn, mismatch, badreq,
-// foreign (detail: the loader's identity), untested (detail: the pedal's identity)
+// foreign (detail: the loader's identity), untested and layout (detail: the pedal's identity), head (detail: the update
+// loader's reason)
 function fail(code, msg, detail = "") { const e = new Error(msg); e.code = code; e.detail = detail; return e; }
+
+// The update loader read the pedal's own flash head, did not know it, and refused (loader/ldr_core.c, 1b): it wrote
+// nothing, erased its update record and restarted the pedal on its own firmware. It says why in the address it reads,
+// 0xF1000000 + the reason
+const HEAD_WHY = { 1: "its flash head could not be read", 2: "its flash head is damaged or of a kind it does not know",
+  3: "its app area does not begin at 0x4000", 4: "its boot loader runs past 0x4000", 5: "its flash head names no app area" };
+const headRefused = (why) => fail("head", `Not installed: the update mode read this pedal's own memory layout and does not ` +
+  `know it (${HEAD_WHY[why] || `reason ${why}`}). It wrote nothing and restarted the pedal on its own firmware. This ` +
+  `installer cannot install on this pedal.`, HEAD_WHY[why] || String(why));
 
 export function pack7(data) {
   const out = []; let acc = 0, nb = 0;
@@ -103,12 +113,23 @@ export function parseInfo(pkt) {
 const NEWEST_OFFICIAL = Object.fromEntries(MODELS.map((m) => [m, Math.max(...OFFICIAL.filter((o) => o.model === m)
   .map((o) => parseInt(o.product.split("_")[1], 10)))]));
 
+// The refusal, in words, of a pedal whose official firmware moved its flash head (pxpkg.js MOVED_HEAD), else null.
+// Installing over it would overwrite the end of its boot loader and the pedal would no longer switch on, so no
+// confirmation lifts this refusal. The update loader refuses such a head itself as well (headRefused). Both checks
+// come from upstream pull request isod89/openpocket#35.
+export function layoutRefusal(id) {
+  if (!IS_OFFICIAL(id) || !(id.version >= MOVED_HEAD[id.model])) return null;
+  return `This ${id.model} runs M-VAVE's official firmware ${String(id.version).padStart(3, "0")} (${id.text}). From V22 on, ` +
+    `that firmware has a larger boot loader at the start of the pedal's memory, and installing this firmware would ` +
+    `overwrite its end: the pedal would no longer switch on. This installer cannot install on it. Keep M-VAVE's firmware on this pedal.`;
+}
+
 // A warning for a pedal that runs an official firmware newer than the newest one this page knows, else null. The USB
 // rescue (tools/uboot_rescue.py) reads the pedal's flash head and refuses an image for another layout; over MIDI the
 // head cannot be read, so the running firmware stands in for it. This is a precaution, not a block: installing over
 // it needs the user's confirmation (acceptNewer), and nothing else changes.
 export function newerOfficialWarning(id) {
-  if (!IS_OFFICIAL(id)) return null;
+  if (!IS_OFFICIAL(id) || layoutRefusal(id)) return null;
   const newest = NEWEST_OFFICIAL[id.model];
   if (id.version <= newest) return null;
   const v = (n) => String(n).padStart(3, "0");
@@ -258,6 +279,10 @@ export class Updater {
         if (r.addr === finishAddr) return { served, finished: true };
         continue;
       }
+      if (r.addr >>> 24 === 0xF1) {                    // the update loader refused the pedal's flash head: nothing written
+        link.send(response(r.addr, [...new TextEncoder().encode("refused"), 0]));
+        return { served, finished: false, refused: r.addr & 0xFFFFFF };
+      }
       if (r.len > MAXDATA || r.addr + r.len > image.length) throw fail("badreq", `bad request ${r.addr.toString(16)}+${r.len}`);
       if (this.t.perRequest) await sleep(this.t.perRequest);
       if (!link.send(response(r.addr, Array.from(image.subarray(r.addr, r.addr + r.len)), r.fl)))
@@ -321,6 +346,8 @@ export class Updater {
 
   // every check comes before the first byte that changes anything: the upgrade command is the point of no return
   async installOn(dev, image, product, step, app, acceptNewer = false) {
+    const no = parseInt(product.split("_")[1], 10) >= 900 && layoutRefusal(dev.id);
+    if (no) { dev.link.close(); throw fail("layout", `Not installed: ${no} Nothing was sent to the pedal.`, dev.id.text); }
     const why = parseInt(product.split("_")[1], 10) >= 900 && newerOfficialWarning(dev.id);
     if (why && !acceptNewer) { dev.link.close(); throw fail("untested", `${why} Nothing was sent; confirm to install anyway.`, dev.id.text); }
     step("start", dev.id.text);
@@ -335,6 +362,7 @@ export class Updater {
     const ota = await this.waitFor(IS_OTA, this.t.loaderWait);
     if (!ota) throw fail("noloader", "the update loader did not appear");
     const s2 = await this.write(ota, image, step);
+    if (s2.refused) throw headRefused(s2.refused);
     if (!s2.finished)
       throw fail(s2.lost ? "lost" : "stopped", `the loader ${s2.lost ? "was disconnected" : "stopped"} after ${s2.served} requests`);
     return this.comeBack(product, step, app);
@@ -376,6 +404,7 @@ export class Updater {
     }
     const step = onStep || (() => {});
     const s = await this.write(ota, image, step);
+    if (s.refused) throw headRefused(s.refused);
     if (!s.finished) throw fail(s.lost ? "lost" : "stopped", `the loader stopped after ${s.served} requests`);
     await this.comeBack(product, step, opts.app);
     return true;

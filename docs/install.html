@@ -159,6 +159,7 @@ code{font:500 14px var(--mono);background:var(--ink);color:var(--lime);padding:1
     <p class="note">Nothing is sent before this page has checked the package against its SHA-256 and the firmware the pedal runs, and nothing is written before the pedal has checked it too.</p>
     <p class="note warnbox" id="bbwarn" hidden data-t="bbwarn">M-VAVE BlackBox: v31 is the fix for issue #1 (OpenPocket restarted every 4 s after the pedal was switched off and on), still being tested on the BlackBox. Please report how it goes on GitHub. If your BlackBox restarts in a loop, use the rescue mode below.</p>
     <p class="note warnbox" id="testchan" hidden data-t="testchan">TEST CHANNEL: this installs a test build, not the release. It is for people who agreed to try it, and it is not the version the normal installer page offers. To go back, open this page without ?channel=… and press Install.</p>
+    <p class="note warnbox" id="layoutwarn" hidden></p>
     <div id="newerconfirm" hidden>
       <p class="note warnbox" id="newerwarn"></p>
       <label class="chk"><input type="checkbox" id="newerok"><span data-t="newerok">I understand: install anyway, over this official firmware.</span></label>
@@ -217,7 +218,7 @@ code{font:500 14px var(--mono);background:var(--ink);color:var(--lime);padding:1
     <div class="row"><a class="go" id="kit" hidden></a></div>
     <p class="note" id="kitinfo" hidden><span id="kitfw"></span> SHA-256: <code id="kitsha"></code></p>
     <p class="note" id="kitnone" hidden><span data-t="kitnone">The rescue kit is not on this copy of the page. How to get or build it:</span> <a href="https://github.com/VinSpee/undertone/blob/main/docs/RESCUE.md#the-rescue-kit">the rescue guide</a></p>
-    <p class="note warnbox" data-t="rescuev22">After the rescue of a pedal that ran M-VAVE V22 or V23, do not install OpenPocket on it. This installer writes over the end of the V22/V23 boot loader, and the pedal goes dark again. Wait for an installer that supports V22 and V23.</p>
+    <p class="note warnbox" data-t="rescuev22">After the rescue of a pedal that ran M-VAVE V22 or V23, do not install OpenPocket on it. Installing writes over the end of the V22/V23 boot loader, and the pedal goes dark again. This installer refuses such a pedal and writes nothing, but older installers do not. Wait for an installer that supports V22 and V23.</p>
     <details class="guide" id="rescueguide">
       <summary>How to run the rescue on your computer</summary>
       <p class="note">Unzip the kit. It makes one folder, <code>OpenPocket-rescue-kit</code>. The tool writes M-VAVE's official firmware back, and the firmware file must match the firmware the pedal had. The first run only checks the pedal and saves a backup. Nothing is written until the second run.</p>
@@ -288,7 +289,7 @@ code{font:500 14px var(--mono);background:var(--ink);color:var(--lime);padding:1
 </main>
 
 <script type="module">
-import { Updater, IS_OTA, IS_OPENPOCKET, IS_ALT, OPENPOCKET, OUR_LOADER, MODELS, newerOfficialWarning } from "./pxota.js";
+import { Updater, IS_OTA, IS_OPENPOCKET, IS_ALT, OPENPOCKET, OUR_LOADER, MODELS, newerOfficialWarning, layoutRefusal } from "./pxota.js";
 import { verifyPackage, checkOfficial } from "./pxpkg.js";
 import { BLACKBOX_V21, verifyFactorySounds } from "./pxfactory.js";
 
@@ -431,9 +432,12 @@ function showDev(d) {
   $("newerconfirm").hidden = !newer;
   if (newer) $("newerwarn").textContent = newer; else if (d) $("newerok").checked = false;
   const unconfirmed = Boolean(newer) && !$("newerok").checked;
+  const refused = d && layoutRefusal(d.id);         // M-VAVE's BlackBox V22 and later: nothing can be installed, no box lifts it
+  $("layoutwarn").hidden = !refused;
+  if (refused) $("layoutwarn").textContent = refused;
   // why the buttons wait, said under them (a disabled button explains nothing by itself)
   const fwwhy = !d ? "Connect the pedal in step 1 first." : IS_OTA(d.id) ? "The pedal is in update mode: press Resume the update to finish it."
-    : unconfirmed ? "Tick the box above to install over this official firmware." : "";
+    : refused ? "Nothing can be installed on this pedal: see above." : unconfirmed ? "Tick the box above to install over this official firmware." : "";
   $("fwwhy").textContent = fwwhy; $("fwwhy").hidden = !fwwhy;
   const offwhy = !d ? "Connect the pedal in step 1, then choose its official file." : IS_OTA(d.id) ? "The pedal is in update mode: finish the update in step 2 first."
     : !official ? "Choose the pedal's official file first." : official.model !== d.id.model ? "This file is for another pedal: choose the file for a " + d.id.model + "."
@@ -448,7 +452,7 @@ function showDev(d) {
     const same = on && o.packages.some((p) => p.product === d.id.text);
     card.classList.toggle("on", on);
     card.querySelector(".pill").hidden = !on;
-    b.disabled = busy || !d || IS_OTA(d.id) || unconfirmed;
+    b.disabled = busy || !d || IS_OTA(d.id) || unconfirmed || Boolean(refused);
     b.textContent = t(same ? "again" : runs && !on ? "back" : "install") + `${o.name} ${o.version}`;
   }
   $("backoff").disabled = busy || !d || IS_OTA(d.id) || !official || official.model !== d.id.model ||
@@ -569,7 +573,7 @@ function rescueTry() {
       r = await up.rescue(pick, (s, n) => { progress(s, n); if (s !== "verify" && s !== "write") log("rescue step " + s + (n !== undefined ? " " + n : "")); }, { acceptNewer: $("newerok").checked });
     } catch (e) {
       if (e.code === "untested") { $("newerwarn").textContent = e.message; $("newerconfirm").hidden = false; }   // tick the box, then arm the rescue again
-      if (e.code === "untested" || e.code === "pkg") { $("rescueOn").checked = false; pre = null; }   // refused: trying again changes nothing
+      if (["untested", "layout", "head", "pkg"].includes(e.code)) { $("rescueOn").checked = false; pre = null; }   // refused: trying again changes nothing
       throw e;
     }
     if (!r) throw Object.assign(new Error("no pedal yet"), { code: "notfound", detail: up.seen() });

@@ -3,7 +3,8 @@
  *
  * It runs, natively on the PC, the very code the pedal runs for an update:
  *   app mode    firmware/bsp/chip/ota.c (handshake, ota_session: stage the package's loader at 0xE0000, record)
- *   loader mode loader/ldr_core.c (ldr_session: check the package, write the app area [0x4000, 0xA3000))
+ *   loader mode loader/ldr_core.c (ldr_session: check the pedal's flash head and the package, write the app area
+ *               [0x4000, 0xA3000); on a head it refuses, erase the records and restart on the pedal's own firmware)
  * on a 1 MiB flash array. MIDI SysEx goes through stdin/stdout, one message per line in hex. Lines starting with
  * '#' are events for the harness: "#port NAME" (the USB device re-enumerates under that name), "#log ...".
  *   devsim FLASH.bin [--stock IDENTITY] [--dump OUT.bin]
@@ -191,7 +192,7 @@ static int info_service(int app_runs)
 
 int main(int argc, char **argv)
 {
-    const char *stock = 0, *dump = 0;
+    const char *stock = 0, *stock0, *dump = 0;
     FILE *f;
     int i, mode = 0;                                    /* 0 app, 1 loader */
     if (argc < 2) { fprintf(stderr, "devsim FLASH.bin [--stock ID] [--dump OUT]\n"); return 2; }
@@ -202,6 +203,7 @@ int main(int argc, char **argv)
     f = fopen(argv[1], "rb");
     if (!f || fread(nor, 1, sizeof nor, f) != sizeof nor) { fprintf(stderr, "devsim: %s: need 1 MiB\n", argv[1]); return 2; }
     fclose(f);
+    stock0 = stock;                                     /* (a refused update: back to it) */
     cur_id = stock ? stock : flash_app_id();
     printf("#port %s\n#log app %s\n", stock ? "USB-Midi" : "OpenPocket", cur_id);
     fflush(stdout);
@@ -242,6 +244,12 @@ int main(int argc, char **argv)
                 mode = 0;
                 cur_id = flash_app_id();
                 printf("#port OpenPocket\n#log app %s\n", cur_id);
+            } else if (rc <= LDR_REFUSED) {             /* the pedal's head refused (1b): the records gone, it restarts */
+                const int rec = ota_rd16(nor + 0xE4F00 + 6) == 0x5441u;   /* on its own firmware (ota.c's record) */
+                mode = 0;
+                stock = stock0;
+                cur_id = stock ? stock : flash_app_id();
+                printf("#port %s\n#log app %s refused record=%s\n", stock ? "USB-Midi" : "OpenPocket", cur_id, rec ? "flash" : "none");
             }
         }
         fflush(stdout);

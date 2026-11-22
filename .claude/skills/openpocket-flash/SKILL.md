@@ -52,8 +52,10 @@ Success ends with `dry run ok: would update PocketX_923 -> PocketX_924`.
 
 Refusals (exit 2, nothing sent to the pedal): no `--confirm-flash` and no `--dry-run`; package not listed in the manifest;
 SHA-256, size or identity differs from the manifest; wrong model; no pedal; several pedals; pedal already in update mode
-(power-cycle it); official firmware newer than the installer knows, unless `--accept-newer-official` is given (a precaution only:
-no evidence shows a newer release bricks pedals; ask the captain before passing it).
+(power-cycle it); a BlackBox on M-VAVE's official V22 or later, always (installing would overwrite the end of its boot
+loader); other official firmware newer than the installer knows, unless `--accept-newer-official` is given (a precaution;
+ask the captain before passing it). The update loader itself refuses a flash head it does not know: exit 2, nothing written,
+the pedal restarts on its own firmware.
 
 ## 4. Flash (only on the captain's explicit instruction)
 

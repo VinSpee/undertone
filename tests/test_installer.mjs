@@ -9,7 +9,7 @@ import { mkdtempSync, readFileSync, existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { Updater, IS_OPENPOCKET, newerOfficialWarning } from "../docs/pxota.js";
+import { Updater, IS_OPENPOCKET, newerOfficialWarning, layoutRefusal } from "../docs/pxota.js";
 import { productOf, logicalImage, checkOfficial } from "../docs/pxpkg.js";
 import { simAccess } from "./simpedal.mjs";
 
@@ -96,8 +96,8 @@ ok(productOf(px) === "PocketX_924" && productOf(bb) === "BlackBox_924", "package
   const box = (v) => ({ model: "BlackBox", version: v, text: `BlackBox_${String(v).padStart(3, "0")}` });
   ok(newerOfficialWarning(pocket(16)) === null && newerOfficialWarning(box(21)) === null && newerOfficialWarning(box(20)) === null && newerOfficialWarning(pocket(923)) === null,
     "newer-firmware check: the official firmware the page knows (PocketX_016, BlackBox_020 / 021), and OpenPocket, are not concerned");
-  ok(/BlackBox_023.*\(021\).*precaution/s.test(newerOfficialWarning(box(23)) || "") && /PocketX_017.*\(016\)/s.test(newerOfficialWarning(pocket(17)) || ""),
-    "newer-firmware check: a newer official firmware gets a warning that names the known one and calls it a precaution");
+  ok(/PocketX_017.*\(016\).*precaution/s.test(newerOfficialWarning(pocket(17)) || "") && newerOfficialWarning(box(22)) === null && newerOfficialWarning(box(23)) === null,
+    "newer-firmware check: a newer official firmware gets a warning that names the known one; BlackBox 022 on is refused instead");
   for (const how of ["install", "rescue"]) {
     const run = (u, accept, steps) => (how === "install"
       ? u.install(logicalImage(px), "PocketX_924", (s) => steps.push(s), { acceptNewer: accept })
@@ -118,6 +118,65 @@ ok(productOf(px) === "PocketX_924" && productOf(bb) === "BlackBox_924", "package
     try { res = await run(new Updater(sim.access, null, FAST), true, steps); } catch (e) { err = e; }
     await sim.end();
     ok(!err && res === "PocketX_924" && steps.includes("start"), `${how} over PocketX_017, confirmed: the install completes ${err ? "(" + err.code + ")" : ""}`);
+  }
+}
+
+// 4b2. M-VAVE's BlackBox V22 and later put the app area at 0x6000, behind a boot loader that runs to 0x5CA0; the update
+//      loader writes from 0x4000 and would overwrite it. The page refuses such a pedal by the firmware it reports, with
+//      no confirmation that lifts it; the loader refuses any flash head it does not know, whatever the pedal reports
+{
+  const pocket = (v) => ({ model: "PocketX", version: v, text: `PocketX_${String(v).padStart(3, "0")}` });
+  const box = (v) => ({ model: "BlackBox", version: v, text: `BlackBox_${String(v).padStart(3, "0")}` });
+  ok(/BlackBox_022.*no longer switch on/s.test(layoutRefusal(box(22)) || "") && /BlackBox_023/.test(layoutRefusal(box(23)) || "") &&
+     [box(20), box(21), box(923), pocket(16), pocket(17)].every((id) => layoutRefusal(id) === null),
+    "layout check: official BlackBox 022 and 023 refused; BlackBox 020 / 021, OpenPocket and the Pocket X not concerned");
+  const untouched = (dump, flash) => {
+    const a = flashOf(dump), b = flashOf(join(TMP, flash));
+    return a.subarray(0, 0xE0000).equals(b.subarray(0, 0xE0000)) && a.subarray(0xE5000).equals(b.subarray(0xE5000));
+  };
+  for (const how of ["install", "rescue"]) {
+    for (const v of ["BlackBox_022", "BlackBox_023"]) {
+      const dump = join(TMP, `layout_${how}_${v}.bin`);
+      const sim = simAccess([join(TMP, "flash_v22.bin"), "--stock", v, "--dump", dump]);
+      await sim.ready;
+      const u = new Updater(sim.access, null, FAST);
+      const steps = [];
+      let err = null;
+      try {
+        await (how === "install" ? u.install(logicalImage(bb), "BlackBox_924", (s) => steps.push(s), { acceptNewer: true })
+          : u.rescue(() => ({ image: logicalImage(bb), product: "BlackBox_924" }), (s) => steps.push(s), { acceptNewer: true }));
+      } catch (e) { err = e; }
+      await sim.end();
+      ok(err && err.code === "layout" && err.detail === v && /no longer switch on.*Nothing was sent/s.test(err.message) && !steps.length,
+        `${how} over official ${v}, even confirmed: refused (layout), no step started`);
+      ok(!sim.log.some((l) => /step[12]/.test(l)) && flashOf(dump).equals(flashOf(join(TMP, "flash_v22.bin"))), `${how} over ${v}: no upgrade command, the flash as it was`);
+    }
+  }
+  {   // the head the loader knows (app area at 0x4000) on a BlackBox: the install goes through
+    const sim = simAccess([join(TMP, "flash_old.bin"), "--stock", "BlackBox_021"]);
+    await sim.ready;
+    let res = null, err = null;
+    try { res = await new Updater(sim.access, null, FAST).install(logicalImage(bb), "BlackBox_924", () => {}); } catch (e) { err = e; }
+    await sim.end();
+    ok(!err && res === "BlackBox_924" && sim.log.some((l) => /step2 rc=0/.test(l)), `official BlackBox_021 on the known head -> OpenPocket 924 ${err ? "(" + err.code + ")" : ""}`);
+  }
+  // the loader's own check, behind an identity the page lets through: the V22 head, and a head whose app area alone moved
+  for (const [flash, why] of [["flash_v22.bin", /boot loader runs past 0x4000/], ["flash_moved.bin", /app area does not begin at 0x4000/]]) {
+    const dump = join(TMP, `head_${flash}`);
+    const sim = simAccess([join(TMP, flash), "--stock", "BlackBox_021", "--dump", dump]);
+    await sim.ready;
+    const u = new Updater(sim.access, null, { ...FAST, step2Idle: 30000 });
+    const t0 = Date.now();
+    let err = null;
+    try { await u.install(logicalImage(bb), "BlackBox_924", () => {}); } catch (e) { err = e; }
+    const took = Date.now() - t0;
+    await new Promise((r) => setTimeout(r, 200));
+    const code = await sim.end();
+    ok(err && err.code === "head" && why.test(err.message) && /wrote nothing/.test(err.message) && took < 10000 && sim.log.some((l) => /step2 rc=-6[1-5]/.test(l)),
+      `${flash} behind BlackBox_021: the loader refuses (${err ? err.detail : "no error"}), the page told in ${took} ms`);
+    ok(code === 0 && untouched(dump, flash), `${flash}: nothing written outside step 1's staging area [0xE0000, 0xE5000)`);
+    ok(flashOf(dump).subarray(0xE4000, 0xE5000).every((b) => b === 0xFF) && sim.log.some((l) => /app BlackBox_021 refused record=none/.test(l)),
+      `${flash}: the update record erased, the pedal back on its own firmware`);
   }
 }
 

@@ -327,7 +327,7 @@ h2{font-size:clamp(40px,6.4vw,104px);line-height:.88;font-weight:900;font-variat
     <div class="qa">
       <div><h3>Can I go back to the official firmware?</h3><p>Yes. Pick the official .fwsc file from Donner or M-VAVE in the installer's step 3. Your browser checks it first.</p></div>
       <div><h3>Does an update keep my presets?</h3><p>Yes. Each firmware also keeps its own presets while the pedal runs the other one.</p></div>
-      <div><h3>Does the installer work on every BlackBox?</h3><p>Not on one that ever ran M-VAVE V22 or V23: the installer would write over the end of that boot loader.</p></div>
+      <div><h3>Does the installer work on every BlackBox?</h3><p>Not on one that ever ran M-VAVE V22 or V23: installing would write over the end of that boot loader, so the installer refuses such a pedal and writes nothing.</p></div>
       <div><h3>Is PALETTE ready for a real pedal?</h3><p>It passes its tests on a simulated pedal and has not run on a real one yet.</p></div>
       <div><h3>What do I need to build my own firmware?</h3><p>Docker and Node 18 or newer. <code>node tools/op.mjs all</code> builds and tests every firmware in a pinned container.</p></div>
       <div><h3>Is this made by Donner or M-VAVE?</h3><p>No. Undertone is an independent GPL-3.0 project. You install it at your own risk.</p></div>
