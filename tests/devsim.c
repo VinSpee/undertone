@@ -3,8 +3,9 @@
  *
  * It runs, natively on the PC, the very code the pedal runs for an update:
  *   app mode    firmware/bsp/chip/ota.c (handshake, ota_session: stage the package's loader at 0xE0000, record)
- *   loader mode loader/ldr_core.c (ldr_session: check the pedal's flash head and the package, write the app area
- *               [0x4000, 0xA3000); on a head it refuses, erase the records and restart on the pedal's own firmware)
+ *   loader mode loader/ldr_core.c (ldr_session: check the pedal's flash head and the package, write the package's
+ *               app area from 0x4000, within [0x4000, 0xA3000); on a head it refuses, erase the records and restart on
+ *               the pedal's own firmware)
  * on a 1 MiB flash array. MIDI SysEx goes through stdin/stdout, one message per line in hex. Lines starting with
  * '#' are events for the harness: "#port NAME" (the USB device re-enumerates under that name), "#log ...".
  *   devsim FLASH.bin [--stock IDENTITY] [--dump OUT.bin]

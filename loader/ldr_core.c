@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: MPL-2.0
  * Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments
- * Modified for OpenPocket: the Pocket X layout (app area to 0xA3000, update records between 0xA3000 and 0xFF000,
+ * Modified for OpenPocket: the Pocket X layout (app area within 0xA3000, update records between 0xA3000 and 0xFF000,
  * no Felucca store). The comments below that name the FM-1's addresses describe the original. */
 /* Felucca update loader, the portable part (step 2 of the M-UPGRADE update
  * protocol).
@@ -9,9 +9,10 @@
  * The loader:
  *   1. reads the UFW header and finds flash.bin;
  *   1b. checks the device's own flash head: its app area must begin at 0x4000, where this loader writes it, and
- *      nothing before it may run into it. M-VAVE's BlackBox firmware V22 and later moved the app area to 0x6000,
- *      behind a boot loader that runs to 0x5CA0: writing from 0x4000 there overwrites the boot loader's end and the
- *      pedal no longer starts. On a head this loader does not know nothing is written: the update records go (as in
+ *      nothing before it may run into it; the package's app area (flash.bin from 0x4000 on, whole sectors) must fit
+ *      the slot that head leaves, [0x4000, 0xA3000). M-VAVE's BlackBox firmware V22 and later moved the app area to
+ *      0x6000, behind a boot loader that runs to 0x5CA0: writing from 0x4000 there overwrites the boot loader's end and
+ *      the pedal no longer starts. On a head this loader does not know nothing is written: the update records go (as in
  *      4.), the host is told (a read of 0xF1000000 + the reason) and the pedal restarts on its own firmware. The check
  *      comes from upstream pull request isod89/openpocket#35;
  *   2. checks that the package's app area decrypts with THIS chip's key
@@ -20,7 +21,7 @@
  *   2b. reads the whole flash.bin once and checks it against the CRC16 of its
  *      UFW entry (the vendor tools' check), keeping each app sector's CRC16:
  *      a damaged or truncated package is refused before anything is erased;
- *   3. writes ONLY the app area [0x4000, 0x93000), sector by sector, skipping
+ *   3. writes ONLY the package's app area [0x4000, flash.bin's end), sector by sector, skipping
  *      sectors that are already equal, and verifies each one; a sector that
  *      comes in different from the checked pass is read again, never written;
  *      the flash head (SPL, isd_config) is never written;
@@ -37,7 +38,7 @@
  *   ldr_progress(done, total)  both passes on one scale: the check (2b, flash.bin) then the write (3, the app area)
  * plus the ota.c hooks (frames, time, idle). */
 #define LDR_APP_LO 0x4000u
-#define LDR_APP_HI 0xA3000u                     /* Pocket X: PRCT [0, 0xA3000) (PocketX_016) */
+#define LDR_APP_HI 0xA3000u                     /* the slot's end on that head: PRCT [0, 0xA3000) of PocketX_016 */
 #define LDR_REC_LO 0xA3000u                     /* update records live above the app area ... */
 #define LDR_REC_HI 0xFF000u                     /* ... and below key_mac (Pocket X); OpenPocket stages at 0xE0000 */
 #define LDR_DATA_LO 0xF0000u                    /* OpenPocket's preset store (px_store.h, copies A and B): */
@@ -104,8 +105,9 @@ static int ldr_chip_key(uint32_t *key)
 /* 1b. the device's own flash head (JLFS top entries, as in ldr_chip_key): app_dir_head at LDR_APP_LO, nothing before
  * it running into the app area. The official heads this loader knows (BlackBox V16, V20, V21; Pocket X 016): uboot.boot
  * [0xA0, 0x38D0) or [0xA0, 0x3938), isd_config.ini right after it, app_dir_head at 0x4000, key_mac at 0xFF000.
- * BlackBox V22 and V23: uboot.boot [0xA0, 0x5CA0), isd_config.ini at 0x5CA0, app_dir_head at 0x6000. 0, or why not */
-static int ldr_head_ok(void)
+ * BlackBox V22 and V23: uboot.boot [0xA0, 0x5CA0), isd_config.ini at 0x5CA0, app_dir_head at 0x6000. 0 and the end
+ * of the app area's slot on that head (hi), or why not */
+static int ldr_head_ok(uint32_t *hi)
 {
     uint8_t e[32];
     uint32_t off, a, n, app = 0;
@@ -126,6 +128,7 @@ static int ldr_head_ok(void)
         if (ota_rd16(e + 14))
             break;                                       /* the last entry */
     }
+    *hi = LDR_APP_HI;
     return app ? 0 : -5;                                 /* no app area in the head */
 }
 
@@ -150,7 +153,7 @@ static void ldr_records_erase(void)
 }
 
 /* 2b. flash.bin [0, fl_size) from the host, before any erase: its CRC16 must be the UFW entry's (want); sc gets
- * the CRC16 of each app sector as it came in */
+ * the CRC16 of each app sector [LDR_APP_LO, fl_size) as it came in */
 static int ldr_check(uint32_t fl_off, uint32_t fl_size, uint32_t want, uint16_t *sc, uint8_t *b)
 {
     uint32_t i, n, crc = 0;
@@ -160,8 +163,8 @@ static int ldr_check(uint32_t fl_off, uint32_t fl_size, uint32_t want, uint16_t 
             return -7;
         crc = ota_crc16(b, n, crc);
         if (!((i + n) & 0xFFFu))
-            ldr_progress(i + n, fl_size + (LDR_APP_HI - LDR_APP_LO));
-        if (i >= LDR_APP_LO && i < LDR_APP_HI) {     /* (512-byte reads from 0: never across a sector) */
+            ldr_progress(i + n, fl_size + (fl_size - LDR_APP_LO));
+        if (i >= LDR_APP_LO) {                       /* (512-byte reads from 0: never across a sector) */
             uint32_t k = (i - LDR_APP_LO) >> 12;
             sc[k] = (uint16_t)ota_crc16(b, n, (i & 0xFFFu) ? sc[k] : 0u);
         }
@@ -173,23 +176,25 @@ static int ldr_session(void)
 {
     static uint8_t hdr[0x400], sec[0x1000], cur[0x1000];
     static uint16_t sc[LDR_NSEC];
-    uint32_t i, k, fl_off, fl_size, ota_off, ota_len, key, s, want = ~0u, done = 0;   /* (no CRC16: no flash.bin entry) */
+    uint32_t i, k, fl_off, fl_size, ota_off, ota_len, key, s, hi, want = ~0u, done = 0;   /* (no CRC16: no flash.bin entry) */
     int rc;
     /* 1. UFW header + entry list (ota.c; it leaves the entries decoded in hdr) */
     if ((rc = ota_ufw(hdr, &fl_off, &fl_size, &ota_off, &ota_len)) != 0)
         return rc;
-    if (!fl_off || fl_size < LDR_APP_HI || fl_size > LDR_FL_MAX)
+    if (!fl_off || fl_size <= LDR_APP_LO || fl_size > LDR_FL_MAX || (fl_size & 0xFFFu))
         return -3;
     for (i = 0; i < ota_rd16(hdr + 8); i++)
         if (ota_rd16(hdr + 0x40 + i * 0x50u) == 0)
             want = ota_rd16(hdr + 0x40 + i * 0x50u + 4u);   /* flash.bin's data CRC16 */
     /* 1b. a head this loader does not know: nothing is written, the pedal goes back to its own firmware (the records go,
      * the host is told why: 0xF1000000 + the reason, 1 to 5; then loader.c resets) */
-    if ((rc = ldr_head_ok()) != 0) {
+    if ((rc = ldr_head_ok(&hi)) != 0) {
         ldr_records_erase();
         (void)ota_read(0xF1000000u + (uint32_t)-rc, sec, 8);
         return LDR_REFUSED + rc;
     }
+    if (fl_size > hi)
+        return -14;                                      /* the package's app area runs past this head's slot */
     /* 2. the package's app area must decrypt with this chip's key */
     if ((rc = ldr_chip_key(&key)) != 0)
         return -40 + rc;
@@ -201,8 +206,8 @@ static int ldr_session(void)
     /* 2b. the whole package first: nothing is erased for a damaged one */
     if ((rc = ldr_check(fl_off, fl_size, want, sc, sec)) != 0)
         return rc;
-    /* 3. app area, sector by sector */
-    for (s = LDR_APP_LO; s < LDR_APP_HI; s += 0x1000u) {
+    /* 3. the package's app area, sector by sector */
+    for (s = LDR_APP_LO; s < fl_size; s += 0x1000u) {
         uint32_t again;
         for (again = 0;; again++) {                      /* as checked in 2b, else read it again */
             for (k = 0; k < 0x1000u; k += 512u)
@@ -232,7 +237,7 @@ static int ldr_session(void)
                 return -11;                              /* verify failed twice */
         }
         done += 0x1000u;
-        ldr_progress(fl_size + done, fl_size + (LDR_APP_HI - LDR_APP_LO));
+        ldr_progress(fl_size + done, fl_size + (fl_size - LDR_APP_LO));
     }
     /* 4. finish: the host confirms, the record goes, the SPL boots the app */
     for (i = 0; i < 4u; i++)

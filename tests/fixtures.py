@@ -32,6 +32,7 @@ old = pxpkg.flash_image(pxpkg.with_product(app[:-500] + b"older", "PocketX_923")
 flash = bytearray(b"\xFF" * 0x100000)
 flash[:len(old)] = old
 flash[0xC0000:0xC0010] = b"STOCK USER DATA!"                                     # USR: must survive
+flash[0x9D000:0xA3000] = (b"AN OLDER, LONGER AREA'S TAIL " * 848)[:0x6000]       # past today's packages' app area
 (out / "flash_old.bin").write_bytes(bytes(flash))
 
 
@@ -66,6 +67,8 @@ def moved_head(flash, boot_end=None, app_at=0x6000):
 (out / "flash_v22.bin").write_bytes(moved_head(flash, boot_end=0x5CA0))
 (out / "flash_moved.bin").write_bytes(moved_head(flash))
 (out / "app_new_px.bin").write_bytes(pxpkg.with_product(app, "PocketX_924"))
+long_flash = pxpkg.flash_image(pxpkg.with_product(app, "PocketX_924"), files).ljust(0xA4000, b"\xFF")
+(out / "too_long.fwsc").write_bytes(pxpkg.ufw(long_flash, ota, "PocketX_924"))      # its area runs past 0xA3000
 alt = app + struct.pack("<8s16s16s8sBB2x", b"OP-APP:", b"starter", b"STARTER", b"v01", 0x0D, 1)   # stereo, midi, store; editor 1
 pxpkg.build(alt, ota, out / "alt", 1, None, sdk, "starter")                       # alt/starter-PocketX_901.fwsc, ...
 (out / "app_alt_px.bin").write_bytes(pxpkg.with_product(alt, "PocketX_901"))
