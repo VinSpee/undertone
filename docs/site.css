@@ -29,6 +29,8 @@ body {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.75' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .1 0 0 0 0 .09 0 0 0 0 .08 0 0 0 .08 0'/%3E%3C/filter%3E%3Crect width='220' height='220' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 a { color: inherit; text-underline-offset: .18em; text-decoration-thickness: 2px; }
+::selection { background: var(--lime); color: var(--ink); }
+.on-lime ::selection, .on-lime::selection { background: var(--ink); color: var(--lime); }
 code { font: 500 .85em var(--mono); }
 :focus-visible { outline: 3px solid var(--ink); outline-offset: 3px; box-shadow: 0 0 0 6px var(--lime); }
 .skip { position: absolute; left: -999px; top: 8px; z-index: 30; background: var(--lime); color: var(--ink); padding: 10px 14px; font-weight: 700; }
@@ -45,14 +47,16 @@ code { font: 500 .85em var(--mono); }
 
 /* the site's bar */
 .site-nav {
-  position: sticky; top: 0; z-index: 20; display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  position: sticky; top: 0; z-index: 20; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0 16px;
   padding: 10px var(--edge); background: var(--ink); color: var(--bone);
 }
 .site-nav__mark {
   --mx: 2px; --my: 2px; font: 900 20px/1 var(--disp); font-variation-settings: "wdth" 130; letter-spacing: -.01em;
   text-decoration: none; padding: 12px 0; white-space: nowrap;
 }
-.site-nav__links { display: flex; gap: 4px; margin-left: auto; }
+.site-nav__links { display: flex; gap: 4px; margin-left: auto; min-width: 0; }
+/* on the black bar the page's ink ring would not show: a bone ring, clear of the lime button */
+.site-nav :focus-visible { outline: 3px solid var(--bone); outline-offset: 3px; box-shadow: none; }
 .site-nav__links a {
   font: 500 15px/1 var(--text); text-decoration: none; padding: 14px 10px;
   background: linear-gradient(var(--lime), var(--lime)) left bottom / 0 3px no-repeat; transition: background-size .2s;
@@ -67,7 +71,7 @@ code { font: 500 .85em var(--mono); }
   border: 3px solid var(--ink); background: var(--lime); color: var(--ink); cursor: pointer;
   transition: transform .12s var(--ease);
 }
-.btn:hover:not(:disabled) { transform: translateY(-3px); }
+@media (hover: hover) { .btn:hover:not(:disabled) { transform: translateY(-3px); } }
 .btn:active:not(:disabled) { transform: translateY(1px); }
 .btn:disabled { opacity: .45; cursor: default; }
 .btn--ink { background: var(--ink); color: var(--bone); }
@@ -84,6 +88,10 @@ code { font: 500 .85em var(--mono); }
   .site-nav__mark { font-size: 17px; }
   .site-nav__links a { padding: 14px 6px; font-size: 14px; }
   .site-nav .btn { font-size: 13px; padding: 0 10px; }
+}
+/* a narrow phone: the mark and Install on the first row, the links on a second */
+@media (max-width: 400px) {
+  .site-nav__links { order: 3; width: 100%; margin-left: -6px; }
 }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }

@@ -95,6 +95,8 @@ let failed = 0;
 const ok = (c, what) => { console.log(`${what.padEnd(64)} ${c ? "ok" : "FAIL"}`); if (!c) failed++; };
 await page.goto(INSTALL);
 await page.waitForTimeout(300);
+ok(/Connect the pedal in step 1 first/.test(await page.textContent("#fwwhy")) && await page.isVisible("#fwwhy") && await page.isVisible("#offwhy"),
+  "before a pedal: the waiting Install buttons say why, under them");
 startSim();
 await page.waitForTimeout(300);
 await page.screenshot({ path: join(OUT, "page_1_start.png"), fullPage: true });
@@ -106,13 +108,17 @@ ok(await shown() === "openpocket" && /Choose a firmware/i.test(await page.textCo
 ok(await page.isEnabled(OP) && (await page.textContent(OP)) === "Install OpenPocket v24" && await page.isVisible(`${card("openpocket")} .pill`),
   "its button names the firmware and the version, and the card says the pedal runs this firmware");
 await page.screenshot({ path: join(OUT, "page_2_found.png"), fullPage: true });
+ok(!(await page.isVisible("#fwwhy")), "a pedal found: no reason left under the buttons");
 await page.click(OP);
+ok(await page.$(`${card("openpocket")} #progress`) !== null, "the install's progress and message sit in the card whose button was pressed");
 await page.waitForFunction(() => /PocketX_924/.test(document.getElementById("msg").textContent) ||
   document.getElementById("msg").classList.contains("err"), null, { timeout: 240000 });
 const msg = await page.textContent("#msg");
 ok(/PocketX_924/.test(msg), `result: ${msg}`);
 ok(/OpenPocket v24/.test(msg) && await page.isVisible("#next") && /WHATS-NEW-v24\.md$/.test(await page.getAttribute("#notes", "href")), "the result names the version and links the editor and the release notes");
-ok(await page.$$eval("#steps span", (s) => s.length > 0 && s.every((e) => e.className === "done")), "every stage shows done, none still lit");
+ok(await page.$$eval("#steps li", (s) => s.length > 0 && s.every((e) => e.className === "done" && /^done: /.test(e.textContent))), "every stage shows done, said in words too, none still lit");
+ok((await page.getAttribute("#progressbar", "aria-valuenow")) === "100" && (await page.getAttribute("#msg", "role")) === "status" && (await page.getAttribute("#state", "role")) === "status",
+  "a screen reader hears the result and the state; the progress bar says 100");
 await page.waitForTimeout(1500);
 ok(/OpenPocket v24/.test(await page.textContent("#d-fw")) && (await page.textContent(OP)) === "Install again: OpenPocket v24", "the page now sees OpenPocket v24, and the button says Install again");
 await page.screenshot({ path: join(OUT, "page_3_done.png"), fullPage: true });
@@ -144,6 +150,7 @@ ok(await page.isVisible("#v21-factory"), "BlackBox V21: the factory sound contro
 await page.click("#verify-factory");
 await page.waitForSelector("#msg.err", { timeout: 15000 });
 ok(/sound bank/.test(await page.textContent("#msg")), "BlackBox V21: no bank reply means verification failed");
+ok((await page.getAttribute("#msg", "role")) === "alert", "an error is announced at once (role alert)");
 await page.click("#factory-uboot");
 await page.waitForFunction(() => /USB recovery requested/.test(document.getElementById("msg").textContent));
 ok(simLog.includes("uboot") && !simLog.some((l) => /step[12]/.test(l)), "BlackBox V21: recovery asks for UBOOT without running an OTA");
@@ -209,10 +216,12 @@ sim.stdin.end(); sim = null; simLog.length = 0; buf = "";
   const mac = await steps("rescue-mac"), win = await steps("rescue-windows");
   ok(mac.some((s) => /brew install libusb/.test(s)) && mac.some((s) => /sudo python3 tools\/uboot_rescue\.py --package firmware\/BlackBox_023\.fwsc/.test(s)) &&
      mac.some((s) => /--write --package firmware\/BlackBox_023\.fwsc/.test(s)), "rescue guide, Mac: libusb once, the read-only check, then the write");
-  ok(win.some((s) => /python\.org/.test(s)) && win.some((s) => /Run as administrator.*not PowerShell/.test(s)) && win.some((s) => /^Unplug.*RESCUE\.bat --package firmware\\BlackBox_023\.fwsc/.test(s)) &&
+  ok(win.some((s) => /python\.org/.test(s)) && win.some((s) => /Run as administrator.*not PowerShell/.test(s)) && win.some((s) => /^Unplug the pedal\.$/.test(s)) && win.some((s) => /RESCUE\.bat --package firmware\\BlackBox_023\.fwsc/.test(s)) &&
      win.some((s) => /RESCUE\.bat --write --package firmware\\BlackBox_023\.fwsc/.test(s)) && /not been tested on a real pedal/.test(await page.textContent("#rescueguide .warnbox")),
     "rescue guide, Windows: Python once, an administrator Command Prompt, the check, then the write; said to be untested");
-  ok(await page.getAttribute("#rescueguide a[href^='RESCUE.md#quick-start']", "href") !== null, "rescue guide: links the full guide in RESCUE.md");
+  ok(await page.getAttribute("#rescueguide a[href^='https://github.com/VinSpee/undertone/blob/main/docs/RESCUE.md#quick-start']", "href") !== null, "rescue guide: links the rendered full guide (RESCUE.md on GitHub)");
+  ok(await page.$$eval("#rescueguide .cmd", (c) => c.length === 6 && c.every((e) => getComputedStyle(e.querySelector("pre")).overflowWrap === "normal" && e.querySelector("button.copy"))),
+    "rescue guide: every command is a block of its own, broken only at spaces, with a copy button");
   await page.screenshot({ path: join(OUT, "page_4b_rescue_card.png"), fullPage: true });
   await page.setViewportSize({ width: 360, height: 800 });
   ok(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), "Rescue card and guide: no sideways scrolling at a phone's width");
@@ -230,7 +239,7 @@ sim.stdin.end(); sim = null; simLog.length = 0; buf = "";
     renameSync(join(SITE, "rescue", "manifest.json"), join(SITE, "rescue", "manifest.off"));
     await no.reload();
     await no.waitForSelector("#kitnone:not([hidden])", { timeout: 5000 });
-    ok(!(await no.isVisible("#kit")) && (await no.getAttribute("#kitnone a", "href")) === "RESCUE.md#the-rescue-kit", "a copy of the page without the kit: says so and links how to get it");
+    ok(!(await no.isVisible("#kit")) && (await no.getAttribute("#kitnone a", "href")) === "https://github.com/VinSpee/undertone/blob/main/docs/RESCUE.md#the-rescue-kit", "a copy of the page without the kit: says so and links how to get it");
     writeFileSync(join(SITE, "rescue", "manifest.json"), JSON.stringify(kit));
     await no.close();
   }
@@ -267,6 +276,28 @@ cpSync(join(FIX, "firmware", "alt"), join(FW, "apps", "starter"), { recursive: t
   await fwd.goto(url);
   ok(fwd.url() === url && await fwd.$("#connect") === null, "the home page without ?app= or ?channel= stays the home page");
   await fwd.close();
+}
+// a 360 px phone: neither page scrolls sideways, and the bar's Install button is on the screen
+{
+  const phone = await browser.newPage({ viewport: { width: 360, height: 780 } });
+  for (const at of [url, INSTALL]) {
+    await phone.goto(at);
+    const fits = await phone.evaluate(() => document.documentElement.scrollWidth <= innerWidth &&
+      [...document.querySelectorAll(".site-nav a")].every((a) => { const r = a.getBoundingClientRect(); return r.left >= 0 && r.right <= innerWidth; }));
+    ok(fits, `a 360 px phone: ${at === url ? "the home page" : "the installer"} fits, every link of the bar on the screen`);
+  }
+  await phone.close();
+}
+// without its script the installer still shows every safety warning and the rescue cases
+{
+  const ctx = await browser.newContext({ javaScriptEnabled: false });
+  const bare = await ctx.newPage();
+  await bare.goto(INSTALL);
+  const text = await bare.textContent("main");
+  ok(/Do not unplug the pedal/.test(text) && /do not install OpenPocket/.test(text) && /restarts in a loop/.test(text) && /black screen/.test(text) &&
+     await bare.isVisible("[data-t=s2warn]") && await bare.isVisible("[data-t=rescuev22]"),
+    "without its script: the install warning, the V22/V23 warning and the rescue cases are on the page");
+  await ctx.close();
 }
 sim.stdin.end(); sim = null; simLog.length = 0; buf = "";
 await page.goto(INSTALL + "?app=starter");
