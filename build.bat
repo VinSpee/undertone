@@ -33,7 +33,7 @@ if not exist "firmware\openpocket.bin" goto fail
 
 :ok
 set VER=?
-for /f "tokens=3" %%v in ('findstr /c:"define OP_VERSION_NUM" firmware\openpocket.c') do set VER=%%~v
+for /f "tokens=3" %%v in ('findstr /c:"define OP_VERSION_NUM" firmware\apps\gamut\openpocket.c') do set VER=%%~v
 echo.
 echo SUCCESS: OpenPocket v%VER%
 echo   - installer packages: docs\firmware\  (PocketX_9%VER%.fwsc, BlackBox_9%VER%.fwsc)

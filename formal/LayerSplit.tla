@@ -41,7 +41,7 @@ Init ==
   /\ bad = FALSE
 
 \* ---- CPU0 ----
-\* between two blocks: px_nam_lp_split, px_nam_lp_force (firmware/px_audio.h lp_split, dsp_lp_run)
+\* between two blocks: px_nam_lp_split, px_nam_lp_force (firmware/apps/gamut/px_audio.h lp_split, dsp_lp_run)
 Split(s) ==
   /\ apc = "idle" /\ want' = s
   /\ UNCHANGED <<lin, lout, ld, hard, es, apc, as, ai, bpc, bi, bad>>

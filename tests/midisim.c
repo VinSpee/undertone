@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: GPL-3.0-only
- * OpenPocket — the musical MIDI code (firmware/px_midi.h) on a PC: the packet decoder, the Control Change map, the
+ * OpenPocket — the musical MIDI code (firmware/apps/gamut/px_midi.h) on a PC: the packet decoder, the Control Change map, the
  * messages the pedal sends, the settings byte, and MIDI clock. No hardware, no sound.
  *   cc -O1 -Wall -Wno-unused-function -Iengine -Ifirmware -o build/midisim tests/midisim.c engine/px_dsp.c firmware/px_math.c -lm && build/midisim
  * Exits 1 on the first group with a failure. */
@@ -9,8 +9,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include "px_dsp.h"
-#include "px_midi.h"
-#include "px_ble_midi.h"
+#include "../firmware/apps/gamut/px_midi.h"
+#include "../firmware/apps/gamut/px_ble_midi.h"
 
 static int failed;
 static void ok(int c, const char *what) { printf("%-76s %s\n", what, c ? "ok" : "FAIL"); if (!c) failed++; }

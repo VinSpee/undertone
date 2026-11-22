@@ -79,7 +79,7 @@ The numbers were chosen so that nothing special is touched: 0 and 32 (bank), 6 a
 use 33 to 51, which are the low halves of controllers 1 to 19; a controller that sends 14-bit pairs on those would move them
 by accident. Map them to one of the free numbers in your DAW instead.
 
-The map is in one place in the source, `px_cc_param()` and its siblings in `firmware/px_midi.h`; a test checks that every
+The map is in one place in the source, `px_cc_param()` and its siblings in `firmware/apps/gamut/px_midi.h`; a test checks that every
 number is unique, reserved ones are free, and a value sent by one pedal is applied by another to the same sound.
 
 ## From the web editor
@@ -126,7 +126,7 @@ nothing happens. Leaving saves the settings only if you changed something (one f
 the pedal a USB sound card as well as a MIDI device: see [USB-AUDIO.md](USB-AUDIO.md). The change is made when you leave
 the page, and the pedal then leaves USB for a second. MIDI works the same with it on or off.
 
-The settings are one byte in the header of the preset store (`firmware/px_store.h`). Older copies have 0 there, which means the
+The settings are one byte in the header of the preset store (`firmware/apps/gamut/px_store.h`). Older copies have 0 there, which means the
 defaults. A power cut while saving leaves the old or the new settings, never a broken store (tested).
 
 While the SAVE page, the MIDI page, the tuner or the block mover is open, the host's Program Change and Control Change are read
@@ -146,16 +146,16 @@ There are two kinds of traffic on the one cable, and they never meet:
    thrown away by `ota_take`; a SysEx longer than the buffer is dropped. A test sends a foreign SysEx to the simulated pedal
    before an update, and the update still works.
 2. **Musical messages** (Program Change, Control Change, clock and transport) go into a 64-entry ring that `usb.c` fills and
-   `firmware/px_midi_io.h` empties every pass of the main loop. Nothing sends SysEx into that ring and nothing in it is SysEx.
+   `firmware/apps/gamut/px_midi_io.h` empties every pass of the main loop. Nothing sends SysEx into that ring and nothing in it is SysEx.
 
 One fix came with this: until now nothing emptied that ring. `usb.c` leaves the host's USB packet unread while the ring is nearly
 full, so a DAW sending clock or notes would, after a few dozen messages, also have stopped the editor's and the installer's SysEx,
 which arrive in the same packets. The ring is now always drained (messages the pedal does not use are dropped), and the
 overflow flag `usb.c` sets is cleared once the ring is empty. A test floods the ring and checks it recovers.
 
-Code map: `engine/px_dsp.c` has `px_dly_value_for_ms` (the TIME value nearest a delay time); `firmware/px_midi.h` is the pure
-logic (decoder, CC map, what to send, settings byte, clock), with no hardware; `firmware/px_midi_io.h` is the glue to the rings
-and the pedal's state; `firmware/ui.h` has the MIDI page; `firmware/px_store.h` keeps the settings byte.
+Code map: `engine/px_dsp.c` has `px_dly_value_for_ms` (the TIME value nearest a delay time); `firmware/apps/gamut/px_midi.h` is the pure
+logic (decoder, CC map, what to send, settings byte, clock), with no hardware; `firmware/apps/gamut/px_midi_io.h` is the glue to the rings
+and the pedal's state; `firmware/apps/gamut/ui.h` has the MIDI page; `firmware/apps/gamut/px_store.h` keeps the settings byte.
 
 ## Cost and safety
 
@@ -171,7 +171,7 @@ and the pedal's state; `firmware/ui.h` has the MIDI page; `firmware/px_store.h` 
 
 Bluetooth MIDI is not in this release. The Bluetooth test image (`make ble`, [BLE-TEST.md](BLE-TEST.md)) is a connectable BLE MIDI
 peripheral on JieLi's Apache-2.0 controller and host libraries. A write to the characteristic goes through
-`firmware/px_ble_midi.h` into the same `px_midi_decode` and `px_midi_in` as USB, so Program Change, Control Change, the clock and the
+`firmware/apps/gamut/px_ble_midi.h` into the same `px_midi_decode` and `px_midi_in` as USB, so Program Change, Control Change, the clock and the
 page guards mean the same on both roads. It only receives: the pedal's own changes are not sent over Bluetooth.
 
 Before this can leave the test image it needs a setting to switch the radio off (saved in the store; default off, so a pedal that

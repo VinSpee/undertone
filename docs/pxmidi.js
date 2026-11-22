@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
-// OpenPocket web editor: musical MIDI. The pedal's own Control Change map (docs/MIDI.md, firmware/px_midi.h: the same
+// OpenPocket web editor: musical MIDI. The pedal's own Control Change map (docs/MIDI.md, firmware/apps/gamut/px_midi.h: the same
 // numbers and the same scaling), a decoder for the messages a port delivers, and the editor's learned mappings: a control
 // of another MIDI device (a foot controller plugged into the computer) -> something on the pedal. No DOM, no port here.
 

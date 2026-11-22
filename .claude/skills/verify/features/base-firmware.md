@@ -25,7 +25,7 @@ button "Back to OpenPocket" or with `flash` without `--app`.
    button plays a guitar loop through the app's own code (`/api/loop/NAME`, `/api/audio/MS`).
 3. `sh .claude/skills/verify/scripts/pages.sh`: the installer page with `?app=starter` and with a catalog of two firmwares
    (install each, the product named, switch to the other and go back, the refusals) and the editor's notice for a pedal on an alternative firmware.
-4. After a change to a base file, the fast check is the object hash of `firmware/openpocket.c` compiled with
+4. After a change to a base file, the fast check is the object hash of `firmware/apps/gamut/openpocket.c` compiled with
    `build.sh`'s flags, before and after. The full check is `node tools/op.mjs package`.
 
 ## Gotchas

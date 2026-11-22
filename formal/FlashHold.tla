@@ -5,14 +5,14 @@
 \* The app runs from the flash through the SFC (XIP). fl_enter (firmware/bsp/chip/fm1_flash.h) switches the SFC
 \* off for every erase, program and SPI read, with CPU0's interrupts off. CPU1 has no such switch: its idle loop is
 \* in RAM, a job it runs is not all in RAM, so the rule is "CPU0 turns the flash off only with no job outstanding"
-\* (firmware/bsp/chip/fm1_cpu1.h). st_audio_hold (firmware/px_store.h) keeps the rule for a write: the audio
+\* (firmware/bsp/chip/fm1_cpu1.h). st_audio_hold (firmware/apps/gamut/px_store.h) keeps the rule for a write: the audio
 \* interrupt masked, then a_collect.
 \*
 \* Promise: while the SFC is off, CPU1 is in its RAM loop.
 \*
-\* The main loop's steps are those of a NAM model commit from the editor (firmware/px_editor.h ED_NAM_COMMIT):
-\* nm_commit (firmware/px_models.h), then nm_changed -> audio_apply (firmware/openpocket.c, firmware/px_audio.h).
-\* ir_commit and ir_erase (firmware/px_irs.h) and nm_erase have the same shape.
+\* The main loop's steps are those of a NAM model commit from the editor (firmware/apps/gamut/px_editor.h ED_NAM_COMMIT):
+\* nm_commit (firmware/apps/gamut/px_models.h), then nm_changed -> audio_apply (firmware/apps/gamut/openpocket.c, firmware/apps/gamut/px_audio.h).
+\* ir_commit and ir_erase (firmware/apps/gamut/px_irs.h) and nm_erase have the same shape.
 EXTENDS Naturals, Sequences
 
 CONSTANTS
@@ -111,7 +111,7 @@ FlashOn == \E more \in BOOLEAN : FlashOnThen(more)
 
 Main == Mask \/ Unmask \/ CollectBegin \/ CollectEnd \/ FlashOff \/ FlashOn
 
-\* ---- the audio interrupt (CPU0, firmware/px_aorder.h and firmware/px_audio.h) ----
+\* ---- the audio interrupt (CPU0, firmware/px_aorder.h and firmware/apps/gamut/px_audio.h) ----
 \* the I2S has a guitar block: it comes every 2.9 ms, masked or not
 BlockDue ==
   /\ ~pend /\ pend' = TRUE
@@ -157,7 +157,7 @@ DecRun ==
   /\ isr' = "none"
   /\ UNCHANGED <<mode, mi, msub, masked, cli, sfc, pend, dpend, cpu1, served, quit>>
 
-\* ---- CPU1 (firmware/bsp/chip/fm1_cpu1.h fm1_cpu1_main, firmware/px_audio.h dsp_job and lp_job) ----
+\* ---- CPU1 (firmware/bsp/chip/fm1_cpu1.h fm1_cpu1_main, firmware/apps/gamut/px_audio.h dsp_job and lp_job) ----
 \* dsp_job returns
 JobDone ==
   /\ cpu1 = "job" /\ cpu1' = "idle"

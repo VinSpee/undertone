@@ -2,8 +2,8 @@
  * OpenPocket — a simulated pedal for the web editor tests (tests/test_editor.mjs) and the hosted simulator
  * (tools/sim.mjs, docs/SIMULATOR.md).
  *
- * It runs, natively on the PC, the pedal's own editor code (firmware/px_editor.h), preset store (firmware/px_store.h),
- * screen (firmware/ui.h, drawn into the frame buffer of tests/simlcd.h) and engine catalogue (engine/px_dsp.c), on a
+ * It runs, natively on the PC, the pedal's own editor code (firmware/apps/gamut/px_editor.h), preset store (firmware/apps/gamut/px_store.h),
+ * screen (firmware/apps/gamut/ui.h, drawn into the frame buffer of tests/simlcd.h) and engine catalogue (engine/px_dsp.c), on a
  * 1 MiB flash array. As tests/devsim.c: MIDI SysEx through stdin/stdout, one message per line in hex; '#' lines are
  * for the harness:
  *   out  "#port NAME"            the USB port appears
@@ -122,12 +122,12 @@ static uint8_t a_pf[PX_NBLK + 1] = {0};   /* v38: CPU per block (the tuner's foo
 static uint32_t a_wcut;                    /* v39: wet blocks cut short */
 static volatile uint8_t a_tmute;
 static float tuner_hz;
-#include "../firmware/px_midi.h"          /* (ui.h's MIDI page, #10) */
+#include "../firmware/apps/gamut/px_midi.h"          /* (ui.h's MIDI page, #10) */
 static void midi_persist(void) { }
 static void b_num(char *d, uint32_t v) { char t[12]; int n = 0; while (*d) d++; do { t[n++] = (char)('0' + v % 10u); v /= 10u; } while (v); while (n) *d++ = t[--n]; *d = 0; }
 static void b_str(char *d, const char *s) { while (*d) d++; while (*s) *d++ = *s++; *d = 0; }
 #include "../firmware/ui_text.h"
-#include "../firmware/ui.h"
+#include "../firmware/apps/gamut/ui.h"
 static uint32_t dsp_load = 42u;
 static int dsp_bypass;
 static uint32_t ed_load(void) { return dsp_load; }
@@ -148,14 +148,14 @@ static int ota_wire_send(const uint8_t *p, uint32_t n)
     return 0;
 }
 
-#include "../firmware/px_midi.h"
-#include "../firmware/px_store.h"
-#include "../firmware/px_models.h"
+#include "../firmware/apps/gamut/px_midi.h"
+#include "../firmware/apps/gamut/px_store.h"
+#include "../firmware/apps/gamut/px_models.h"
 static void nm_changed(uint32_t s) { (void)s; }
-#include "../firmware/px_irs.h"
+#include "../firmware/apps/gamut/px_irs.h"
 static void ir_changed(uint32_t s) { (void)s; }
 #if OP_BLE_TEST
-#include "../firmware/ble/ble_diag.h"
+#include "../firmware/apps/gamut/ble/ble_diag.h"
 #define ED_DIAG_LINES 4u
 #define ED_DIAG_LEN 224u
 static uint32_t sim_safe, sim_rst = 0x40u;
@@ -175,7 +175,7 @@ static void sim_ble(const char *l)
     else if (!strcmp(l, "safe")) { ble_state = BLE_OFF; sim_safe = 1; sim_rst = 4u; ble_last = (ble_boot_t){ .failed = 1, .stage = 7, .blocks = 9 }; }
 }
 #endif
-#include "../firmware/px_editor.h"
+#include "../firmware/apps/gamut/px_editor.h"
 
 static int hexv(int c) { return c <= '9' ? c - '0' : (c | 32) - 'a' + 10; }
 static int closed;

@@ -2,7 +2,7 @@
  * OpenPocket — the order in which the firmware's own flash code holds the audio and takes the flash, recorded for
  * formal/FlashHold.tla (formal/check.mjs runs `everystate conform` on what this writes).
  *
- * It runs firmware/px_store.h, firmware/px_models.h and firmware/px_irs.h on a PC, as tests/test_store.c does, on a
+ * It runs firmware/apps/gamut/px_store.h, firmware/apps/gamut/px_models.h and firmware/apps/gamut/px_irs.h on a PC, as tests/test_store.c does, on a
  * 1 MiB flash array. What st_audio_hold and the flash routines call on the pedal writes one line here, named after
  * the model's step: fm1_irq_mask "Mask", a_collect "CollectBegin", fm1_irq_unmask "Unmask", and each fl_erase4k,
  * fl_write and ota_fread the SFC off and on again (the model's FlashOff and FlashOn).
@@ -14,7 +14,7 @@
 #include <string.h>
 #include "px_dsp.h"
 #include "px_nam.h"
-#include "../../firmware/px_midi.h"
+#include "../../firmware/apps/gamut/px_midi.h"
 
 static uint8_t nor[0x100000];
 static FILE *out;                                  /* 0: not recording (the start-up reads) */
@@ -50,9 +50,9 @@ static px_preset_t PRESET;
 static void st_get(uint32_t k, px_preset_t *p);
 static void load_preset(uint32_t i) { st_get(i, &PRESET); }
 #define ST_IRQ_OFF() ((void)0)
-#include "../../firmware/px_store.h"
-#include "../../firmware/px_models.h"
-#include "../../firmware/px_irs.h"
+#include "../../firmware/apps/gamut/px_store.h"
+#include "../../firmware/apps/gamut/px_models.h"
+#include "../../firmware/apps/gamut/px_irs.h"
 
 static const char *dir;
 static void record(const char *name)

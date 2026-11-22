@@ -81,7 +81,7 @@ So the feature is felucca-bsp's streams switched on, a setting, and the pedal's 
   its `usb_cdc_switch`): off, the pedal presents the descriptors of a build without audio, with `bcdDevice` 3.00; on,
   the audio device, with `bcdDevice` 3.D0, so a computer does not reuse what it learnt about the other one. A change
   takes the pedal off the bus for one second. The setting is one bit in the preset store's header
-  (`firmware/px_store.h`, the header's second spare byte; every earlier firmware wrote 0 there, which is off). At boot
+  (`firmware/apps/gamut/px_store.h`, the header's second spare byte; every earlier firmware wrote 0 there, which is off). At boot
   the store is now read before the USB device starts, so the computer finds the right device from its first question.
 - **The pedal's side** is `firmware/px_uaudio.h`. Once a block, in the I2S interrupt on CPU0, where the block the second
   core made is complete (`a_dec`), `px_ua_block` writes the block into the record ring and adds the playback to the

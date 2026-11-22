@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: GPL-3.0-only
- * OpenPocket — host test of the preset store (firmware/px_store.h) on a simulated NOR flash:
+ * OpenPocket — host test of the preset store (firmware/apps/gamut/px_store.h) on a simulated NOR flash:
  * save / reload, alternate copies, a power cut at every step of a save, the bytes the update loader reads
  * (0xF00.. of each sector) kept erased, writes only inside the store.
  *   cc -O1 -Iengine tests/test_store.c engine/px_dsp.c -lm -o build/test_store && build/test_store */
@@ -8,7 +8,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "px_dsp.h"
-#include "../firmware/px_midi.h"
+#include "../firmware/apps/gamut/px_midi.h"
 
 static uint8_t nor[0x100000];
 static int fails, ops, cut_at = -1, dead;          /* power cut: after cut_at flash operations nothing more happens */
@@ -52,7 +52,7 @@ static px_preset_t PRESET;
 static void st_get(uint32_t k, px_preset_t *p);
 static void load_preset(uint32_t i) { st_get(i, &PRESET); }
 #define ST_IRQ_OFF() ((void)0)
-#include "../firmware/px_store.h"
+#include "../firmware/apps/gamut/px_store.h"
 
 static void reboot(void) { memset(st_slot, 0, sizeof st_slot); st_cur = st_seq = 0; st_last = 0; st_midi = 0x55; mid_cfg.chan = 9; st_usb = 0xA5; px_ua_on = 7; px_store_boot(); }
 static void loader_bytes_clear(void)

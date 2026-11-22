@@ -153,7 +153,7 @@ DELAY cost 1 to 3 % of the NAM network, so running them at half rate would free 
 
 In order of value for the sound, with what it would cost.
 
-1. **Glide every parameter, crossfade every change.** Today `audio_apply` (`firmware/px_audio.h`) masks the audio
+1. **Glide every parameter, crossfade every change.** Today `audio_apply` (`firmware/apps/gamut/px_audio.h`) masks the audio
    interrupt, recomputes the whole engine (`px_engine_set`) and swaps the new coefficients in at once. That makes two
    kinds of crackle: a step in the sound when a coefficient jumps, and a late block if the recompute takes longer
    than the block margin (the interrupt is held off meanwhile). The stock way: compute the new set outside the

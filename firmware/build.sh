@@ -1,5 +1,5 @@
 #!/bin/sh
-# Build OpenPocket -> firmware/openpocket.bin (app), build/loader/ota.bin (update loader),
+# Build OpenPocket (firmware/apps/gamut/) -> firmware/openpocket.bin (app), build/loader/ota.bin (update loader),
 #                    docs/firmware/*.fwsc (packages for the web installer)   (in the container: tools/op.mjs build)
 # OP_BLE=1 sh firmware/build.sh builds the Bluetooth MIDI test image instead (docs/BLE-TEST.md): the same
 #   firmware plus the JieLi controller and host (third_party/jieli-ble) -> firmware/openpocket-ble.bin and build/ble/*.fwsc.
@@ -23,14 +23,14 @@ fi
 # the stack guard: on, except in the Bluetooth test image (its task stacks are outside the guard window); app.ld refuses the
 # link if the guard is on and those stacks are outside. OP_GUARD_STACK=1 with OP_BLE=1 is how that check is shown to fire.
 GUARD_STACK=1; [ -n "$OP_BLE" ] && GUARD_STACK="${OP_GUARD_STACK:-0}"
-if [ -n "$OP_BLE" ]; then O="$HERE/build-ble"; APP="$HERE/openpocket-ble.bin"; PKG="$HERE/../build/ble"; BLEDEF="-DOP_BLE_TEST=1 -I$HERE/ble"
+if [ -n "$OP_BLE" ]; then O="$HERE/build-ble"; APP="$HERE/openpocket-ble.bin"; PKG="$HERE/../build/ble"; BLEDEF="-DOP_BLE_TEST=1 -I$HERE/apps/gamut/ble"
 else O="$HERE/build"; APP="$HERE/openpocket.bin"; PKG="$HERE/../docs/firmware"; BLEDEF=""; fi
 # An app on the base firmware (docs/BASE-FIRMWARE.md): OP_APP=<name> builds firmware/apps/<name>/ in place of OpenPocket,
 #   into build/apps/<name>/ (the image, its packages). Its app.sh names its C file (APP_MAIN), its engine's when that is
 #   a file of its own (APP_ENGINE), their options (APP_DEFS) and the functions that run from RAM beside the base's
 #   (APP_RAM_DSP in the engine's file, APP_RAM_FW in the app's); its memory.ld holds its regions (app.ld).
 #   Nothing of the OpenPocket build's outputs is touched.
-MAIN="$HERE/openpocket.c"; ENGINE="$HERE/../engine/px_dsp.c"; MEM="$HERE"
+MAIN="$HERE/apps/gamut/openpocket.c"; ENGINE="$HERE/../engine/px_dsp.c"; MEM="$HERE/apps/gamut"
 if [ -n "$OP_APP" ]; then
   case "$OP_APP" in *[!a-z0-9-]*) echo "ERROR: OP_APP must be lowercase letters, digits and -"; exit 1;; esac
   [ -z "$OP_BLE$OP_CHANNEL" ] || { echo "ERROR: OP_APP builds an app as it is: not with OP_BLE or OP_CHANNEL"; exit 1; }
@@ -48,7 +48,7 @@ CC="$TC/pi32v2/bin/clang -target pi32v2"
 $CC -c "$BSP/chip/crt0.S"    -o "$O/crt0.o"
 $CC -c "$BSP/chip/fm1_vec.S" -o "$O/vec.o"
 $CC -c "$BSP/chip/fm1_isr.S" -o "$O/isr.o"
-# 2nd core (entry + stacks, Felucca): only if openpocket.c enables it (#define DSP_CPU1 1)
+# 2nd core (entry + stacks, Felucca): only if the main C file enables it (#define DSP_CPU1 1)
 CPU1OBJ=""
 if grep -q "^#define DSP_CPU1 1" "$MAIN"; then
   $CC -c "$BSP/chip/fm1_cpu1.S" -o "$O/cpu1.o"; CPU1OBJ="$O/cpu1.o"
@@ -83,10 +83,10 @@ if [ -n "$OP_BLE" ]; then
     $CC -Os -c -x ir "$b" -o "$O/jl/$(basename "$(dirname "$b")")_$(basename "$b" .bc).o"
   done
   # v40 made memcpy and memset RAM code, out of the call range of the library's code at the end of the flash: the
-  # library calls flash copies instead (ble/ble_libc.c)
+  # library calls flash copies instead (apps/gamut/ble/ble_libc.c)
   for o in "$O"/jl/*.o; do python3 "$HERE/../tools/elfsym.py" "$o" memcpy=ble_memcpy memset=ble_memset; done
   rm -f "$O/libjl.a"; "$TC/pi32v2/bin/ar" rcs "$O/libjl.a" "$O"/jl/*.o   # an archive: the linker takes only the objects the image calls
-  $CC -c "$HERE/ble/ble_ctx.S" -o "$O/ble_ctx.o"; $CC -c "$HERE/ble/ble_isr.S" -o "$O/ble_isr.o"; BLEOBJ="$O/ble_ctx.o $O/ble_isr.o $O/libjl.a"
+  $CC -c "$HERE/apps/gamut/ble/ble_ctx.S" -o "$O/ble_ctx.o"; $CC -c "$HERE/apps/gamut/ble/ble_isr.S" -o "$O/ble_isr.o"; BLEOBJ="$O/ble_ctx.o $O/ble_isr.o $O/libjl.a"
 fi
 # official JieLi I2S driver (LLVM bitcode from the AC79 SDK, Apache-2.0) -> pi32v2 object
 $CC -Os -c -x ir "$HERE/sdk/iis.bc" -o "$O/iis.o"

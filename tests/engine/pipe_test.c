@@ -1,4 +1,4 @@
-/* v37: the two-core pipeline (firmware/px_audio.h, dsp_pipe) against the plain engine: per 128-frame block, the blocks
+/* v37: the two-core pipeline (firmware/apps/gamut/px_audio.h, dsp_pipe) against the plain engine: per 128-frame block, the blocks
  * after the amp on the previous block's network output (POST), then the blocks before it (PRE) and the network (NAM) on
  * this block. Every factory preset with a NAM amp: the same output bit for bit, one block (128 frames) later. */
 #include <stdio.h>

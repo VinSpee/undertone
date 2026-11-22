@@ -24,14 +24,14 @@ node tools/op.mjs sim --app starter      # an alternative firmware of firmware/a
 ## What runs
 
 `tests/edsim.c`, built into `build/sim/edsim`, compiles the firmware's own code: the editor protocol
-(`firmware/px_editor.h`), the preset store (`firmware/px_store.h`) on a 1 MiB flash array, the screen
-(`firmware/ui.h`, `ui_text.h`, drawn into the 240 x 240 frame buffer of `tests/simlcd.h`) and the engine's catalogue
+(`firmware/apps/gamut/px_editor.h`), the preset store (`firmware/apps/gamut/px_store.h`) on a 1 MiB flash array, the screen
+(`firmware/apps/gamut/ui.h`, `ui_text.h`, drawn into the 240 x 240 frame buffer of `tests/simlcd.h`) and the engine's catalogue
 (`engine/px_dsp.c`). `tests/devsim.c` (`--update`) runs `firmware/bsp/chip/ota.c` and `loader/ldr_core.c`. The programs
 are the ones the tests use; `tools/sim.mjs` only talks to them on stdin/stdout. Their line protocol is documented in the
 header of each `.c` file; `tests/devsim.c` and the old `edsim` commands are unchanged.
 
 Only the control dispatch is mirrored: `press()` and the `button_*` functions in `tests/edsim.c` follow what the main
-loop of `firmware/openpocket.c` does with a debounced press (PUSH, HOME, footswitches, the block buttons, a long press of
+loop of `firmware/apps/gamut/openpocket.c` does with a debounced press (PUSH, HOME, footswitches, the block buttons, a long press of
 PUSH or HOME, a double click on PUSH, and their 800, 700 and 350 ms). If that loop changes, change them with it.
 
 **Not simulated:** the LEDs and any bypass footswitch (the firmware does not drive any), USB and Bluetooth, the debounce. `POST press` has no timing: a double click or a long press
@@ -123,7 +123,7 @@ The price is a committed binary: `tools/sim/px_engine.wasm` (82 KB), so that the
 compiler. `node tools/op.mjs wasm` (`make wasm`) rebuilds it in the container with Debian's clang and lld. Next to it,
 `px_engine.wasm.sources` holds the sources' checksum, and the test fails when the engine changes without a rebuild.
 
-`engine/px_wasm.c` mirrors `dsp_block()`, `audio_apply()`, `audio_reset()` and `audio_volume()` of `firmware/px_audio.h` and `firmware/base/audio.h`:
+`engine/px_wasm.c` mirrors `dsp_block()`, `audio_apply()`, `audio_reset()` and `audio_volume()` of `firmware/apps/gamut/px_audio.h` and `firmware/base/audio.h`:
 if those change, change it with them. Left out: the 24-bit output rounding, and the overload guard that drops to bypass,
 because a computer's load says nothing about the pedal's.
 
@@ -157,7 +157,7 @@ before it is answered, so a state read right after a press shows the press.
 | `GET info` | `{kind: "pedal" \| "update", port, flash, controls, log}`; `port` is the MIDI port name, `null` when none |
 | `GET state` | the pedal's state (below) |
 | `POST press/NAME` | a control: `fs_up` `fs_dn` `fx` `home` `push` `mod` `amp` `cab` `dly` `rev`; `push_long` (hold PUSH: SAVE), `dpush` (double click PUSH: MOVE), `home_long` (hold HOME: tuner; on the tuner: diagnostics), `fx_long` (hold FX: MIDI), `feet` (both footswitches: tuner) |
-| `POST down/NAME`, `POST up/NAME` | a button goes down, comes up: `fs_up` `fs_dn` `fx` `home` `push` `mod` `amp` `cab` `dly` `rev`. Timed as the firmware does (`ui_buttons` in `firmware/ui.h`): HOME, PUSH and FX act at a short release, or after 0.7 s, 0.8 s and 0.8 s held (HOME held on as long again: the diagnostics); a PUSH click on the chain opens the block at once and a second one within 350 ms makes it MOVE; the others act when they go down; the second footswitch down within 150 ms of the first, while the first is held, takes the first one's step back and opens the tuner. A button already down, or not down, is left as it is |
+| `POST down/NAME`, `POST up/NAME` | a button goes down, comes up: `fs_up` `fs_dn` `fx` `home` `push` `mod` `amp` `cab` `dly` `rev`. Timed as the firmware does (`ui_buttons` in `firmware/apps/gamut/ui.h`): HOME, PUSH and FX act at a short release, or after 0.7 s, 0.8 s and 0.8 s held (HOME held on as long again: the diagnostics); a PUSH click on the chain opens the block at once and a second one within 350 ms makes it MOVE; the others act when they go down; the second footswitch down within 150 ms of the first, while the first is held, takes the first one's step back and opens the tuner. A button already down, or not down, is left as it is |
 | `POST knob/N[?fast]` | the PARA knob N detents (negative: the other way); `fast` is the quick-turn step of 5 |
 | `POST volume/N` | the MASTER knob, 0..100 |
 | `POST battery/MV[/USB_MV]` | the battery voltage the screen shows; `USB_MV` above 4300 shows "USB" |

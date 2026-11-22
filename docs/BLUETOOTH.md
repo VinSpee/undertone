@@ -112,10 +112,10 @@ RAM**. v40 did the same for OpenPocket (`tools/ramcode.py`), and v41 builds on i
 - **JieLi's own Bluetooth LE controller and host** (Apache-2.0, LLVM bitcode from the AC79 SDK, `third_party/jieli-ble/`):
   the same library family the stock firmware links (section 19.2 of STOCK-FIRMWARE.md compares them function by function).
   OpenPocket's code around it:
-  - `firmware/ble/ble_os.c`: a small cooperative scheduler for its tasks, its message queues, semaphores, timers and heap;
-  - `firmware/ble/ble_rf.c`: the radio start-up, replayed from the stock firmware's;
-  - `firmware/ble/ble_midi.c`: the GATT table, the advertising, the link's parameters;
-  - `firmware/px_ble_midi.h`: the MIDI packet reader.
+  - `firmware/apps/gamut/ble/ble_os.c`: a small cooperative scheduler for its tasks, its message queues, semaphores, timers and heap;
+  - `firmware/apps/gamut/ble/ble_rf.c`: the radio start-up, replayed from the stock firmware's;
+  - `firmware/apps/gamut/ble/ble_midi.c`: the GATT table, the advertising, the link's parameters;
+  - `firmware/apps/gamut/px_ble_midi.h`: the MIDI packet reader.
 
   What the pedal receives goes through the same `px_midi_in` as USB.
 - **How a message travels**, as in the stock firmware:
@@ -144,7 +144,7 @@ RAM**. v40 did the same for OpenPocket (`tools/ramcode.py`), and v41 builds on i
   on the second core makes it refuse its job: it is retired, every preset runs on one core, and the load doubles (`BYP`).
   A bad read on CPU0 is a crash.
 - **So the radio now starts only after the stock firmware's whole power setup** (`ble_supplies` in
-  `firmware/openpocket.c`), as M-VAVE's start-up does it (AUDIO-SDK.md, v30):
+  `firmware/apps/gamut/openpocket.c`), as M-VAVE's start-up does it (AUDIO-SDK.md, v30):
   - VDC14 to 7 and SYSVDD to 15, one level per 100 µs, with the core supply's strong drive (`CON9` bit 4) and `CON6`
     bit 3;
   - the 1.3 V supply moved from its linear regulator onto the DC-DC, tuned as stock (`CON7` 0xA5, `CON8` 0x96);
@@ -201,7 +201,7 @@ cache used as RAM is all the NAM vector unit's again, as before v37. The build p
 ### Safety
 
 - **The stack guard** stays on. Before the controller's tasks first run, the firmware lowers the bottom of the guard's
-  window to `BTSTK` (`ble_guard_window` in `firmware/openpocket.c`). `app.ld` refuses the link if the stacks are anywhere
+  window to `BTSTK` (`ble_guard_window` in `firmware/apps/gamut/openpocket.c`). `app.ld` refuses the link if the stacks are anywhere
   else.
 - **Start-up safety.** A reset while the radio is starting (a hang the watchdog ends, a crash) is noted in memory that
   survives a reset. The following boots leave the radio off until a power cycle, or until you turn the row off and on again,

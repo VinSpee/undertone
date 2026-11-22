@@ -13,9 +13,9 @@
 #  - trails: after px_engine_switch the outgoing delay and reverb are their own tails, sample for sample, on every type;
 #    they end; the stretches of the delay memory never overlap through changes at random (under the sanitizers)
 #  - NAM: engine/px_nam.c against tools/nam_a2.py with every factory model (needs numpy)
-#  - MIDI: the musical-MIDI code (firmware/px_midi.h) on a PC: decoder, CC map, messages sent, settings byte, clock
-#  - preset store: save / reload / power cut at every step of a save (firmware/px_store.h on a simulated flash)
-#  - flash hold (firmware/px_store.h, px_models.h, px_irs.h): every erase, program and SPI read of a save or an erase
+#  - MIDI: the musical-MIDI code (firmware/apps/gamut/px_midi.h) on a PC: decoder, CC map, messages sent, settings byte, clock
+#  - preset store: save / reload / power cut at every step of a save (firmware/apps/gamut/px_store.h on a simulated flash)
+#  - flash hold (firmware/apps/gamut/px_store.h, px_models.h, px_irs.h): every erase, program and SPI read of a save or an erase
 #    of a preset, a NAM model or an IR falls inside the audio hold (formal/FINDINGS.md, F1)
 #  - the audio callbacks' order (v42, firmware/px_aorder.h): the I2S driver calls the output's callback before the
 #    input's when its interrupt enters late; every output block must still be the sound of that interrupt's guitar block
@@ -124,7 +124,7 @@ echo "== screen (every page fully drawn)"
 mkdir -p build/ui && $CC -O1 -Wall -Wno-unused-function -Iengine -Ifirmware -o build/uisim tests/uisim.c engine/px_dsp.c firmware/px_math.c -lm
 build/uisim build/ui > build/ui/log.txt
 if grep -q "never drawn" build/ui/log.txt; then grep "never drawn" build/ui/log.txt; echo "screen: FAIL"; exit 1; else echo "screen: $(wc -l < build/ui/log.txt) pages ok (build/ui/*.ppm)"; fi
-echo "== MIDI (firmware/px_midi.h: decoder, Control Change map, what the pedal sends, settings, clock)"
+echo "== MIDI (firmware/apps/gamut/px_midi.h: decoder, Control Change map, what the pedal sends, settings, clock)"
 for t in midisim midiio; do
   $CC -O1 -Wall -Wno-unused-function -Iengine -Ifirmware -o build/$t tests/$t.c engine/px_dsp.c firmware/px_math.c -lm
   build/$t > build/$t.log || { grep FAIL build/$t.log; exit 1; }

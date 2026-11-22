@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // OpenPocket — NAM A2 models for the pedal (v37): read a .nam file, check it is an A2 network, take its A2-Lite part,
-// measure its level and pack it for a user slot (firmware/px_models.h). The network itself runs here only to measure
+// measure its level and pack it for a user slot (firmware/apps/gamut/px_models.h). The network itself runs here only to measure
 // the level, in float, with the same maths as tools/nam_a2.py and engine/px_nam.c.
 
 export const KERNELS = [6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 15, 15, 6, 6, 6, 6, 6, 6, 6];
@@ -150,7 +150,7 @@ export function crc16(b, c = 0) {             // CRC16, poly 0x1021, init 0 (ota
   return c;
 }
 
-// a user slot's bytes (firmware/px_models.h nm_hdr_t + weights, little endian)
+// a user slot's bytes (firmware/apps/gamut/px_models.h nm_hdr_t + weights, little endian)
 export function packModel(name, weights, levelDb) {
   const out = new Uint8Array(SLOT_BYTES), v = new DataView(out.buffer);
   const wb = new Uint8Array(weights.buffer.slice(weights.byteOffset, weights.byteOffset + NW * 4));

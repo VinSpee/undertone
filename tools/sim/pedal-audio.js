@@ -55,7 +55,7 @@ export class PedalAudio {
     this.setVolume(this.volumePercent);
     if (this.pedal) this.follow(this.pedal);
   }
-  // the sound follows the pedal: what `GET /api/state` says now, as audio_poll() in firmware/px_audio.h
+  // the sound follows the pedal: what `GET /api/state` says now, as audio_poll() in firmware/apps/gamut/px_audio.h
   follow(state) {
     this.pedal = state;
     if (!this.node) return;

@@ -10,7 +10,7 @@ set TAG=%~1
 set REPO=
 if /i "%~2"=="-Repo" set REPO=%~3
 if defined TAG goto have
-for /f "tokens=3" %%v in ('findstr /c:"define OP_VERSION_NUM" firmware\openpocket.c') do set TAG=v%%~v
+for /f "tokens=3" %%v in ('findstr /c:"define OP_VERSION_NUM" firmware\apps\gamut\openpocket.c') do set TAG=v%%~v
 set TAG_IN=
 set /p TAG_IN="Release to publish again [%TAG%]: "
 if defined TAG_IN set TAG=%TAG_IN%

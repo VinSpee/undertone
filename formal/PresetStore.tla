@@ -3,7 +3,7 @@
 \* The preset store and a power cut.
 \*
 \* The 52 slots are kept in RAM (st_slot) and written whole on each save, in turn to copy A and copy B, two
-\* sectors each (firmware/px_store.h st_commit): both sectors erased, the slots of sector 1, the slots of sector
+\* sectors each (firmware/apps/gamut/px_store.h st_commit): both sectors erased, the slots of sector 1, the slots of sector
 \* 0, the header last (sequence number, CRC16 of every slot), then read back. At the start st_load takes the
 \* whole copy with the highest sequence.
 \*

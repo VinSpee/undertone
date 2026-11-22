@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // The pedal's sound thread: each 128 frames go through the engine as the firmware's I2S interrupt sends them. Mono in, the
-// same signal on both outputs (a_dec in firmware/px_audio.h). docs/SIMULATOR.md.
+// same signal on both outputs (a_dec in firmware/apps/gamut/px_audio.h). docs/SIMULATOR.md.
 import { BLOCK, ENGINE_RATE, PxEngine } from "/sim/px-engine.js";
 
 const REPORT_BLOCKS = 16;                              // about 46 ms: the meters

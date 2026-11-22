@@ -8,7 +8,7 @@
 A maintainer runs `build.bat` / `make package`; a user downloads the packages and the installer page uses them.
 
 ## Driving it with op.mjs
-`node tools/op.mjs clean && node tools/op.mjs package`. Twice in a row must print identical checksums. Version = `OP_VERSION_NUM` in `firmware/openpocket.c`.
+`node tools/op.mjs clean && node tools/op.mjs package`. Twice in a row must print identical checksums. Version = `OP_VERSION_NUM` in `firmware/apps/gamut/openpocket.c`.
 
 ## Gotchas
 - Needs Docker and the pinned image; first run downloads the toolchain.

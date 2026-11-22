@@ -24,7 +24,7 @@ const LOOPS = join(ROOT, "assets", "loops");
 
 // ---- the native simulators, built with the host's C compiler (no JieLi toolchain, no Docker) ----
 const PROGRAMS = {
-  pedal: { src: ["tests/edsim.c", "engine/px_dsp.c", "firmware/px_math.c"], libs: ["-lm"] },
+  pedal: { src: ["tests/edsim.c", "engine/px_dsp.c", "firmware/px_math.c"], libs: ["-lm"], dirs: ["firmware/apps/gamut", "firmware/apps/gamut/ble"] },
   update: { src: ["tests/devsim.c"], libs: [] },
 };
 function newest(dirs) {

@@ -13,8 +13,8 @@ Set-Location (Split-Path $PSScriptRoot)
 function Fail([string]$m) { Write-Host ""; Write-Host "ERROR: $m" -ForegroundColor Red; exit 1 }
 function Step([string]$m) { Write-Host "== $m" -ForegroundColor Cyan }
 
-$ver = (Select-String -Path "firmware\openpocket.c" -Pattern '#define OP_VERSION_NUM "(\d+)"').Matches[0].Groups[1].Value
-if (-not $ver) { Fail "OP_VERSION_NUM not found in firmware\openpocket.c" }
+$ver = (Select-String -Path "firmware\apps\gamut\openpocket.c" -Pattern '#define OP_VERSION_NUM "(\d+)"').Matches[0].Groups[1].Value
+if (-not $ver) { Fail "OP_VERSION_NUM not found in firmware\apps\gamut\openpocket.c" }
 $Tag = "v$ver"
 Write-Host ""
 Write-Host "  O P E N P O C K E T   $Tag   ->   GitHub" -ForegroundColor White

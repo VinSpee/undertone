@@ -48,7 +48,7 @@ enum { PX_AMP_NAM, PX_AMP_COUNT };
 #define PX_NAM_NUSER  16
 #define PX_NAM_N      (PX_NAM_NFACT + PX_NAM_NUSER)
 /* The CAB block's one type (v38; the only one since store format 6): USER IR, a cabinet impulse response loaded from the
- * editor. PX_IR_N slots (the firmware keeps them in flash: firmware/px_irs.h); the engine plays the first
+ * editor. PX_IR_N slots (the firmware keeps them in flash: firmware/apps/gamut/px_irs.h); the engine plays the first
  * PX_IR_LEN taps (23 ms at 44.1 kHz) by uniform partitioned FFT convolution, 64-frame partitions. Its settings: IR (the
  * slot), LOW CUT, HIGH CUT. */
 enum { PX_CAB_IR, PX_CAB_COUNT };

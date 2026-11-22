@@ -67,7 +67,7 @@ what the scanner shows and whether the pedal still works as a normal OpenPocket 
 | Part | What it is |
 | --- | --- |
 | GATT | GAP (`0x1800`, device name), GATT (`0x1801`), and the MIDI service with its characteristic `7772E5DB-3868-4112-A1A9-F2669D106BF3`: read (empty), write without response, notify |
-| MIDI in | `firmware/px_ble_midi.h` reads the header, timestamps, running status and several messages in one write, and ignores the timestamps. SysEx and system common messages are skipped |
+| MIDI in | `firmware/apps/gamut/px_ble_midi.h` reads the header, timestamps, running status and several messages in one write, and ignores the timestamps. SysEx and system common messages are skipped |
 | MIDI out | Nothing yet: notify can be enabled, but the pedal sends nothing |
 | Pairing | Just Works with bonding, accepted when the central asks. The pedal never asks, and the characteristic does not need it. Keys stay in RAM, so a bond ends at a power cycle |
 | Connection | The central's parameters are kept. The pedal does not ask for others: the Chocolate's 60 ms, latency 0, 4 s timeout held |
@@ -100,7 +100,7 @@ The log channel (`node tools/op.mjs log`) adds two lines, and the status area sc
 
 Failing steps: `1` `task_create` failed (`c` is -1); `2` `btctrler_task_init` returned `c` (not 0); `3`
 `btctrler_task_ready` returned `c` (0: the controller task did not answer); `4` `ll_hci_adv_enable` returned `c` (not
-0); `5` still `STARTING` after 5 s, and `c` is the stage it stalled in (the list above). At a timeout the line ends with `wait XXXXXXXX`: the address of the semaphore or mutex the controller task is blocked on (look it up in `firmware/build-ble/symbols.txt`; a value below 0x10 is a task state instead). Example: `FAILED 5 3` only means the last marker passed was the entry of the radio replay; it does not say the replay hung. (In the second hardware run it was a deadlock after the radio start-up: see "Found on hardware" below.) The codes and the text come from `firmware/ble/ble_status.h`, checked on the PC by
+0); `5` still `STARTING` after 5 s, and `c` is the stage it stalled in (the list above). At a timeout the line ends with `wait XXXXXXXX`: the address of the semaphore or mutex the controller task is blocked on (look it up in `firmware/build-ble/symbols.txt`; a value below 0x10 is a task state instead). Example: `FAILED 5 3` only means the last marker passed was the entry of the radio replay; it does not say the replay hung. (In the second hardware run it was a deadlock after the radio start-up: see "Found on hardware" below.) The codes and the text come from `firmware/apps/gamut/ble/ble_status.h`, checked on the PC by
 `tests/test_ble_status.c`. Please report the whole `FAILED s c` text.
 
 ### The advertising line (proof counters)
@@ -120,7 +120,7 @@ The fourth flash showed `ADVERTISING` but neither a Mac nor a phone scanner saw 
 
 Reading the next flash: `i` and `t` rising means the radio runs and the cause is on the air side (power, trims, address). `i` 0 with `IC45` 0 means the interrupt was never enabled; `i` 0 with `IC45` 3 and `IEN` 0 means the baseband never enabled its event; `t` 0 means the library's timers never fire.
 
-**Checked against the Core Specification** (`firmware/ble/ble_adv.h`, tested on the PC): the advertising data is two whole AD structures (flags 0x06, the complete 128-bit UUID list, little endian), 21 of 31 bytes; the scan response is the complete local name, 21 bytes; the PDU is ADV_SCAN_IND at 100 ms on channels 37, 38 and 39 with filter policy 0. One fault was found and fixed: the controller's public address was never set (the library reads it from a stored item this image does not have), so it was all zeros, which is not a valid device address. It is now `02:4F:50:42:4C:54` (locally administered, unicast; not an IEEE-assigned address). The library's own-address type is fixed at public in its HCI layer, so a random static address cannot be used from here.
+**Checked against the Core Specification** (`firmware/apps/gamut/ble/ble_adv.h`, tested on the PC): the advertising data is two whole AD structures (flags 0x06, the complete 128-bit UUID list, little endian), 21 of 31 bytes; the scan response is the complete local name, 21 bytes; the PDU is ADV_SCAN_IND at 100 ms on channels 37, 38 and 39 with filter policy 0. One fault was found and fixed: the controller's public address was never set (the library reads it from a stored item this image does not have), so it was all zeros, which is not a valid device address. It is now `02:4F:50:42:4C:54` (locally administered, unicast; not an IEEE-assigned address). The library's own-address type is fixed at public in its HCI layer, so a random static address cannot be used from here.
 
 **Open suspicion, not a fix:** the link scheduler (`link_task.c`) arms its timer through `slot_timer_set` and its siblings, which are among the empty stand-ins in `ble_stubs.c` (the library's slot timer is not part of the linked archive). Whether a plain advertising event depends on them is not known. `s` counts the calls: if it is above 0 the next step is a real slot timer.
 
@@ -157,20 +157,20 @@ The third flash froze: the screen was drawn but the controls were dead, and the 
 
 ```
 openpocket.c (OP_BLE_TEST)  ble_test_start() after the screen is up, ble_test_poll() in the main loop
-firmware/ble/ble_test.c     a task that starts the controller and the host
-firmware/ble/ble_midi.c     the GATT table, the host's callbacks, pairing, advertising
-firmware/px_ble_midi.h      a BLE MIDI write -> USB-MIDI event packets (tests/midisim.c)
-firmware/ble/ble_os.c       the operating-system services the library calls (below)
-firmware/ble/ble_rf.c       the Wi-Fi front-end half of the radio start-up (below)
-firmware/ble/ble_cfg.c      configuration: LE only, advertising, one slave link, a GATT server
-firmware/ble/ble_stubs.c    empty stand-ins for the parts that are not built
+firmware/apps/gamut/ble/ble_test.c     a task that starts the controller and the host
+firmware/apps/gamut/ble/ble_midi.c     the GATT table, the host's callbacks, pairing, advertising
+firmware/apps/gamut/px_ble_midi.h      a BLE MIDI write -> USB-MIDI event packets (tests/midisim.c)
+firmware/apps/gamut/ble/ble_os.c       the operating-system services the library calls (below)
+firmware/apps/gamut/ble/ble_rf.c       the Wi-Fi front-end half of the radio start-up (below)
+firmware/apps/gamut/ble/ble_cfg.c      configuration: LE only, advertising, one slave link, a GATT server
+firmware/apps/gamut/ble/ble_stubs.c    empty stand-ins for the parts that are not built
 third_party/jieli-ble/      JieLi's controller, as published (Apache-2.0): see its README.md
 ```
 
 * **The controller is JieLi's**, from the Apache-2.0 SDK libraries (`btctrler.a`, 33 of its objects plus 3 helpers from
   `cpu.a`): HCI front end, link layer, advertising, the LE radio driver. Only the objects the image reaches are linked.
   The LE part of the host stack (`btstack.a`) runs as its own task; the classic profiles are stand-ins.
-  The OpenPocket code around it is small and separate from the vendor objects (`firmware/ble/`), which are kept
+  The OpenPocket code around it is small and separate from the vendor objects (`firmware/apps/gamut/ble/`), which are kept
   unmodified under `third_party/jieli-ble/` with the licence text and the source URL.
 * **No RTOS.** The library expects tasks, queues, semaphores and timers. `ble_os.c` provides a cooperative scheduler:
   the controller's one task runs from `ble_poll()` in the main loop, switches only where it waits (queue, semaphore,

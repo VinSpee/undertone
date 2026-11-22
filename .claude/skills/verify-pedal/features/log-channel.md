@@ -4,7 +4,7 @@ The pedal's state as text over USB MIDI: this boot, the last boot, the status li
 
 ## Sub-features
 
-- `DIAG`, command 23 (`docs/EDITOR-PROTOCOL.md`), read only; `firmware/px_editor.h`, `firmware/ble/ble_diag.h`.
+- `DIAG`, command 23 (`docs/EDITOR-PROTOCOL.md`), read only; `firmware/apps/gamut/px_editor.h`, `firmware/apps/gamut/ble/ble_diag.h`.
 - `tools/log.mjs`: parsing, meanings, verdict. It falls back to `INFO` and `PING`, then to the identity query.
 
 ## How to get to it (user POV)

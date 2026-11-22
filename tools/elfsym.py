@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: GPL-3.0-only
 # OpenPocket v40.1 — renames symbols of a compiled object (what the toolchain's objcopy cannot do): every symbol named
 # OLD becomes NEW, defined or not, so the object's calls to OLD go to NEW. The Bluetooth test image uses it to send the
-# controller library's memcpy and memset calls to flash copies (firmware/build.sh, firmware/ble/ble_libc.c): v40 made
+# controller library's memcpy and memset calls to flash copies (firmware/build.sh, firmware/apps/gamut/ble/ble_libc.c): v40 made
 # the firmware's own RAM code, out of the call range of the library's code at the end of the flash.
 #
 #   elfsym.py OBJ.o OLD=NEW...

@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: GPL-3.0-only
- * OpenPocket — screen drawing over lcd_win / lcd_px / lcd_end / lcd_rect (firmware/openpocket.c on the pedal,
+ * OpenPocket — screen drawing over lcd_win / lcd_px / lcd_end / lcd_rect (firmware/apps/gamut/openpocket.c on the pedal,
  * tests/uisim.c on the PC): anti-aliased text and rounded boxes. */
 #pragma once
 /* ================= ANTI-ALIASED text (Inter font, 4-bit alpha) =================

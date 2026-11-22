@@ -156,14 +156,15 @@ proposed upstream.
 | | |
 | --- | --- |
 | `engine/` | the sound engine (`px_dsp.c`), portable C, float |
-| `firmware/` | the pedal app: screen, controls, audio (I2S), USB, UI (`ui.h`), board support (`bsp/`, felucca-bsp) |
+| `firmware/` | the base every firmware is built on: board support (`bsp/`, felucca-bsp), controls, audio (I2S), USB, the build |
+| `firmware/apps/` | one folder per firmware: `gamut/` (OpenPocket: its main file, screens (`ui.h`), presets, editor, MIDI), `palette/`, `starter/` |
 | `loader/` | the update loader (runs from RAM, writes the app area) |
 | `docs/` | the web installer (GitHub Pages) and documentation |
 | `tools/` | package builder, loader wrapper, font converter, flash image tools |
 | `tests/` | host tests and the simulated pedal |
 | `flash/` | SD-card recovery with fm1buddy (ESP32-S3) |
 | `changelog/`, `.changeset/` | the release units with their changelogs, and the changesets waiting for the next release ([CONTRIBUTING.md](CONTRIBUTING.md), [docs/RELEASING.md](docs/RELEASING.md)) |
-| `firmware/ble/`, `third_party/jieli-ble/` | the optional Bluetooth MIDI test image (`make ble`, [docs/BLE-TEST.md](docs/BLE-TEST.md)) and JieLi's Bluetooth controller it links |
+| `firmware/apps/gamut/ble/`, `third_party/jieli-ble/` | the optional Bluetooth MIDI test image (`make ble`, [docs/BLE-TEST.md](docs/BLE-TEST.md)) and JieLi's Bluetooth controller it links |
 
 ## Licence
 
