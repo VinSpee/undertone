@@ -2,7 +2,8 @@
 
 Release notes are generated with [changesets](https://github.com/changesets/changesets). Each pull request adds a
 changeset ([CONTRIBUTING.md](../CONTRIBUTING.md)); a workflow collects them into a version, one changelog per release
-unit, a tag and a draft GitHub release. Nothing is published to npm, and nothing is published without a person.
+unit, a tag, and a draft GitHub release that carries every firmware, the rescue kit and the checksum list of the site.
+Nothing is published to npm, and nothing is published without a person.
 
 ## The parts
 
@@ -14,7 +15,8 @@ unit, a tag and a draft GitHub release. Nothing is published to npm, and nothing
 | `.changeset/pre.json` | Pre-release mode with the tag `beta` |
 | `.github/workflows/changeset.yml` | The `changeset` check on pull requests. Advisory, not required |
 | `.github/workflows/release.yml` | The release flow below |
-| `.github/scripts/release.mjs` | The step that creates the tag and the draft release. Without `--create` it prints them and changes nothing |
+| `.github/scripts/release.mjs` | The steps that create the tag (`--tag`) and the draft release (`--draft TAG DIR`). Without an option it prints the tag and the notes and changes nothing |
+| `.github/scripts/assets.mjs` | The step that assembles the release's files from a build ([The release's files](#the-releases-files)) |
 
 The stubs live in `changelog/` and not beside the sources for three reasons. OpenPocket's sources have no folder of
 their own. `tools/` has its own `package.json` and lock file, installed with `npm ci --prefix tools`, which an npm
@@ -51,33 +53,66 @@ version and its release pin by hand, as before (`tests/release_pin.sh`).
 2. When the release is wanted, start the checks on that pull request: close it and reopen it. GitHub does not start
    workflows for a pull request that a workflow opened with its own token, so the required `build-and-test` check
    does not appear by itself. A later update of the pull request by the workflow needs the same again.
-3. Merge it. The `release` workflow then creates the tag `v<version>` at the merge commit and a **draft** GitHub
-   release, marked as a pre-release while the version has a suffix. Its text is the entry of each unit for that
-   version, under the unit's title. A unit without changes is left out.
+3. Merge it. The `release` workflow then creates the tag `v<version>` at the merge commit, builds the release's files
+   at that tag, and creates a **draft** GitHub release with them, marked as a pre-release while the version has a
+   suffix. Its text is the entry of each unit for that version, under the unit's title. A unit without changes is left
+   out. The build takes about as long as the `build` workflow.
 4. Read the draft, add what only a person can say (what was checked on a pedal, the warnings), and publish it. The
-   workflow never publishes a release.
+   workflow never publishes a release. Publishing it puts it on the site ([below](#putting-a-release-on-the-site)).
 
-The release step runs on every push to `main` that has no changeset waiting. It creates the tag and the draft only
-when they are missing, so running it again changes nothing. To see what it would create:
-`node .github/scripts/release.mjs`.
+The tag step runs on every push to `main` that has no changeset waiting. It creates the tag only when it is missing,
+and the build and the draft follow only while the tag has no release, draft or published. When the build fails, the
+next push to `main` tries again. To see the tag and the notes it would use: `node .github/scripts/release.mjs`.
+
+A person can also push a tag such as `v1.0.0-beta.1` (`git tag v1.0.0-beta.1 <commit> && git push origin
+v1.0.0-beta.1`). Any tag of the form `v*.*.*` starts the same build and draft. The tag must be on a commit whose
+`changelog/*/package.json` hold that version, which is the merge of a Version Packages pull request; the draft step
+refuses any other tag, because its notes are that version's changelog entries.
 
 To leave the beta: run `npx changeset pre exit` on a branch, merge it, and the next Version Packages pull request
 carries `1.0.0`. To use another tag such as `rc`, change `"tag"` in `.changeset/pre.json`.
 
-## Where the firmware assets plug in
+## The release's files
 
-The draft release has no files yet. Attaching them is a second job in `.github/workflows/release.yml`:
+The jobs `files` and `release` of `.github/workflows/release.yml` make the draft's files. They run after the tag step
+found a tag without a release, and for a pushed tag.
 
-- `needs: release` and `if: needs.release.outputs.tag != ''`. The `release` job sets that output only in the run that
-  created the draft.
-- It checks out that tag, builds and tests as the `build` workflow does, compares the outputs with the pins, and
-  uploads them to the draft with `gh release upload "$TAG" <files>`. It needs `contents: write` and no secret.
-- Among the files it uploads is `site.sha256`, the checksum list the site serves the release from: one line per file,
-  its SHA-256, its path on the site and its asset name ([site/README.md](../site/README.md)). A release published
-  without it stops every build of the site.
+1. `files`, with read access only: it checks out the tag and builds as the `build` workflow does. `node tools/op.mjs
+   all` builds OpenPocket, which fails when its packages are not the pinned release's bytes, and every app of
+   `firmware/apps`, then runs the host tests with the packages built. `node tools/op.mjs kit` builds the rescue kit.
+   The job then compares the files on disk with their pins: OpenPocket's image and packages with
+   `tests/release.sha256`, the kit with `rescue/kit.sha256`. The apps have no pin. Then
+   `node .github/scripts/assets.mjs` assembles the files, and the job keeps them as the workflow artifact
+   `release-files`.
+2. `release`, the only job of these two that can write: it creates the draft release with those files
+   (`node .github/scripts/release.mjs --draft TAG DIR`). It refuses a tag that has a release already, draft or
+   published, and never replaces or edits one. After the upload it checks that the draft holds every file at its size.
 
-It has to be a job of this workflow. A tag created with the workflow's token does not start a workflow that waits for
-`push: tags`.
+The files of a release:
+
+| Asset | What it is | On the site at |
+| --- | --- | --- |
+| `release.json` | The firmware catalog (`tools/catalog.py`): one card per firmware on the installer page | `firmware/release.json` |
+| `manifest.json`, `PocketX_9NN.fwsc`, `BlackBox_9NN.fwsc` | OpenPocket's manifest and its package for each pedal | `firmware/` |
+| `<app>-manifest.json`, `<app>-PocketX_9NN.fwsc`, `<app>-BlackBox_9NN.fwsc` | The same for each other firmware of the catalog, such as PALETTE | `firmware/apps/<app>/` |
+| `OpenPocket-rescue-kit-<N>.zip` | The rescue kit without M-VAVE's files ([rescue/README.md](../rescue/README.md)) | Not from the release: the site builds its own kit |
+| `site.sha256` | The checksum list the site serves the release from: one line per file, its SHA-256, its path on the site and its asset name ([site/README.md](../site/README.md)) | |
+| `SHA256SUMS` | The SHA-256 of every other asset, for `sha256sum -c SHA256SUMS` | |
+
+The catalog decides which firmwares a release carries: those of `firmware/catalog.json` that the build made. The
+starter app and the MIDI test channel are built but not released. A release's assets have no folders, so an app's
+files carry the app's name. Each SHA-256 comes from the build, not from a download of the release.
+
+To make the files without a release, run the workflow by hand from the Actions tab, on any branch or tag. It runs the
+`files` job only and keeps the files as the artifact `release-files`; it creates no tag and no release. Locally, after
+`node tools/op.mjs all` and `node tools/op.mjs kit`:
+
+```
+node .github/scripts/assets.mjs OUT_DIR
+```
+
+When a draft is wrong, delete it on GitHub (Releases, the draft, Delete) and push to `main` again, or delete and push
+the tag again. The workflow never deletes a release itself.
 
 ## Putting a release on the site
 
@@ -94,7 +129,9 @@ sends nothing.
 
 - **Settings, Actions, General: "Allow GitHub Actions to create and approve pull requests"** must be on. Without it
   the workflow cannot open the Version Packages pull request. It was off when this was written.
-- The release workflows use only the token GitHub gives each run. The `deploy-site` workflow needs one secret and
+- The release workflows use only the token GitHub gives each run. In `release.yml` only two jobs can write: the
+  version job (the Version Packages pull request and the tag) and the `release` job (the draft release). The build
+  of the files can only read. The `deploy-site` workflow needs one secret and
   one variable, under Settings, Secrets and variables, Actions:
   - `COOLIFY_DEPLOY_TOKEN`, a secret: a Coolify API token that can start a deployment and nothing more.
   - `COOLIFY_APP_UUID`, a variable: the uuid of the site's application in Coolify.

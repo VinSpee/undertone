@@ -43,6 +43,8 @@
 #  - products: an alternative firmware (an app on the base firmware) on the same simulated pedal: what it says it is, the
 #    flasher's --app guard, the install, the way back to OpenPocket (also by rescue), what the flash keeps through both.
 #    With OP_BUILT=1 (node tools/op.mjs all) also with the packages the build made: each product's image byte for byte
+#  - release files: .github/scripts/assets.mjs assembles a release from fixture packages; site/latest.py and site/release.sh
+#    take it from a stand-in GitHub; .github/scripts/release.mjs --draft with a stand-in gh (tests/test_release_files.mjs)
 #  - rescue: tools/uboot_rescue.py (protocol, guards, resume) against a simulated UBOOT pedal, tests/uboot_sim.py
 #  - rescue kit: rescue/build_kit.py gives the pinned bytes twice; an unzipped kit's own files restore a simulated pedal
 #    on a V20, a V22 and a V23 flash head, and refuse the file of the other head (tests/test_rescue_kit.py)
@@ -156,6 +158,8 @@ sed '1s/^./0/;1s/^00/01/' tests/release.sha256 > build/release_pin_wrong.sums
 if sh tests/release_pin.sh build/release_pin_wrong.sums > /dev/null 2>&1; then echo "release pin: accepts a changed image"; exit 1; fi
 if sh tests/release_pin.sh build/no-such.sums > /dev/null 2>&1; then echo "release pin: accepts a missing build"; exit 1; fi
 echo "release pin: ok"
+echo "== release files (.github/scripts/assets.mjs, release.mjs --draft: the assets, site.sha256 through the site's own steps)"
+node tests/test_release_files.mjs > build/release_files.log || { cat build/release_files.log; exit 1; }; tail -1 build/release_files.log
 echo "== rescue tool (tools/uboot_rescue.py on a simulated UBOOT pedal)"
 python3 tests/test_uboot_rescue.py $1
 echo "== rescue kit (rescue/build_kit.py: the pinned bytes; the unzipped kit on a simulated V20, V22 and V23 pedal)"

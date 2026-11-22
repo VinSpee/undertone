@@ -1,37 +1,107 @@
 name: release
-# Release notes with changesets (docs/RELEASING.md). On every push to main:
-#   - changesets are waiting: open or update the "Version Packages" pull request (versions, changelogs);
-#   - none are waiting: create the tag v<version> and a draft GitHub release from the changelogs, when they are missing.
-# It publishes nothing to npm and it never publishes the release: that stays a person's act.
+# Releases with changesets (docs/RELEASING.md). It never publishes a release: that stays a person's act.
+#   - A push to main with changesets waiting opens or updates the "Version Packages" pull request (versions, changelogs).
+#   - A push to main with none waiting creates the tag v<version> when it is missing. When that tag has no release yet,
+#     the run builds its files and creates the draft release, as for a tag pushed by a person.
+#   - A pushed tag v*.*.* (v1.0.0-beta.1 too): build every firmware and the rescue kit at the tag, run the tests, compare
+#     with the pins, assemble the release's files (.github/scripts/assets.mjs) and create a draft release with them and
+#     the tag version's changelog entries. It refuses a tag that has a release already.
+#   - Run by hand: the same build, its files kept as the workflow artifact release-files, and no release.
+# A tag created with the workflow's token starts no workflow, so the main branch's run builds the files itself.
 on:
   push:
     branches: [main]
+    tags: ["v*.*.*"]
+  workflow_dispatch:
 permissions: {}
 concurrency:
   group: release-${{ github.ref }}
 jobs:
-  release:
+  version:
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     runs-on: ubuntu-24.04
     permissions:
-      contents: write        # the version commit on changeset-release/main, the tag, the draft release
+      contents: write        # the version commit on changeset-release/main, the tag
       pull-requests: write   # the Version Packages pull request
     outputs:
-      tag: ${{ steps.release.outputs.tag }}   # set only by the run that created the draft release
+      tag: ${{ steps.tag.outputs.tag }}   # set only when the tag has no release yet
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262   # v4.4.0
         with:
           fetch-depth: 0               # a changelog entry links the commit and the pull request that added its changeset
           persist-credentials: false   # every write goes through the GitHub API with the job's token
       - run: npm ci
       - name: Changesets waiting or not
         id: mode
-        uses: changesets/action/select-mode@v2
+        uses: changesets/action/select-mode@ae32849d5ba541f9ae29e40e22a623bc13562f51   # v2.1.2
       - name: Open or update the Version Packages pull request
         if: steps.mode.outputs.mode == 'version'
-        uses: changesets/action/version@v2
-      - name: Create the tag and the draft release of a version that has none
-        id: release
+        uses: changesets/action/version@ae32849d5ba541f9ae29e40e22a623bc13562f51   # v2.1.2
+      - name: Create the tag of a version that has none
+        id: tag
         if: steps.mode.outputs.mode != 'version'
-        run: node .github/scripts/release.mjs --create
+        run: node .github/scripts/release.mjs --tag
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+  files:
+    needs: version
+    # after the version job created or found a tag without a release, for a pushed tag, and when run by hand
+    if: >-
+      !cancelled() && needs.version.result != 'failure' &&
+      (needs.version.outputs.tag != '' || startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262   # v4.4.0
+        with:
+          ref: ${{ needs.version.outputs.tag || github.ref }}
+          persist-credentials: false
+      - name: Build OpenPocket (it fails when its packages are not the pinned release's bytes, tests/release.sha256) and every app of firmware/apps, then run the host tests with the packages built
+        run: node tools/op.mjs all
+      - name: Build the rescue kit and compare it with its pin (rescue/kit.sha256)
+        run: |
+          node tools/op.mjs kit
+          (cd docs/rescue && sha256sum -c ../../rescue/kit.sha256)
+      - name: Compare the image and packages of OpenPocket on disk with the release pin (the apps have no pin)
+        run: sha256sum -c tests/release.sha256
+      - name: Assemble the release's files, with site.sha256 and SHA256SUMS
+        run: node .github/scripts/assets.mjs "$RUNNER_TEMP/release-files"
+      - name: Check the files against their own SHA256SUMS
+        run: cd "$RUNNER_TEMP/release-files" && sha256sum -c SHA256SUMS
+      - name: The release notes this commit's changelogs give
+        run: node .github/scripts/release.mjs
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02   # v4.6.2
+        with:
+          name: release-files
+          path: ${{ runner.temp }}/release-files/
+          if-no-files-found: error
+
+  release:
+    needs: [version, files]
+    if: >-
+      !cancelled() && needs.files.result == 'success' && github.event_name == 'push' &&
+      (needs.version.outputs.tag != '' || startsWith(github.ref, 'refs/tags/'))
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: write   # the draft release and its files
+    concurrency:
+      group: release-draft-${{ needs.version.outputs.tag || github.ref_name }}
+    env:
+      TAG: ${{ needs.version.outputs.tag || github.ref_name }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262   # v4.4.0
+        with:
+          ref: ${{ env.TAG }}
+          persist-credentials: false
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093   # v4.3.0
+        with:
+          name: release-files
+          path: ${{ runner.temp }}/release-files
+      - name: Create the draft release with the files and the notes of the tag's changelog entries
+        run: node .github/scripts/release.mjs --draft "$TAG" "$RUNNER_TEMP/release-files"
         env:
           GH_TOKEN: ${{ github.token }}
