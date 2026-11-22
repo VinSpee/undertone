@@ -154,5 +154,12 @@ Tested locally, in a copy of the repository: `changeset version` gives `1.0.0-be
 repository; the release step prints the right notes, and with a stand-in for `gh` it creates the tag and the draft
 only when they are missing. The `changeset` check ran on its own pull request.
 
-Not tested: the `release` workflow has not run on `main`. No Version Packages pull request, tag or release has been
-created.
+The release's files: `tests/test_release_files.mjs` (part of the host tests) assembles a release from the fixture
+packages, serves it as a stand-in GitHub release with a releases feed, and runs `site/latest.py` and `site/release.sh`
+against it; it also runs `release.mjs --draft` with a stand-in `gh`. The workflow ran by hand on its pull request's
+branch: the `files` job built, tested and assembled the ten files in 11 minutes, the `release` job was skipped, and the
+files were the same bytes as a local build's.
+
+Not tested: the `release` workflow has not run on `main` or for a pushed tag. No Version Packages pull request, tag or
+release has been created. On the day this was written, every run on `main` failed at the Version Packages pull
+request, because the setting below that lets GitHub Actions create pull requests was off.
