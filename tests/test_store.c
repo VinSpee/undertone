@@ -2,7 +2,7 @@
  * OpenPocket — host test of the preset store (firmware/apps/gamut/px_store.h) on a simulated NOR flash:
  * save / reload, alternate copies, a power cut at every step of a save, the bytes the update loader reads
  * (0xF00.. of each sector) kept erased, writes only inside the store.
- *   cc -O1 -Iengine tests/test_store.c engine/px_dsp.c -lm -o build/test_store && build/test_store */
+ *   cc -O1 -Ifirmware/apps/gamut/engine tests/test_store.c firmware/apps/gamut/engine/px_dsp.c -lm -o build/test_store && build/test_store */
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>

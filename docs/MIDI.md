@@ -153,7 +153,7 @@ full, so a DAW sending clock or notes would, after a few dozen messages, also ha
 which arrive in the same packets. The ring is now always drained (messages the pedal does not use are dropped), and the
 overflow flag `usb.c` sets is cleared once the ring is empty. A test floods the ring and checks it recovers.
 
-Code map: `engine/px_dsp.c` has `px_dly_value_for_ms` (the TIME value nearest a delay time); `firmware/apps/gamut/px_midi.h` is the pure
+Code map: `firmware/apps/gamut/engine/px_dsp.c` has `px_dly_value_for_ms` (the TIME value nearest a delay time); `firmware/apps/gamut/px_midi.h` is the pure
 logic (decoder, CC map, what to send, settings byte, clock), with no hardware; `firmware/apps/gamut/px_midi_io.h` is the glue to the rings
 and the pedal's state; `firmware/apps/gamut/ui.h` has the MIDI page; `firmware/apps/gamut/px_store.h` keeps the settings byte.
 

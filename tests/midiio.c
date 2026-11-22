@@ -3,7 +3,7 @@
  * screen mode and the store stubbed: what a host's Program Change, Control Change and clock do to the sound, when the
  * pedal must ignore them, that the input ring is always emptied (usb.c stops reading the host's packets when it is
  * nearly full, and the editor's SysEx arrives in the same packets), and what the pedal sends back.
- *   cc -O1 -Wall -Wno-unused-function -Iengine -Ifirmware -o build/midiio tests/midiio.c engine/px_dsp.c firmware/px_math.c -lm && build/midiio */
+ *   cc -O1 -Wall -Wno-unused-function -Ifirmware/apps/gamut/engine -Ifirmware -o build/midiio tests/midiio.c firmware/apps/gamut/engine/px_dsp.c firmware/px_math.c -lm && build/midiio */
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>

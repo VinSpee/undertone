@@ -102,7 +102,7 @@ int         px_nam_equiv(int mode);                   /* the hand routines again
 int         px_nam_lp_equiv(void);                    /* v40.2: the layer split against one core, both cores: blocks that differ */
 void        px_nam_helper(int (*run)(void (*fn)(uint32_t), uint32_t arg), int (*wait)(void));   /* the other core */
 void        px_nam_fast(void *base, unsigned bytes);   /* memory away from the CPUs' RAM, for the vector unit (before px_nam_check) */
-/* v40.2: the network split between the cores by layers (engine/px_nam.c pxn_lp_*), for the two-core pipeline: memory
+/* v40.2: the network split between the cores by layers (firmware/apps/gamut/engine/px_nam.c pxn_lp_*), for the two-core pipeline: memory
  * (px_nam_lp_mem, PX_NAM_LP_BYTES), on or off for this engine (px_nam_lp: on only if it can run; the queue emptied),
  * the other core's part (px_nam_lp_b: 1 = a block finished; both declared after px_engine), blocks waiting for it,
  * CPU0's share (layers 0..s) */

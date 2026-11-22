@@ -19,9 +19,9 @@ const sha256 = (...buffers) => { const h = createHash("sha256"); for (const b of
 const check = (what, fn) => { fn(); console.log(`${what.padEnd(76)} ok`); };
 
 check("the committed engine is built from these sources (else: node tools/op.mjs wasm)", () => {
-  const sources = ["engine/px_wasm.c", "engine/px_dsp.c", "firmware/px_math.c", "engine/px_dsp.h", "engine/px_trim.h",
-    "engine/px_nam.c", "engine/px_nam.h", "engine/px_nam_factory.h",    // (px_dsp.c includes the NAM network, v37)
-    "engine/px_ir_factory.h"];                                           // (and slot IR1's factory IR)
+  const sources = ["firmware/apps/gamut/engine/px_wasm.c", "firmware/apps/gamut/engine/px_dsp.c", "firmware/px_math.c", "firmware/apps/gamut/engine/px_dsp.h", "firmware/apps/gamut/engine/px_trim.h",
+    "firmware/apps/gamut/engine/px_nam.c", "firmware/apps/gamut/engine/px_nam.h", "firmware/apps/gamut/engine/px_nam_factory.h",    // (px_dsp.c includes the NAM network, v37)
+    "firmware/apps/gamut/engine/px_ir_factory.h"];                                           // (and slot IR1's factory IR)
   assert.equal(sha256(...sources.map(read)), read("tools/sim/px_engine.wasm.sources").toString().trim());
 });
 
@@ -106,7 +106,7 @@ const TOLERANCE = 0;
 const GAIN = Math.fround(0.15);
 check("every factory preset, on a tone and every loop: WebAssembly sounds as the native build", () => {
   const exe = join(TMP, "preset"), input = join(TMP, "in.wav"), output = join(TMP, "out.f32");
-  const cc = spawnSync(process.env.CC || "cc", ["-O2", "-fno-builtin", "-ffp-contract=off", "-Iengine", "tests/engine/preset.c", "engine/px_dsp.c", "firmware/px_math.c", "-lm", "-o", exe], { cwd: ROOT, stdio: "inherit" });
+  const cc = spawnSync(process.env.CC || "cc", ["-O2", "-fno-builtin", "-ffp-contract=off", "-Ifirmware/apps/gamut/engine", "tests/engine/preset.c", "firmware/apps/gamut/engine/px_dsp.c", "firmware/px_math.c", "-lm", "-o", exe], { cwd: ROOT, stdio: "inherit" });
   assert.equal(cc.status, 0);
   const signals = [{ name: "tone 220 Hz", wav: wavBytes(IN), gain: 1 }];
   for (const l of JSON.parse(read("assets/loops/manifest.json")).loops) signals.push({ name: l.file, wav: read(join("assets/loops", l.file)), gain: GAIN });

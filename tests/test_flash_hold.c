@@ -4,7 +4,7 @@
  * the hold's a_collect and its release, because the flash switches the SFC off under the second core
  * (formal/FINDINGS.md, F1). It runs firmware/apps/gamut/px_store.h, px_models.h and px_irs.h on a simulated NOR flash, as
  * tests/test_store.c does.
- *   cc -O1 -Iengine tests/test_flash_hold.c engine/px_dsp.c firmware/px_math.c -lm -o build/test_flash_hold && build/test_flash_hold */
+ *   cc -O1 -Ifirmware/apps/gamut/engine tests/test_flash_hold.c firmware/apps/gamut/engine/px_dsp.c firmware/px_math.c -lm -o build/test_flash_hold && build/test_flash_hold */
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>

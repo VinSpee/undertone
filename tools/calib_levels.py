@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: GPL-3.0-only
-# OpenPocket — level calibration (v36) -> engine/px_trim.h. Loudness = ITU-R BS.1770 (K-weighted, gated) of real DI
+# OpenPocket — level calibration (v36) -> firmware/apps/gamut/engine/px_trim.h. Loudness = ITU-R BS.1770 (K-weighted, gated) of real DI
 # guitar at the pedal's level (x 0.15: hard playing peaks about -17 dBFS at the converter).
 #  - every type of the effect blocks (knobs at noon, in front of / after the NAM model TWIN at noon): switching it on
 #    keeps the loudness
@@ -15,7 +15,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SR = 44100
 TARGET = -23.0                      # LUFS at noon (EBU R128; engine output, before the master volume): headroom for cleans
 EXE = os.path.join(ROOT, "build", "lvl_chain")
-TRIM = os.path.join(ROOT, "engine", "px_trim.h")
+TRIM = os.path.join(ROOT, "firmware", "apps", "gamut", "engine", "px_trim.h")
 B = dict(GT=0, CMP=1, PIT=2, SFX=3, DRV=4, AMP=5, CAB=6, EQ=7, MOD=8, DLY=9, REV=10, SYN=11)
 NT = dict(CMP=4, PIT=5, SFX=7, DRV=4, MOD=11, DLY=8, REV=8, SYN=11)
 TWIN = 1                            # the AMP block's MODEL knob for the first factory NAM model, TWIN (px_nam_knob(0))
@@ -41,8 +41,8 @@ def lufs(x):
 
 
 def build():
-    subprocess.run(["cc", "-O2", "-I" + os.path.join(ROOT, "engine"), os.path.join(ROOT, "tests", "engine", "chain.c"),
-                    os.path.join(ROOT, "engine", "px_dsp.c"), os.path.join(ROOT, "firmware", "px_math.c"), "-lm", "-o", EXE],
+    subprocess.run(["cc", "-O2", "-I" + os.path.join(ROOT, "firmware", "apps", "gamut", "engine"), os.path.join(ROOT, "tests", "engine", "chain.c"),
+                    os.path.join(ROOT, "firmware", "apps", "gamut", "engine", "px_dsp.c"), os.path.join(ROOT, "firmware", "px_math.c"), "-lm", "-o", EXE],
                    check=True)
 
 

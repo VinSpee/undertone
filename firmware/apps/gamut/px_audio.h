@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: GPL-3.0-only
- * OpenPocket X — the REAL sound: guitar -> DSP engine (engine/px_dsp.c) -> output, set by the UI.
+ * OpenPocket X — the REAL sound: guitar -> DSP engine (firmware/apps/gamut/engine/px_dsp.c) -> output, set by the UI.
  *
  * The audio's way in and out (the I2S, the block's stages, the tuner's capture) is the base's: base/audio.h.
  *
@@ -129,7 +129,7 @@ static void dsp_pipe_run(int run)                      /* run: the engine on (el
     a_nbv = (uint8_t)run;
     a_nbi = (uint8_t)prev;
 }
-/* v40.2: the network split between the cores by layers (engine/px_nam.c pxn_lp_*). CPU0 runs the blocks before the amp
+/* v40.2: the network split between the cores by layers (firmware/apps/gamut/engine/px_nam.c pxn_lp_*). CPU0 runs the blocks before the amp
  * and the network's first layers in each block's interrupt; CPU1 runs the blocks after the amp on the block before's
  * network output, the network's other layers and its head. Every layer runs on whole blocks: no per-layer waits; the
  * output is the same (tests/engine/lp_test.c).

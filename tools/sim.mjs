@@ -24,7 +24,7 @@ const LOOPS = join(ROOT, "assets", "loops");
 
 // ---- the native simulators, built with the host's C compiler (no JieLi toolchain, no Docker) ----
 const PROGRAMS = {
-  pedal: { src: ["tests/edsim.c", "engine/px_dsp.c", "firmware/px_math.c"], libs: ["-lm"], dirs: ["firmware/apps/gamut", "firmware/apps/gamut/ble"] },
+  pedal: { src: ["tests/edsim.c", "firmware/apps/gamut/engine/px_dsp.c", "firmware/px_math.c"], libs: ["-lm"], dirs: ["firmware/apps/gamut", "firmware/apps/gamut/ble"] },
   update: { src: ["tests/devsim.c"], libs: [] },
 };
 function newest(dirs) {
@@ -47,7 +47,7 @@ export function compile(kind, app) {
   const bin = join(BIN, kind === "pedal" ? "edsim" : kind === "app" ? `app-${app}` : "devsim");
   mkdirSync(BIN, { recursive: true });
   const p = kind === "app" ? appProgram(app) : PROGRAMS[kind];
-  const stale = !existsSync(bin) || statSync(bin).mtimeMs < newest(["tests", "engine", "firmware", "firmware/bsp/chip", "loader", ...(p.dirs || [])]);
+  const stale = !existsSync(bin) || statSync(bin).mtimeMs < newest(["tests", "firmware/apps/gamut/engine", "firmware", "firmware/bsp/chip", "loader", ...(p.dirs || [])]);
   if (!stale) return bin;
   const r = spawnSync(process.env.CC || "cc", ["-O1", "-Wall", "-Wno-unused-function", ...(p.flags || []), "-o", bin, ...p.src, ...p.libs], { cwd: ROOT, stdio: "inherit" });
   if (r.error || r.status !== 0) {

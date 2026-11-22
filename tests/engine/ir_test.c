@@ -7,7 +7,7 @@
 #include <string.h>
 #include <math.h>
 #define PX_IR_USER_GIVEN
-#include "../../engine/px_dsp.c"
+#include "../../firmware/apps/gamut/engine/px_dsp.c"
 static float IRS[2][PX_IR_LEN];
 static int user0 = 1;                                  /* slot 0 holds the user's IR (0: emptied) */
 int px_ir_user(int slot, char *name12, float *h)       /* slots 0 and 1 hold test IRs, the others are empty */

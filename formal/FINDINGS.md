@@ -97,7 +97,7 @@ PING is the common one. The NAM_WRITE and IR_WRITE frames of an upload and the S
 **Real, or the model's doing?** Real, and reproduced. `formal/repro/editor_watch.mjs` drives the simulated pedal of the editor tests, which runs the firmware's own `px_editor.h`.
 
 ```sh
-cc -O1 -o build/edsim tests/edsim.c engine/px_dsp.c firmware/px_math.c -lm
+cc -O1 -o build/edsim tests/edsim.c firmware/apps/gamut/engine/px_dsp.c firmware/px_math.c -lm
 node formal/repro/editor_watch.mjs build/edsim
 ```
 

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // OpenPocket — NAM A2 models for the pedal (v37): read a .nam file, check it is an A2 network, take its A2-Lite part,
 // measure its level and pack it for a user slot (firmware/apps/gamut/px_models.h). The network itself runs here only to measure
-// the level, in float, with the same maths as tools/nam_a2.py and engine/px_nam.c.
+// the level, in float, with the same maths as tools/nam_a2.py and firmware/apps/gamut/engine/px_nam.c.
 
 export const KERNELS = [6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 15, 15, 6, 6, 6, 6, 6, 6, 6];
 export const DILATIONS = [1, 3, 7, 17, 41, 101, 239, 1, 3, 7, 17, 41, 101, 239, 1, 13, 1, 3, 7, 17, 41, 101, 239];

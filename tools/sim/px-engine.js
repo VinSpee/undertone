@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
-// The pedal's engine as WebAssembly (engine/px_wasm.c, tools/sim/px_engine.wasm), on arrays of 128 samples at 44.1 kHz. One
+// The pedal's engine as WebAssembly (firmware/apps/gamut/engine/px_wasm.c, tools/sim/px_engine.wasm), on arrays of 128 samples at 44.1 kHz. One
 // class for the AudioWorklet (tools/sim/pedal-worklet.js) and the tests. docs/SIMULATOR.md.
 export const ENGINE_RATE = 44100;
 export const BLOCK = 128;
@@ -7,7 +7,7 @@ export const BLOCK = 128;
 export const GUITAR_LEVEL = 0.15;
 const NAME = 14, NBLK = 12, NPAR = 5;
 
-// `preset` is the sound as `GET /api/state` reports it; the bytes are px_preset_t (engine/px_dsp.h)
+// `preset` is the sound as `GET /api/state` reports it; the bytes are px_preset_t (firmware/apps/gamut/engine/px_dsp.h)
 export function presetBytes(preset) {
   const b = new Uint8Array(NAME + NBLK * 3 + NBLK * NPAR);
   b.set([...preset.name].slice(0, NAME - 1).map((c) => c.charCodeAt(0)));

@@ -226,8 +226,8 @@ of the next version, with the owner listening.
 node tools/op.mjs all                                  # every product, the release pin, every test
 node tools/op.mjs sim --app palette                    # the app on this computer; the page plays a guitar loop
 mkdir -p build/palette-wav
-cc -O2 -fno-vectorize -fno-slp-vectorize -DPL_REFERENCE -Ifirmware/apps/palette -Iengine -o build/palette_render \
-   tests/palette_render.c firmware/apps/palette/engine.c engine/px_dsp.c firmware/px_math.c -lm    # (clang)
+cc -O2 -fno-vectorize -fno-slp-vectorize -DPL_REFERENCE -Ifirmware/apps/palette -Ifirmware/apps/gamut/engine -o build/palette_render \
+   tests/palette_render.c firmware/apps/palette/engine.c firmware/apps/gamut/engine/px_dsp.c firmware/px_math.c -lm    # (clang)
 build/palette_render --runs 15 --wav build/palette-wav # section 2's levels and times; each effect as a WAV file
 ```
 

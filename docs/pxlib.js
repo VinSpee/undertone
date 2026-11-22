@@ -4,7 +4,7 @@
 // another slot, renaming it, or keeping more of them than the pedal has slots needs a copy here: the library
 // (IndexedDB; in memory when the browser has none). Plus the arithmetic between a preset and the slot it plays.
 
-// ---- a preset's MODEL / IR setting (0..100) <-> the slot it plays (engine/px_dsp.c: px_nam_model, px_nam_knob, px_ir_slot) ----
+// ---- a preset's MODEL / IR setting (0..100) <-> the slot it plays (firmware/apps/gamut/engine/px_dsp.c: px_nam_model, px_nam_knob, px_ir_slot) ----
 export const knobIndex = (v, n) => Math.floor(Math.max(0, Math.min(100, v)) * n / 101);
 export function indexKnob(i, n) {                 // the middle of the index's span of the knob, as the pedal's own knob
   let lo = -1, hi = -1;

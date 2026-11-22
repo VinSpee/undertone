@@ -30,7 +30,7 @@ else O="$HERE/build"; APP="$HERE/openpocket.bin"; PKG="$HERE/../docs/firmware"; 
 #   a file of its own (APP_ENGINE), their options (APP_DEFS) and the functions that run from RAM beside the base's
 #   (APP_RAM_DSP in the engine's file, APP_RAM_FW in the app's); its memory.ld holds its regions (app.ld).
 #   Nothing of the OpenPocket build's outputs is touched.
-MAIN="$HERE/apps/gamut/openpocket.c"; ENGINE="$HERE/../engine/px_dsp.c"; MEM="$HERE/apps/gamut"
+MAIN="$HERE/apps/gamut/openpocket.c"; ENGINE="$HERE/apps/gamut/engine/px_dsp.c"; MEM="$HERE/apps/gamut"
 if [ -n "$OP_APP" ]; then
   case "$OP_APP" in *[!a-z0-9-]*) echo "ERROR: OP_APP must be lowercase letters, digits and -"; exit 1;; esac
   [ -z "$OP_BLE$OP_CHANNEL" ] || { echo "ERROR: OP_APP builds an app as it is: not with OP_BLE or OP_CHANNEL"; exit 1; }
@@ -68,9 +68,9 @@ fi
 # AC791N hardware FPU (same options as the JieLi SDK for the WL82) + DSP engine at 44.1 kHz
 FP="-mcpu=r3 -mfprev1"
 DSPDEF="-DPX_SR=44100.0f -DPX_OVERSAMPLE=4"
-[ -n "$OP_BLE" ] && DSPDEF="$DSPDEF -DPXN_LEAN=1 -DPXN_HOT_RAM=1 -DPX_RUNS=0"   # v40.2: the test image's flash is full (engine/px_nam.c; v40.4: px_dsp.c PX_RUNS)
+[ -n "$OP_BLE" ] && DSPDEF="$DSPDEF -DPXN_LEAN=1 -DPXN_HOT_RAM=1 -DPX_RUNS=0"   # v40.2: the test image's flash is full (firmware/apps/gamut/engine/px_nam.c; v40.4: px_dsp.c PX_RUNS)
 [ -n "$OP_APP" ] && DSPDEF="$APP_DEFS"
-INC="-I$HERE -I$HERE/inc -I$HERE/../engine"
+INC="-I$HERE -I$HERE/inc -I$HERE/apps/gamut/engine"
 $CC $FP -Os -ffunction-sections -fno-builtin -Wall -Wno-unused-function $DSPDEF $BLEDEF -DOP_GUARD_STACK=$GUARD_STACK $INC \
     -I"$BSP/chip" -I"$BSP/boards/fm1" -include "$O/channel.h" -c "$MAIN" -o "$MOBJ"
 [ -z "$ENGINE" ] || $CC $FP -O2 -ffunction-sections -fno-builtin $DSPDEF $INC -c "$ENGINE" -o "$EOBJ"

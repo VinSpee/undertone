@@ -24,7 +24,7 @@ function parse(argv) {
   return a;
 }
 
-// the engine's blocks (engine/px_dsp.h PX_B_*), then the NAM network
+// the engine's blocks (firmware/apps/gamut/engine/px_dsp.h PX_B_*), then the NAM network
 const PROF = ["GATE", "COMP", "PITCH", "SFX", "DRIVE", "AMP", "CAB", "EQ", "MOD", "DELAY", "REVERB", "SYN", "NAM"];
 
 // PING's reply: load, flags, then (v40.1) peak, peak since boot, late blocks and clips (14 bits each, wrapping)

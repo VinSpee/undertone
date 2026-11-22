@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: GPL-3.0-only
-"""OpenPocket - the NAM network's post5 routine (pi32v2 assembly in engine/px_nam.c, written by tools/gen_rdq.py --post5)
+"""OpenPocket - the NAM network's post5 routine (pi32v2 assembly in firmware/apps/gamut/engine/px_nam.c, written by tools/gen_rdq.py --post5)
 checked on the PC. The pedal's own start-up check compares it with the C post and falls back if they differ; this test
 runs the assembly text itself through a small model of the instructions it uses, so that a mistake shows before an
 image is flashed:
@@ -23,10 +23,10 @@ def strip(text):
         if m: out.append(m.group(1).replace("\\t", "").strip())
     return out
 gen = strip(subprocess.run([sys.executable, os.path.join(HERE, "..", "tools", "gen_rdq.py"), "--post5"], capture_output=True, text=True, check=True).stdout)
-src = open(os.path.join(HERE, "..", "engine", "px_nam.c")).read()
+src = open(os.path.join(HERE, "..", "firmware", "apps", "gamut", "engine", "px_nam.c")).read()
 a = src.index('    "\\t.global pxn_post5_asm\\n"'); b = src.index('    "\\t{pc, r15-r4} = [sp++]\\n"', a)
 lines = strip(src[a:src.index("\n", b) + 1])
-if lines != gen: raise SystemExit("post5: the routine in engine/px_nam.c is not tools/gen_rdq.py --post5's output")
+if lines != gen: raise SystemExit("post5: the routine in firmware/apps/gamut/engine/px_nam.c is not tools/gen_rdq.py --post5's output")
 if len(sys.argv) == 3: lines = [l.replace(sys.argv[1], sys.argv[2], 1) if sys.argv[1] in l else l for l in lines]
 M32 = 0xFFFFFFFF
 def s32(v): v &= M32; return v - (1 << 32) if v & 0x80000000 else v

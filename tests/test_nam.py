@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: GPL-3.0-only
-# OpenPocket — the NAM engine (engine/px_nam.c, fixed point, the pedal's C path) against the float reference
-# (tools/nam_a2.py), with each factory model's weights (engine/px_nam_factory.h): DI clip (docs/nam_di.wav) at the
+# OpenPocket — the NAM engine (firmware/apps/gamut/engine/px_nam.c, fixed point, the pedal's C path) against the float reference
+# (tools/nam_a2.py), with each factory model's weights (firmware/apps/gamut/engine/px_nam_factory.h): DI clip (docs/nam_di.wav) at the
 # pedal's input level, several block sizes, the rings in one piece and in two. Wants SNR > 80 dB. Modes 2..8 (the
 # vector unit beside the CPU, a second core, simulated: tests/engine/nam_test.c) must give exactly the same output as the CPU alone.
 #   python3 tests/test_nam.py build/nam_test
@@ -15,7 +15,7 @@ import nam_a2  # noqa: E402
 exe = sys.argv[1]
 out = os.path.join(ROOT, "build", "nam")
 os.makedirs(out, exist_ok=True)
-src = open(os.path.join(ROOT, "engine", "px_nam_factory.h")).read()
+src = open(os.path.join(ROOT, "firmware", "apps", "gamut", "engine", "px_nam_factory.h")).read()
 names = re.search(r"PXN_FNAME\[PX_NAM_NFACT\] = \{(.*?)\};", src).group(1)
 names = re.findall(r'"([^"]*)"', names)
 body = src[src.index("PXN_FW[PX_NAM_NFACT][PXN_NW] = {"):]

@@ -38,8 +38,8 @@ lines from `tests/run_tests.sh`):
 
 ```
 cc -O1 -Wall -Wno-unused-function -o build/devsim tests/devsim.c && node tests/test_installer.mjs
-cc -O1 -Wall -Wno-unused-function -o build/edsim tests/edsim.c engine/px_dsp.c firmware/px_math.c -lm && node tests/test_editor.mjs
-mkdir -p build/ui && cc -O1 -Wall -Wno-unused-function -Iengine -Ifirmware -o build/uisim tests/uisim.c engine/px_dsp.c firmware/px_math.c -lm && build/uisim build/ui
+cc -O1 -Wall -Wno-unused-function -o build/edsim tests/edsim.c firmware/apps/gamut/engine/px_dsp.c firmware/px_math.c -lm && node tests/test_editor.mjs
+mkdir -p build/ui && cc -O1 -Wall -Wno-unused-function -Ifirmware/apps/gamut/engine -Ifirmware -o build/uisim tests/uisim.c firmware/apps/gamut/engine/px_dsp.c firmware/px_math.c -lm && build/uisim build/ui
 ```
 
 `devsim` is the update flow, `edsim` the editor protocol, `uisim` writes every screen page to `build/ui/*.ppm`.

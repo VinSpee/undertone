@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: GPL-3.0-only
- * OpenPocket — the pedal's sound in a browser: engine/px_dsp.c and firmware/px_math.c, built to WebAssembly with no libc
+ * OpenPocket — the pedal's sound in a browser: firmware/apps/gamut/engine/px_dsp.c and firmware/px_math.c, built to WebAssembly with no libc
  * (tools/op.mjs wasm -> tools/sim/px_engine.wasm), driven by tools/sim/px-engine.js. docs/SIMULATOR.md.
  *
  * px_process() is dsp_block() of firmware/apps/gamut/px_audio.h, without the I2S and the load measurement: 128 frames as two

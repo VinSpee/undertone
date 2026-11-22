@@ -56,7 +56,7 @@ Driver setup: `iis_open` IIS_PORTA, channel_in = BIT(1), channel_out = BIT(0), m
 `iis_set_sample_rate(44100)`, `iis_channel_on`, ALNK0 IRQ = 11 → `iis_irq_handler(0)`.
 
 ## v15: the DSP engine in the audio path
-- `firmware/base/audio.h` and `px_audio.h`: I2S (in PA8 / out PA7), amp PA9, engine `engine/px_dsp.c` in the ALNK0 IRQ (blocks of 128
+- `firmware/base/audio.h` and `px_audio.h`: I2S (in PA8 / out PA7), amp PA9, engine `firmware/apps/gamut/engine/px_dsp.c` in the ALNK0 IRQ (blocks of 128
   frames), guard: > 85 % load for 8 blocks in a row → BYPASS. Load shown as "CPU xx%".
 - Float on the hardware FPU: `-mcpu=r3 -mfprev1` (the JieLi SDK's options for the WL82). Without them clang emits
   software calls (`__addsf3`...). `firmware/px_math.c` = a small libm (sin/cos/exp/log/pow/sqrt, error ~1e-6).
@@ -247,7 +247,7 @@ Driver setup: `iis_open` IIS_PORTA, channel_in = BIT(1), channel_out = BIT(0), m
 
 ## v36: levels, 24 factory presets, a new screen
 - Levels, measured as loudness (ITU-R BS.1770, gated) on real DI guitar at the pedal's level, by
-  `tools/calib_levels.py` (writes `engine/px_trim.h`): each type (knobs at noon) keeps the loudness when switched
+  `tools/calib_levels.py` (writes `firmware/apps/gamut/engine/px_trim.h`): each type (knobs at noon) keeps the loudness when switched
   on; the built-in amps and cabinets that had level curves are gone (store format 6). The 52 v35 presets
   spanned -53 to -10 LUFS; the 24 v36 presets are all at -23.0 +-0.2 LUFS (`tools/level_presets.py`).
 - The preset LEVEL: GT block, 3rd setting "PRESET LVL" (-15..+15 dB, 0.3 dB a step). Store format 5 and the editor
@@ -261,7 +261,7 @@ Driver setup: `iis_open` IIS_PORTA, channel_in = BIT(1), channel_out = BIT(0), m
 
 ## v37: NAM A2-Lite, user models
 - AMP type 8, NAM: a Neural Amp Modeler A2-Lite network (3 channels, 23 dilated layers, LeakyReLU, 16-tap head;
-  1871 weights, about 1,730 multiply-adds a sample) in fixed point, `engine/px_nam.c` ([NAM.md](NAM.md)). Activations
+  1871 weights, about 1,730 multiply-adds a sample) in fixed point, `firmware/apps/gamut/engine/px_nam.c` ([NAM.md](NAM.md)). Activations
   Q20, weights Q24, 64-bit sums shifted by a constant. Against the float reference (`tools/nam_a2.py`): 83 to 100 dB
   signal to error on the factory models (`tests/test_nam.py`).
 - This CPU has no data cache in front of the SRAM, a taken branch costs about 8 cycles, and it issues two
@@ -371,9 +371,9 @@ Driver setup: `iis_open` IIS_PORTA, channel_in = BIT(1), channel_out = BIT(0), m
 
 ## Slot IR1's factory IR (after v42)
 - Slot IR1 plays a factory IR while it holds no IR of the user's: "BEST IR IN THE WORLD", a free cabinet IR by ML
-  Sound Lab (credits in `NOTICE.md`), named `ML BEST IR`. It is compiled into the engine (`engine/px_ir_factory.h`,
+  Sound Lab (credits in `NOTICE.md`), named `ML BEST IR`. It is compiled into the engine (`firmware/apps/gamut/engine/px_ir_factory.h`,
   1024 int16 samples and their scale, as a user slot holds them), so the pedal, the simulator, the editor's sound and
-  `px_render` all play it. `ir_get()` in `engine/px_dsp.c` asks the firmware's slot first (`px_ir_user`), then falls
+  `px_render` all play it. `ir_get()` in `firmware/apps/gamut/engine/px_dsp.c` asks the firmware's slot first (`px_ir_user`), then falls
   back to the factory IR for IR1 only. An IR written to IR1 replaces it; `IR_ERASE` brings it back; the IR flash and
   its format do not change. `IR_LIST` reports it as present 2 (editor protocol 5).
 - `tools/mk_ir_factory.mjs` converts the creator's WAV (mono, 24-bit, 48 kHz, 65,536 frames, 1.37 s) with the editor's
@@ -389,7 +389,7 @@ Driver setup: `iis_open` IIS_PORTA, channel_in = BIT(1), channel_out = BIT(0), m
   they measure -23.1 to -22.9 LUFS with peaks from -14.2 to -3.5 dBFS: each LEVEL is 5 to 34 steps lower (ACOUSTIC,
   without a cabinet, is unchanged).
 - Load: a factory preset now runs the convolution it skipped while IR1 was empty, the same work as any USER IR
-  (about 420 instructions a sample: `engine/px_dsp.c`, WHATS-NEW-v38.md). On a PC (the simulator's engine, natively) the 24
+  (about 420 instructions a sample: `firmware/apps/gamut/engine/px_dsp.c`, WHATS-NEW-v38.md). On a PC (the simulator's engine, natively) the 24
   factory presets take 49.8 us a 64-frame block with their CAB off and 51.6 us with the factory IR (+3.7 %, about
   the run-to-run noise). The load on a pedal was not measured.
 - Image: 355,636 -> 357,700 bytes (the IR, 2,064 bytes). RAM unchanged.

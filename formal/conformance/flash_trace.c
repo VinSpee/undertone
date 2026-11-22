@@ -6,7 +6,7 @@
  * 1 MiB flash array. What st_audio_hold and the flash routines call on the pedal writes one line here, named after
  * the model's step: fm1_irq_mask "Mask", a_collect "CollectBegin", fm1_irq_unmask "Unmask", and each fl_erase4k,
  * fl_write and ota_fread the SFC off and on again (the model's FlashOff and FlashOn).
- *   cc -O1 -Iengine formal/conformance/flash_trace.c engine/px_dsp.c firmware/px_math.c -lm -o flash_trace
+ *   cc -O1 -Ifirmware/apps/gamut/engine formal/conformance/flash_trace.c firmware/apps/gamut/engine/px_dsp.c firmware/px_math.c -lm -o flash_trace
  *   flash_trace DIR      writes DIR/st_save.jsonl, nm_commit.jsonl, nm_erase.jsonl, ir_commit.jsonl, ir_erase.jsonl */
 #include <stdint.h>
 #include <stdio.h>

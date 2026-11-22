@@ -20,4 +20,4 @@ Changes made to each recording: cut to a loop, crossfaded, resampled to 44.1 kHz
 normalised (`assets/loops/prepare.py`, `assets/loops/ATTRIBUTION.md`); then played through PALETTE's engine and an
 amplifier simulation, matched in loudness, faded, and encoded as AAC ([README.md](README.md)).
 
-The amplifier simulation is OpenPocket's own engine (`engine/px_dsp.c`), GPL-3.0-only, part of this repository.
+The amplifier simulation is OpenPocket's own engine (`firmware/apps/gamut/engine/px_dsp.c`), GPL-3.0-only, part of this repository.

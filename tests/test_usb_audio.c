@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-only
  * OpenPocket — USB audio on a PC: the pedal's USB device code (firmware/bsp/chip/usb.c, built as firmware/px_usb.h
  * builds it) and its audio glue (firmware/px_uaudio.h) against a model of the USB controller and of a computer.
- *   cc -O1 -Wall -Wno-unused-function -Iengine -Ifirmware -Ifirmware/bsp/chip tests/test_usb_audio.c -lm -o build/test_usb_audio
+ *   cc -O1 -Wall -Wno-unused-function -Ifirmware/apps/gamut/engine -Ifirmware -Ifirmware/bsp/chip tests/test_usb_audio.c -lm -o build/test_usb_audio
  *   build/test_usb_audio            the tests
  *   build/test_usb_audio desc       the device and configuration descriptors with USB AUDIO off, as hex
  * Built with -DT_REF (FELUCCA_UAC 0: the USB device every OpenPocket before v42 was), `desc` prints that device's;

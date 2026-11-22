@@ -113,7 +113,7 @@ const commands = {
   package: () => inContainer(["sh", "-c", `sh firmware/build.sh && mkdir -p build && sha256sum ${OUTS} > build/SHA256SUMS && sh tests/release_pin.sh`]),
   "package-test": () => inContainer(["sh", "-c", `OP_CHANNEL=midi-test sh firmware/build.sh && mkdir -p build && sha256sum ${TEST} > build/SHA256SUMS-midi-test && cat build/SHA256SUMS-midi-test`]),
   clean() {
-    for (const p of ["build", "firmware/build", "firmware/build-ble", "firmware/openpocket.bin", "firmware/openpocket-ble.bin", "firmware/openpocket-midi-test.bin", "docs/firmware/midi-test", "docs/firmware/manifest.json", "docs/firmware/release.json", "docs/rescue", "engine/px_render"]) {
+    for (const p of ["build", "firmware/build", "firmware/build-ble", "firmware/openpocket.bin", "firmware/openpocket-ble.bin", "firmware/openpocket-midi-test.bin", "docs/firmware/midi-test", "docs/firmware/manifest.json", "docs/firmware/release.json", "docs/rescue", "firmware/apps/gamut/engine/px_render"]) {
       rmSync(resolve(root, p), { recursive: true, force: true });
     }
     const dir = resolve(root, "docs/firmware");
@@ -166,13 +166,13 @@ const commands = {
     return r.status ?? 1;
   },
   sim: (args) => exec(process.execPath, ["tools/sim.mjs", ...args]),   // the host's own Node and C compiler: no container
-  wasm: () => inContainer(["sh", "engine/wasm.sh"]),
+  wasm: () => inContainer(["sh", "firmware/apps/gamut/engine/wasm.sh"]),
   render([input, output, preset]) {
     if (!input) fail("usage: render in.wav [out.wav] [preset 1..52]");
     const rel = inside(input);
     if (!existsSync(resolve(root, rel))) fail(`${input} not found.`);
     const out = output ? inside(output) : rel.replace(/\.[^./]*$/, "") + "_OpenPocket.wav";
-    return inContainer(["bash", "engine/render.sh", rel, out, preset || "1"]);
+    return inContainer(["bash", "firmware/apps/gamut/engine/render.sh", rel, out, preset || "1"]);
   },
   appimage([dump]) {
     const rel = inside(dump || "fm1-1.bin");

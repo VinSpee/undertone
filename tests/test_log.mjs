@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // OpenPocket — `node tools/op.mjs log` (tools/log.mjs): the DIAG request against the pedal's real editor and status-text code
 // (tests/edsim.c built with -DOP_BLE_TEST=1), the same against firmware without it, and the states where less can be read.
-//   cc -O1 -DOP_BLE_TEST=1 -o build/edsim_diag tests/edsim.c engine/px_dsp.c firmware/px_math.c -lm && node tests/test_log.mjs
+//   cc -O1 -DOP_BLE_TEST=1 -o build/edsim_diag tests/edsim.c firmware/apps/gamut/engine/px_dsp.c firmware/px_math.c -lm && node tests/test_log.mjs
 import { spawn } from "node:child_process";
 import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";

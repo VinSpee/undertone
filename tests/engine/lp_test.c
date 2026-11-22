@@ -1,4 +1,4 @@
-/* v40.2: the NAM network split between the cores by layers (engine/px_nam.c pxn_lp_*) against one core: every factory
+/* v40.2: the NAM network split between the cores by layers (firmware/apps/gamut/engine/px_nam.c pxn_lp_*) against one core: every factory
  * model, the split moved at random from block to block (up, down, to either end), the second core's blocks run at random
  * moments (and while the first waits for them: PXN_EMUVEC); v40.4: a rise of the split follows the second core's progress
  * without a wait, or waits for it when forced. The output must be the one-core output bit for bit. Then

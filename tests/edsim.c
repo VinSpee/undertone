@@ -3,7 +3,7 @@
  * (tools/sim.mjs, docs/SIMULATOR.md).
  *
  * It runs, natively on the PC, the pedal's own editor code (firmware/apps/gamut/px_editor.h), preset store (firmware/apps/gamut/px_store.h),
- * screen (firmware/apps/gamut/ui.h, drawn into the frame buffer of tests/simlcd.h) and engine catalogue (engine/px_dsp.c), on a
+ * screen (firmware/apps/gamut/ui.h, drawn into the frame buffer of tests/simlcd.h) and engine catalogue (firmware/apps/gamut/engine/px_dsp.c), on a
  * 1 MiB flash array. As tests/devsim.c: MIDI SysEx through stdin/stdout, one message per line in hex; '#' lines are
  * for the harness:
  *   out  "#port NAME"            the USB port appears
@@ -48,8 +48,8 @@
 #include <sys/time.h>
 #include <unistd.h>
 #include <math.h>
-#include "../engine/px_dsp.h"
-#include "../engine/px_nam.h"
+#include "../firmware/apps/gamut/engine/px_dsp.h"
+#include "../firmware/apps/gamut/engine/px_nam.h"
 #include "simlcd.h"
 
 static uint8_t nor[0x100000];

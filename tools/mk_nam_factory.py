@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: GPL-3.0-only
-# OpenPocket — writes engine/px_nam_factory.h: the factory NAM models (A2-Lite weights, names, level trims).
+# OpenPocket — writes firmware/apps/gamut/engine/px_nam_factory.h: the factory NAM models (A2-Lite weights, names, level trims).
 #   mk_nam_factory.py LIST.txt DIR [DI.wav]
 # LIST.txt: one model a line, "id|NAME|source capture"; DIR/id.nam: the trained A2-Lite (tools/train_a2.py).
 # Level trim: every model at the same loudness (ITU BS.1770, K-weighted) on the DI clip played at the captures' level,
@@ -55,8 +55,8 @@ def main():
         lines = [", ".join(vals[i:i + 10]) for i in range(0, len(vals), 10)]
         out.append("  {" + ",\n   ".join(lines) + "},")
     out.append("};")
-    open(os.path.join(ROOT, "engine", "px_nam_factory.h"), "w").write("\n".join(out) + "\n")
-    print("engine/px_nam_factory.h: %d models" % len(ws))
+    open(os.path.join(ROOT, "firmware", "apps", "gamut", "engine", "px_nam_factory.h"), "w").write("\n".join(out) + "\n")
+    print("firmware/apps/gamut/engine/px_nam_factory.h: %d models" % len(ws))
 
 
 if __name__ == "__main__":

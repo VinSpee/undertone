@@ -50,7 +50,7 @@ static void ir_scan(void)
     }
     ir_gen++;
 }
-/* the engine's hook (engine/px_dsp.h): the name from the cache, the samples from the flash (checked) */
+/* the engine's hook (firmware/apps/gamut/engine/px_dsp.h): the name from the cache, the samples from the flash (checked) */
 int px_ir_user(int slot, char *name12, float *h)
 {
     if (slot < 0 || slot >= PX_IR_N || !ir_cache[slot].ok) return 0;

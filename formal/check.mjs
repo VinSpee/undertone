@@ -79,7 +79,7 @@ if (!noTraces && TRACES.some(([t, cfg]) => wanted(`${t}:${cfg}`))) {
   const dir = mkdtempSync(join(tmpdir(), "openpocket-formal-"));
   try {
     const exe = join(dir, "flash_trace");
-    const cc = spawnSync(process.env.CC || "cc", ["-O1", "-Iengine", "formal/conformance/flash_trace.c", "engine/px_dsp.c",
+    const cc = spawnSync(process.env.CC || "cc", ["-O1", "-Ifirmware/apps/gamut/engine", "formal/conformance/flash_trace.c", "firmware/apps/gamut/engine/px_dsp.c",
       "firmware/px_math.c", "-lm", "-o", exe], { cwd: ROOT, encoding: "utf8" });
     const run = cc.status === 0 ? spawnSync(exe, [dir], { encoding: "utf8" }) : null;
     if (!run || run.status !== 0) {

@@ -26,7 +26,7 @@ node tools/op.mjs sim --app starter      # an alternative firmware of firmware/a
 `tests/edsim.c`, built into `build/sim/edsim`, compiles the firmware's own code: the editor protocol
 (`firmware/apps/gamut/px_editor.h`), the preset store (`firmware/apps/gamut/px_store.h`) on a 1 MiB flash array, the screen
 (`firmware/apps/gamut/ui.h`, `ui_text.h`, drawn into the 240 x 240 frame buffer of `tests/simlcd.h`) and the engine's catalogue
-(`engine/px_dsp.c`). `tests/devsim.c` (`--update`) runs `firmware/bsp/chip/ota.c` and `loader/ldr_core.c`. The programs
+(`firmware/apps/gamut/engine/px_dsp.c`). `tests/devsim.c` (`--update`) runs `firmware/bsp/chip/ota.c` and `loader/ldr_core.c`. The programs
 are the ones the tests use; `tools/sim.mjs` only talks to them on stdin/stdout. Their line protocol is documented in the
 header of each `.c` file; `tests/devsim.c` and the old `edsim` commands are unchanged.
 
@@ -87,7 +87,7 @@ document.head.append(Object.assign(document.createElement("script"), { src: "htt
 
 ## The sound
 
-The skin plays guitar through the pedal's real chain: `engine/px_dsp.c`, the firmware's own engine and maths
+The skin plays guitar through the pedal's real chain: `firmware/apps/gamut/engine/px_dsp.c`, the firmware's own engine and maths
 (`firmware/px_math.c`), built to WebAssembly and run in an AudioWorklet of the page. The preset is the one on the screen:
 the page follows `GET state` (10 times a second, and after every control) and hands the engine the same bytes the
 firmware's `audio_poll()` hands it, so footswitches, PARA, the block buttons, an editor page and `curl` all change the
@@ -123,7 +123,7 @@ The price is a committed binary: `tools/sim/px_engine.wasm` (82 KB), so that the
 compiler. `node tools/op.mjs wasm` (`make wasm`) rebuilds it in the container with Debian's clang and lld. Next to it,
 `px_engine.wasm.sources` holds the sources' checksum, and the test fails when the engine changes without a rebuild.
 
-`engine/px_wasm.c` mirrors `dsp_block()`, `audio_apply()`, `audio_reset()` and `audio_volume()` of `firmware/apps/gamut/px_audio.h` and `firmware/base/audio.h`:
+`firmware/apps/gamut/engine/px_wasm.c` mirrors `dsp_block()`, `audio_apply()`, `audio_reset()` and `audio_volume()` of `firmware/apps/gamut/px_audio.h` and `firmware/base/audio.h`:
 if those change, change it with them. Left out: the 24-bit output rounding, and the overload guard that drops to bypass,
 because a computer's load says nothing about the pedal's.
 
