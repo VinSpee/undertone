@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-3.0-only
  * OpenPocket — the pedal's LCD on the PC: the 240x240 RGB565 frame buffer behind the lcd_win / lcd_px / lcd_end /
- * lcd_rect calls that firmware/ui.h and ui_text.h draw through (the pedal streams the same calls to the panel).
+ * lcd_rect calls that firmware/apps/gamut/ui.h and ui_text.h draw through (the pedal streams the same calls to the panel).
  * Shared by tests/uisim.c (screenshots of a script) and tests/edsim.c (the live, hosted pedal: tools/sim.mjs).
  * fb_gen counts the drawing calls, so a host can tell whether the screen changed. */
 #pragma once

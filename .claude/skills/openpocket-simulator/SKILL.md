@@ -67,7 +67,7 @@ renders the loops to WAV. After any change to `engine/`, run `node tools/op.mjs 
 No LEDs or bypass footswitch (the firmware has none: the skin's backlights are
 its own reading of the state), no USB or Bluetooth. `press/NAME` has no timing, `down` and `up` do. The panel's TUNER line
 is the stock firmware's: in OpenPocket both footswitches are two presses, and the tuner is a long press of HOME.
-`press()` and the `button_*` functions in `tests/edsim.c` mirror the control dispatch of `firmware/openpocket.c`: if that
+`press()` and the `button_*` functions in `tests/edsim.c` mirror the control dispatch of `firmware/apps/gamut/openpocket.c`: if that
 loop changes, change them too. The proof is the firmware's real code on a PC, not the pedal.
 
 ## Tests

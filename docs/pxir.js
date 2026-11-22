@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // OpenPocket — cabinet impulse responses for the pedal (v38): read a WAV file (PCM 16 / 24 / 32-bit or float, any rate,
 // mono or stereo), bring it to 44.1 kHz, keep the first 1024 samples (23 ms) from its onset with a short fade at the end,
-// and pack it for a user slot (firmware/px_irs.h: a 64-byte header, then 1024 16-bit samples). The pedal sets the
+// and pack it for a user slot (firmware/apps/gamut/px_irs.h: a 64-byte header, then 1024 16-bit samples). The pedal sets the
 // level itself (every IR at the same loudness as the modelled cabinets).
 
 import { crc16 } from "./pxnam.js";
@@ -9,7 +9,7 @@ import { crc16 } from "./pxnam.js";
 export const IR_LEN = 1024;
 export const IR_SR = 44100;
 export const IR_BYTES = 64 + IR_LEN * 2;
-export const IR_CHUNK = 112;          // bytes per IR_WRITE (firmware/px_irs.h IR_CHUNK)
+export const IR_CHUNK = 112;          // bytes per IR_WRITE (firmware/apps/gamut/px_irs.h IR_CHUNK)
 // the firmware's factory IR, which slot IR1 plays while it holds none of the user's (engine/px_ir_factory.h)
 export const FACTORY_IR = { slot: 0, title: "BEST IR IN THE WORLD", by: "ML Sound Lab", url: "https://www.facebook.com/watch/?ref=embed_video&v=1053603041469100" };
 
@@ -92,7 +92,7 @@ export function prepareIr(w) {
   return { h, note: notes.join(", ") };
 }
 
-// a user slot's bytes (firmware/px_irs.h ir_hdr_t + 1024 int16, little endian)
+// a user slot's bytes (firmware/apps/gamut/px_irs.h ir_hdr_t + 1024 int16, little endian)
 export function packIr(name, h) {
   const out = new Uint8Array(IR_BYTES), v = new DataView(out.buffer);
   let peak = 0;

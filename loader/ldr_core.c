@@ -36,9 +36,9 @@
 #define LDR_REC_HI 0xFF000u                     /* ... and below key_mac (Pocket X); OpenPocket stages at 0xE0000 */
 #define LDR_DATA_LO 0xF0000u                    /* OpenPocket's preset store (px_store.h, copies A and B): */
 #define LDR_DATA_HI 0xF4000u                    /* user data, never erased even if a sector ends like a record */
-#define LDR_NAM_LO 0xC0000u                     /* v37: OpenPocket's NAM user models (firmware/px_models.h): */
+#define LDR_NAM_LO 0xC0000u                     /* v37: OpenPocket's NAM user models (firmware/apps/gamut/px_models.h): */
 #define LDR_NAM_HI 0xE0000u                     /* user data as well */
-#define LDR_IR_LO 0xF4000u                      /* v38: OpenPocket's cabinet IRs (firmware/px_irs.h): */
+#define LDR_IR_LO 0xF4000u                      /* v38: OpenPocket's cabinet IRs (firmware/apps/gamut/px_irs.h): */
 #define LDR_IR_HI 0xFC000u                      /* user data as well */
 #define LDR_NSEC ((LDR_APP_HI - LDR_APP_LO) >> 12)
 #define LDR_FL_MAX 0x100000u                    /* flash.bin: at most the 1 MiB part */

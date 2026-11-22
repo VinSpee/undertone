@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-3.0-only
    OpenPocket web editor. One dark look, on purpose: it is used beside the pedal, often in a dim room, and it carries the
-   pedal's own colours: its amber (UI_ACC in firmware/ui.h), its panel's green-black, and each block's colour, which
+   pedal's own colours: its amber (UI_ACC in firmware/apps/gamut/ui.h), its panel's green-black, and each block's colour, which
    the pedal sends (CAT_BLOCK) and which is used here for that block only. Inter is the pedal's typeface. */
 
 *, *::before, *::after { box-sizing: border-box; min-width: 0; }

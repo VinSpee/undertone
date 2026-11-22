@@ -2,7 +2,7 @@
  * model, the split moved at random from block to block (up, down, to either end), the second core's blocks run at random
  * moments (and while the first waits for them: PXN_EMUVEC); v40.4: a rise of the split follows the second core's progress
  * without a wait, or waits for it when forced. The output must be the one-core output bit for bit. Then
- * the firmware's two-core pipeline with it (firmware/px_audio.h dsp_lp_run) on every factory preset with a NAM amp: per
+ * the firmware's two-core pipeline with it (firmware/apps/gamut/px_audio.h dsp_lp_run) on every factory preset with a NAM amp: per
  * 128-frame block the other core finishes the blocks left from the block before, runs the blocks after the amp on it,
  * and finishes some of this block's; this core runs the blocks before the amp and queues the network. The output must
  * be the plain engine's, one block later. Built with the sanitizers by tests/run_tests.sh. */

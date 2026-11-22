@@ -19,7 +19,7 @@ MEMORY
     CRAM   (rw)  : ORIGIN = 0x01F28000, LENGTH = 0x7000    /* PXC_BEGIN..PXC_END (px_cacheram.h) */
 }
 /* the app's own regions, between LOWRAM and the stacks: RAM (.data, .bss), POOL (its engine's memory), RAMTEXT (the RAM
- * code). firmware/memory.ld holds OpenPocket's, firmware/apps/<name>/memory.ld another app's (build.sh: -L) */
+ * code). firmware/apps/gamut/memory.ld holds OpenPocket's, firmware/apps/<name>/memory.ld another app's (build.sh: -L) */
 INCLUDE memory.ld
 SECTIONS
 {

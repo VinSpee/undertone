@@ -959,7 +959,7 @@ static int px_may_load = 1;                            /* v38: 0 in px_engine_kn
 #define PX_NAM_R0 ((PXN_RING_BYTES + 7u) / 8u * 2u)
 static pxn_model px_nam_m;
 static int32_t px_nam_r0[PX_NAM_R0] PX_NAM_POOL __attribute__((aligned(8)));
-/* no user slots unless the firmware (firmware/px_models.h) or a simulator provides them */
+/* no user slots unless the firmware (firmware/apps/gamut/px_models.h) or a simulator provides them */
 __attribute__((weak)) int px_nam_user(int slot, char *name12, float *level_db, float *w)
 {
     (void)slot; (void)name12; (void)level_db; (void)w;
@@ -1251,7 +1251,7 @@ PX_HOT __attribute__((noinline)) static void ir_run(float *xb)
     for (int i = 0; i < IR_B; i++) xb[i] = Y[IR_B + i];
     ir_pos = ir_pos + 1 < IR_P ? ir_pos + 1 : 0;
 }
-/* the slots: the firmware's (firmware/px_irs.h), or none */
+/* the slots: the firmware's (firmware/apps/gamut/px_irs.h), or none */
 #ifndef PX_IR_USER_GIVEN                               /* (a test that includes this file gives its own) */
 __attribute__((weak)) int px_ir_user(int slot, char *name12, float *h) { (void)slot; (void)name12; (void)h; return 0; }
 #endif

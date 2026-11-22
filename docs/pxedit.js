@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
-// OpenPocket — the web editor's protocol over WebMIDI (docs/EDITOR-PROTOCOL.md; the pedal side: firmware/px_editor.h).
+// OpenPocket — the web editor's protocol over WebMIDI (docs/EDITOR-PROTOCOL.md; the pedal side: firmware/apps/gamut/px_editor.h).
 // Request / reply, one at a time; STATE frames the pedal pushes while watched go to onState.
 
 import { PORT_RE, parseInfo } from "./pxota.js";
@@ -11,7 +11,7 @@ export const C = { INFO: 1, CAT_BLOCK: 2, CAT_TYPE: 3, TEXTS: 4, STATE: 5, SET: 
   FOCUS: 11, LIST: 12, SLOT_GET: 13, SLOT_PUT: 14, COMMIT: 15, SAVE: 16, WATCH: 17, PING: 18,
   NAM_LIST: 19, NAM_WRITE: 20, NAM_COMMIT: 21, NAM_ERASE: 22, DIAG: 23, IR_LIST: 24, IR_WRITE: 25, IR_COMMIT: 26, IR_ERASE: 27,
   USB_AUDIO: 28 };
-export const NAM_CHUNK = 112;     // bytes per NAM_WRITE (firmware/px_models.h NM_CHUNK)
+export const NAM_CHUNK = 112;     // bytes per NAM_WRITE (firmware/apps/gamut/px_models.h NM_CHUNK)
 export const P_SIZE = 110;
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 function fail(code, msg) { const e = new Error(msg); e.code = code; return e; }

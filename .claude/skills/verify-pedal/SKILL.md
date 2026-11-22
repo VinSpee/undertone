@@ -1,6 +1,6 @@
 ---
 name: verify-pedal
-description: Verify an OpenPocket build on the real, USB-connected pedal without a person reading its screen: flash the Bluetooth test image, wait for boot, read boot state, last-boot report and radio counters over USB MIDI (node tools/op.mjs log), run the Mac Bluetooth scan, and report pass or fail with the reason in words. Use after a firmware/ble or boot change when a pedal is attached. For checks without a pedal, use the verify skill.
+description: Verify an OpenPocket build on the real, USB-connected pedal without a person reading its screen: flash the Bluetooth test image, wait for boot, read boot state, last-boot report and radio counters over USB MIDI (node tools/op.mjs log), run the Mac Bluetooth scan, and report pass or fail with the reason in words. Use after a firmware/apps/gamut/ble or boot change when a pedal is attached. For checks without a pedal, use the verify skill.
 ---
 
 # Verify on the real pedal

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // OpenPocket — what a key, a drag or a wheel on the pedal skin (pedal.html) means to the simulated pedal, and what its
 // state means to the backlights. No DOM, so tests/test_pedal_input.mjs runs it in Node. Hold timing is not here:
-// tests/edsim.c times a held button as firmware/openpocket.c does.
+// tests/edsim.c times a held button as firmware/apps/gamut/openpocket.c does.
 
 export const BUTTONS = ["home", "fx", "amp", "mod", "dly", "rev", "cab", "fs_dn", "fs_up"];
 export const BLOCK = { amp: 5, cab: 6, mod: 8, dly: 9, rev: 10 };

@@ -2,7 +2,7 @@
 \* SPDX-License-Identifier: GPL-3.0-only
 \* A change of settings handed from the main loop to the audio side.
 \*
-\* audio_apply (firmware/px_audio.h) gives a change of knobs or of blocks on / off to the audio side without
+\* audio_apply (firmware/apps/gamut/px_audio.h) gives a change of knobs or of blocks on / off to the audio side without
 \* stopping the sound: it waits until the change before was taken (a_wait on a_kpend), copies the preset to a_kp
 \* and sets a_kpend. a_commit, at the start of a block, applies it (px_engine_knobs reads a_kp, writes the engine)
 \* and clears a_kpend. a_commit runs in the audio interrupt on CPU0, and again in dsp_block, which CPU1 runs beside the

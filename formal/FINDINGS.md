@@ -23,7 +23,7 @@ Only a pedal can show two things, and neither was tested. The first is that a sa
 `fl_enter` switches the SFC off for every erase, program, and SPI read (`firmware/bsp/chip/fm1_flash.h:120`), with the interrupts of CPU0 off.
 CPU1 has no interrupts to switch off. Its idle loop is in RAM, and a job is not all in RAM.
 `firmware/bsp/chip/fm1_cpu1.h:21` states the rule: "CPU0 turns the flash off only with no job outstanding".
-`st_audio_hold` (`firmware/px_store.h:169`) keeps the rule. It masks the audio interrupt and calls `a_collect`.
+`st_audio_hold` (`firmware/apps/gamut/px_store.h:169`) keeps the rule. It masks the audio interrupt and calls `a_collect`.
 
 **The shortest trace.** `FlashHold.cfg` modelled `nm_commit` as the code ran it. The check stopped after 12 states.
 
@@ -32,23 +32,23 @@ CPU1 has no interrupts to switch off. Its idle loop is in RAM, and a job is not 
 | 1 | `Mask` | `nm_commit` calls `st_audio_hold(1)`, which masks the audio interrupt. |
 | 2 | `CollectBegin` | `a_collect` finds no job outstanding. |
 | 3 | `FlashOff`, `FlashOnThen` | The erases, the programs, and the read back run with the audio held. |
-| 4 | `Unmask` | `st_audio_hold(0)` at `firmware/px_models.h:128`. |
+| 4 | `Unmask` | `st_audio_hold(0)` at `firmware/apps/gamut/px_models.h:128`. |
 | 5 | `BlockDue`, `EncEnter` | The audio interrupt enters. A guitar block comes every 2.9 ms. |
-| 6 | `EncRun` | `a_block` reaches `dsp_lp_run`, which starts `lp_job` on CPU1 (`firmware/px_audio.h:248`). |
+| 6 | `EncRun` | `a_block` reaches `dsp_lp_run`, which starts `lp_job` on CPU1 (`firmware/apps/gamut/px_audio.h:248`). |
 | 7 | `WorkerServe`, `DecRun` | `lp_job` makes the output. `a_send` takes it and the interrupt returns. `lp_job` keeps running. |
-| 8 | `FlashOff` | `nm_scan` at `firmware/px_models.h:129` calls `ota_fread`. The SFC goes off while CPU1 is in `lp_job`. |
+| 8 | `FlashOff` | `nm_scan` at `firmware/apps/gamut/px_models.h:129` calls `ota_fread`. The SFC goes off while CPU1 is in `lp_job`. |
 
 `nm_scan` makes 16 such reads and `ir_scan` makes 8. The interrupts of CPU0 come back on between two reads.
 
 **Where.** Four functions release the hold and then scan.
-They are `nm_commit` (`firmware/px_models.h:128`), `nm_erase` (`firmware/px_models.h:141`), `ir_commit` (`firmware/px_irs.h:98`), and `ir_erase` (`firmware/px_irs.h:110`).
+They are `nm_commit` (`firmware/apps/gamut/px_models.h:128`), `nm_erase` (`firmware/apps/gamut/px_models.h:141`), `ir_commit` (`firmware/apps/gamut/px_irs.h:98`), and `ir_erase` (`firmware/apps/gamut/px_irs.h:110`).
 The editor reaches them with NAM_COMMIT, NAM_ERASE, IR_COMMIT, and IR_ERASE.
 `st_commit` and `bs_save` keep every flash access inside the hold.
 
 **Real, or the model's doing?** Real. Two checks tie the trace to the code.
 
 - `formal/conformance/flash_trace.c` runs the firmware's own `px_store.h`, `px_models.h`, and `px_irs.h` on a PC and records each mask, each `a_collect`, each flash access, and each unmask. `everystate conform` accepted all five recorded runs as behaviours of the model of the code. Against the model of the fix it accepted `st_save` and rejected the other four at their `Unmask` line.
-- The steps of the audio interrupt and of `lp_job` come from reading `firmware/px_audio.h`. No test runs them. `a_send` waits only for the output of `lp_job`, not for its return (`a_lp_post`), so the job is still outstanding when the main loop runs again.
+- The steps of the audio interrupt and of `lp_job` come from reading `firmware/apps/gamut/px_audio.h`. No test runs them. `a_send` waits only for the output of `lp_job`, not for its return (`a_lp_post`), so the job is still outstanding when the main loop runs again.
 
 **When it happens.** With a NAM amp on two cores (the layer split), `lp_job` is one job for as long as the preset plays. Every scan read then falls inside it.
 Without the layer split, `a_send` waits for the block's job. If the main loop never runs between `a_enc` and `a_dec`, CPU1 is then idle whenever the main loop runs. `FlashHoldOneShot.cfg` checks that case and passes.
@@ -72,7 +72,7 @@ The four recorded runs now conform to `FlashHoldFixed.cfg`, and `check.mjs` expe
 
 ## F2 (fixed): a request from the editor made the pedal drop a push it owed
 
-**Fixed** by the commit `fix(editor): keep a push the pedal owes when it answers a request`, the first change to `firmware/px_editor.h` after commit `7189376`.
+**Fixed** by the commit `fix(editor): keep a push the pedal owes when it answers a request`, the first change to `firmware/apps/gamut/px_editor.h` after commit `7189376`.
 The rest of this section describes the code before that commit, and its line numbers are those of commit `5fce8f5`.
 The trace below is now the trace of `EditorWatchNoOwed.cfg`, which keeps the old rule as a mutation.
 
@@ -83,15 +83,15 @@ The trace below is now the trace of `EditorWatchNoOwed.cfg`, which keeps the old
 | Step | Model action | In the code |
 |---|---|---|
 | 1 | `Knob` | A control on the pedal changes a setting. |
-| 2 | `Push` | `ed_service` sees that the state differs from `ed_w.hash` and sends a STATE frame (`firmware/px_editor.h:336`). The next push is at least 40 ms away. |
+| 2 | `Push` | `ed_service` sees that the state differs from `ed_w.hash` and sends a STATE frame (`firmware/apps/gamut/px_editor.h:336`). The next push is at least 40 ms away. |
 | 3 | `Knob` | The control changes the setting again inside those 40 ms. This change waits for its push. |
 | 4 | `SendPing` | The editor sends its PING. It sends one every second (`docs/editor.js:55`). |
-| 5 | `Handle` | `ed_handle` answers and ends with `ed_w.hash = ed_state_hash()` (`firmware/px_editor.h:324`). The hash now covers the change of step 3. |
+| 5 | `Handle` | `ed_handle` answers and ends with `ed_w.hash = ed_state_hash()` (`firmware/apps/gamut/px_editor.h:324`). The hash now covers the change of step 3. |
 | 6 | `Recv`, `Recv` | The editor takes the STATE frame of step 2 and the PING reply. |
 
 After step 6 nothing is in flight and the pedal sees no difference, so it never sends the second change. The editor shows the value of step 1.
 
-**Where.** `firmware/px_editor.h:324` runs for every command the pedal answers, also for the ones that change nothing and carry no state.
+**Where.** `firmware/apps/gamut/px_editor.h:324` runs for every command the pedal answers, also for the ones that change nothing and carry no state.
 PING is the common one. The NAM_WRITE and IR_WRITE frames of an upload and the SLOT_GET frames that read the bank do the same.
 
 **Real, or the model's doing?** Real, and reproduced. `formal/repro/editor_watch.mjs` drives the simulated pedal of the editor tests, which runs the firmware's own `px_editor.h`.

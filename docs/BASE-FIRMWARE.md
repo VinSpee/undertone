@@ -38,9 +38,9 @@ bytes as the pinned release, upstream's published v42 with the bass tuner fix, t
 | The link and the build: sections, fixed regions, RAM code, the memory report | `firmware/app.ld`, `firmware/build.sh`, `tools/ramcode.py`, `tools/check_calls.py` |
 | The package and the update loader | `tools/pxpkg.py`, `tools/mkloader.py`, `loader/` |
 
-OpenPocket's own files are `firmware/openpocket.c`, `px_audio.h`, `ui.h`, `ui_colors.h`, `px_lights.h`,
-`px_store.h`, `px_models.h`, `px_irs.h`, `px_editor.h`, `px_midi.h`, `px_midi_io.h`, `px_ble_midi.h`,
-`firmware/ble/`, `firmware/memory.ld`, and `engine/`.
+OpenPocket's own files are in `firmware/apps/gamut/` (`openpocket.c`, `px_audio.h`, `ui.h`, `ui_colors.h`,
+`px_lights.h`, `px_store.h`, `px_models.h`, `px_irs.h`, `px_editor.h`, `px_midi.h`, `px_midi_io.h`, `px_ble_midi.h`,
+`ble/` and `memory.ld`) and in `engine/`. Everything under `firmware/` outside `firmware/apps/` is the base.
 
 A base file that was already a file of its own, such as `px_usb.h`, stays at its path. The tests include those files
 by path, and a file that does not move merges with upstream changes as before.
@@ -134,7 +134,7 @@ regions in this order:
 | `RAMTEXT` | Code that runs from RAM. Section `.bss.hi.*` uses its free end and is set to zero. |
 
 `app.ld` includes `memory.ld` and refuses the link when the three regions overlap, are out of order, or reach the
-stacks. It also refuses a `RAMTEXT` that the flash code cannot call. `firmware/memory.ld` is OpenPocket's.
+stacks. It also refuses a `RAMTEXT` that the flash code cannot call. `firmware/apps/gamut/memory.ld` is OpenPocket's.
 
 | | `RAM` | `POOL` | `RAMTEXT` |
 | --- | --- | --- | --- |
@@ -367,7 +367,7 @@ OpenPocket's upstream does not have `firmware/base/`, the apps, or the product i
   | `px_audio.h` | The I2S driver's glue, the audio's variables, `dsp_out`, `dsp_load`, the tuner, the input's conversion (now `a_input`), the output's copy (now `a_output`), the I2S start (now `audio_io_start`), `audio_volume` | `base/audio.h` |
   | `px_audio.h` | `b_num`, `b_str`, `b_fix2` | `base/board.h` |
   | `px_usb.h` | The three flash ranges of `FL_RANGE_OK`, the `OTA_SCRATCH` lines | `openpocket.c` |
-  | `app.ld` | The regions `RAM`, `POOL`, `RAMTEXT` | `firmware/memory.ld` |
+  | `app.ld` | The regions `RAM`, `POOL`, `RAMTEXT` | `firmware/apps/gamut/memory.ld` |
 
 - The version line, the `app_main` loop, and the lists of RAM code in `build.sh` did not move. A release upstream
   merges into them without a conflict.

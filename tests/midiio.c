@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: GPL-3.0-only
- * OpenPocket — the glue between usb.c's MIDI rings and the pedal (firmware/px_midi_io.h) on a PC, with the rings, the
+ * OpenPocket — the glue between usb.c's MIDI rings and the pedal (firmware/apps/gamut/px_midi_io.h) on a PC, with the rings, the
  * screen mode and the store stubbed: what a host's Program Change, Control Change and clock do to the sound, when the
  * pedal must ignore them, that the input ring is always emptied (usb.c stops reading the host's packets when it is
  * nearly full, and the editor's SysEx arrives in the same packets), and what the pedal sends back.
@@ -9,7 +9,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "px_dsp.h"
-#include "px_midi.h"
+#include "../firmware/apps/gamut/px_midi.h"
 
 static int failed;
 static void ok(int c, const char *what) { printf("%-76s %s\n", what, c ? "ok" : "FAIL"); if (!c) failed++; }
@@ -58,7 +58,7 @@ static uint32_t ft_box(uint32_t x, uint32_t y, uint32_t w, const char *s, const 
 #define UI_BG 0
 #define OP_BLE_TEST 1
 static uint32_t ms_now(void) { return 0; }
-#include "px_midi_io.h"
+#include "../firmware/apps/gamut/px_midi_io.h"
 
 static uint32_t cc(uint32_t ch, uint32_t n, uint32_t v) { return 0xBu | (0xB0u | ch) << 8 | n << 16 | v << 24; }
 static uint32_t pc(uint32_t ch, uint32_t n) { return 0xCu | (0xC0u | ch) << 8 | n << 16; }

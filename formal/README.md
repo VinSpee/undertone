@@ -44,10 +44,10 @@ A configuration that models a finding fails until the code is fixed. A mutation 
 
 | Model | Promise | Code it stands for |
 |---|---|---|
-| `FlashHold.tla` | While the SFC is off, CPU1 is in its RAM loop. | `st_audio_hold` (`firmware/px_store.h`), `nm_commit` (`firmware/px_models.h`), `ir_commit` (`firmware/px_irs.h`), `a_block`, `a_send`, `a_collect`, and `lp_job` (`firmware/px_audio.h`), `fl_enter` (`firmware/bsp/chip/fm1_flash.h`) |
-| `EditorWatch.tla` | Once nothing is in flight and no push is owed, the editor shows the pedal's sound. | `ed_service` and `ed_handle` (`firmware/px_editor.h`), `Editor.request` and `Editor._onMessage` (`docs/pxedit.js`), `ping` (`docs/editor.js`), `sendParam` (`docs/edsound.js`) |
-| `PresetStore.tla` | After a power cut at any step, the next start loads the last confirmed save or a later one. | `st_commit` and `st_load` (`firmware/px_store.h`) |
-| `KnobHandoff.tla` | `a_kp` and the engine's preset are never read by one side while the other writes them. | `audio_apply` and `a_commit` (`firmware/px_audio.h`), `px_engine_knobs` (`engine/px_dsp.c`) |
+| `FlashHold.tla` | While the SFC is off, CPU1 is in its RAM loop. | `st_audio_hold` (`firmware/apps/gamut/px_store.h`), `nm_commit` (`firmware/apps/gamut/px_models.h`), `ir_commit` (`firmware/apps/gamut/px_irs.h`), `a_block`, `a_send`, `a_collect`, and `lp_job` (`firmware/apps/gamut/px_audio.h`), `fl_enter` (`firmware/bsp/chip/fm1_flash.h`) |
+| `EditorWatch.tla` | Once nothing is in flight and no push is owed, the editor shows the pedal's sound. | `ed_service` and `ed_handle` (`firmware/apps/gamut/px_editor.h`), `Editor.request` and `Editor._onMessage` (`docs/pxedit.js`), `ping` (`docs/editor.js`), `sendParam` (`docs/edsound.js`) |
+| `PresetStore.tla` | After a power cut at any step, the next start loads the last confirmed save or a later one. | `st_commit` and `st_load` (`firmware/apps/gamut/px_store.h`) |
+| `KnobHandoff.tla` | `a_kp` and the engine's preset are never read by one side while the other writes them. | `audio_apply` and `a_commit` (`firmware/apps/gamut/px_audio.h`), `px_engine_knobs` (`engine/px_dsp.c`) |
 | `LayerSplit.tla` | Each ring of the NAM network belongs to one core at a time, and every layer runs every block once, in order. | `pxn_lp_a` and `pxn_lp_b` (`engine/px_nam.c`) |
 
 In each `.tla` file, the comment on an action names the function the action stands for.
@@ -97,7 +97,7 @@ These parts are left out.
 - **The order of `a_enc` and `a_dec`** (`firmware/px_aorder.h`). The two callbacks never run at the same time, and `tests/test_aorder.c` runs the file itself. `FlashHold.tla` keeps one fact about them: the interrupt can enter once for each, and the main loop can run in between.
 - **The request counters of `lp_job`.** `FlashHold.tla` reduces `a_lpreq` and `a_lpdone` to one boolean, `served`, and holds `a_lpquit` as `quit`. `a_lparg` and the timing fields that set the split are not modelled.
 - **The USB driver** (`firmware/bsp/chip/usb.c`, MIDI and USB audio). It is felucca-bsp's with small local changes, its rings have one writer each, and `tests/test_usb_audio.c` runs it.
-- **The Bluetooth test image** (`firmware/ble`). It is not the release, and its tasks run from the main loop.
+- **The Bluetooth test image** (`firmware/apps/gamut/ble`). It is not the release, and its tasks run from the main loop.
 - **The update** (`firmware/bsp/chip/ota.c`, `loader/`, `docs/pxota.js`, `tools/flash.mjs`). One side acts at a time. The orders that matter are power cuts, and the chip's boot code decides what follows one. That code is not in the repository, so a model would only restate guesses about it. A model of the update should first look at `ota_unstage`, which erases the first sector of the staged loader before the sector that holds the update record.
 - **The sound across a preset change.** A separate change to it (trails that ring on after the change) is in progress. `KnobHandoff.tla` models a full change only as mask, `a_collect`, and `px_engine_set`.
 - **The load figures** (`audio_prof`). The main loop reads and clears counters that the audio side adds to. A lost count changes a percentage on a diagnostics page.

@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: GPL-3.0-only
- * OpenPocket — the button lights in the normal firmware (firmware/px_lights.h over px_leds.h, issue #8) on the PC,
+ * OpenPocket — the button lights in the normal firmware (firmware/apps/gamut/px_lights.h over px_leds.h, issue #8) on the PC,
  * against fake port C registers and a model of the 74HC595 with its output enable on PC7:
  *   cc -O1 -Wall -Iengine -Ifirmware -o build/lightsim tests/lightsim.c && build/lightsim
  * Checks: after leds_init the lights are enabled (PC7 low) with all of them dark; every one of the twelve blocks,
@@ -34,7 +34,7 @@ static uint8_t lit(void) { return enabled() ? (uint8_t)~q : 0u; }   /* what the 
 #define LEDS_PC(r) (pc[(r) / 4u])
 #define LEDS_WAIT() (waits++)
 #define LEDS_EDGE() edge()
-#include "px_lights.h"
+#include "../firmware/apps/gamut/px_lights.h"
 
 static int failed;
 static void ok(int c, const char *what) { printf("%-66s %s\n", what, c ? "ok" : "FAIL"); if (!c) failed++; }

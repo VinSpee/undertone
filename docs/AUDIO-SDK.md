@@ -110,7 +110,7 @@ Driver setup: `iis_open` IIS_PORTA, channel_in = BIT(1), channel_out = BIT(0), m
 - Packages (`tools/pxpkg.py`): rebuild the official PocketX_016 app area byte for byte.
 
 ## v25: presets in flash, finer cabinets and amps
-- Presets (`firmware/px_store.h`): 42 slots of 96 bytes, two A/B copies (0xF0000 / 0xF2000, two 4 KiB sectors
+- Presets (`firmware/apps/gamut/px_store.h`): 42 slots of 96 bytes, two A/B copies (0xF0000 / 0xF2000, two 4 KiB sectors
   each), "OPPS" header written last (sequence + CRC16), read back after writing. Bytes 0xF00..0xF7F of each sector
   always left erased (the loader reads that area for its records). While writing: output muted, ALNK0 IRQ masked,
   second core between two blocks (its loop runs from RAM).
@@ -202,7 +202,7 @@ Driver setup: `iis_open` IIS_PORTA, channel_in = BIT(1), channel_out = BIT(0), m
   1 VDDIO low, 2 watchdog, 3 VCM, 4 long press, 5 1.2 V, 6 soft).
 
 ## v32: the web editor
-- `firmware/px_editor.h`: SysEx `F0 7D 4F 50 cmd ... F7` (docs/EDITOR-PROTOCOL.md), frames from usb.c's `sx_frame`
+- `firmware/apps/gamut/px_editor.h`: SysEx `F0 7D 4F 50 cmd ... F7` (docs/EDITOR-PROTOCOL.md), frames from usb.c's `sx_frame`
   (`ota_frame_get`), handled in the main loop before `ota_service` (which takes any frame), replies through
   `ota_wire_send`, as Felucca's editor.c. It edits `PRESET` directly: `audio_poll` applies, `ui_render` redraws.
 - Pushes: while watched, a hash of PRESET + slot + focused block + `st_gen`; a change made by the editor itself updates
@@ -278,7 +278,7 @@ Driver setup: `iis_open` IIS_PORTA, channel_in = BIT(1), channel_out = BIT(0), m
   block buffers (7 KB) in RAM. A direct call between the flash (0x02xxxxxx) and the RAM code (0x01C0xxxx) is out of
   the call instruction's +-4 MiB: `tools/check_calls.py`, run by `firmware/build.sh` before linking, refuses any such
   call and names it (a first v37 build put the audio path in RAM: the linker refused 478 calls, naming only one).
-- User models: 16 slots of 8 KiB at 0xC0000 (`firmware/px_models.h`), written by the editor (protocol 2); the update
+- User models: 16 slots of 8 KiB at 0xC0000 (`firmware/apps/gamut/px_models.h`), written by the editor (protocol 2); the update
   loader keeps that range (`loader/ldr_core.c`, `LDR_NAM_LO/HI`). The weights are read from the flash (SPI, with the
   audio held) when a preset picks the model.
 - Level: every model plays at the same loudness: a trim per model (-20 LUFS on `docs/nam_di.wav`, measured by the

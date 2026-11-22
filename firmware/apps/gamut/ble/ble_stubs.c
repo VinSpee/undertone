@@ -4,7 +4,7 @@
  * (ble_cfg.c: LE only, one slave link, a GATT server) keeps the libraries from calling them; each is an empty function that
  * returns 0 and counts the call in ble_stub_calls, keeping its name in ble_stub_last, so a call that should not happen shows
  * in the link line.
- * Generated from the link errors of the "ble" target (list the names with: grep BLE_STUB firmware/ble/ble_stubs.c). */
+ * Generated from the link errors of the "ble" target (list the names with: grep BLE_STUB firmware/apps/gamut/ble/ble_stubs.c). */
 #include <stdint.h>
 #include "ble_status.h"
 

@@ -3,7 +3,7 @@
 \* The web editor and the pedal's own controls.
 \*
 \* While the editor watches, the pedal pushes a STATE frame when its sound changes by its own controls, at most
-\* one every 40 ms (firmware/px_editor.h ed_service). It knows what the editor has by a hash of the state
+\* one every 40 ms (firmware/apps/gamut/px_editor.h ed_service). It knows what the editor has by a hash of the state
 \* (ed_w.hash), and it does not push back a change the editor made itself: ed_handle ends with
 \* ed_w.hash = ed_state_hash(), unless a change of the pedal's still waits for its push and the reply is not the
 \* state (ed_w.owed). The editor (docs/pxedit.js, docs/editor.js, docs/edsound.js) sends one request
@@ -49,7 +49,7 @@ Init ==
   /\ inbox = None /\ wire = <<>> /\ waiting = "none"
   /\ knobs = MaxKnobs /\ pings = MaxPings /\ sets = MaxSets
 
-\* ---- the pedal's main loop (firmware/openpocket.c app_main) ----
+\* ---- the pedal's main loop (firmware/apps/gamut/openpocket.c app_main) ----
 \* a control changes the sound (ui_turn, ui_buttons, px_midi_service)
 Knob(v) ==
   /\ knobs > 0 /\ v # pedal

@@ -113,7 +113,7 @@ static void ir_changed(uint32_t s)   /* v38: a user IR was written or erased: th
     a_full = 1;
     audio_apply();
 }
-#if OP_BLE_TEST             /* the log channel (firmware/ble/ble_diag.h): only this image answers DIAG, the normal firmware does not change */
+#if OP_BLE_TEST             /* the log channel (firmware/apps/gamut/ble/ble_diag.h): only this image answers DIAG, the normal firmware does not change */
 #define ED_STATS 8u         /* PING also gives the Bluetooth heap's and tasks' lowest free bytes */
 #define ED_DIAG_LINES 5u
 #define ED_DIAG_LEN 224u
