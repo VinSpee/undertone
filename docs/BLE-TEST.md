@@ -101,7 +101,7 @@ The log channel (`node tools/op.mjs log`) adds two lines, and the status area sc
 Failing steps: `1` `task_create` failed (`c` is -1); `2` `btctrler_task_init` returned `c` (not 0); `3`
 `btctrler_task_ready` returned `c` (0: the controller task did not answer); `4` `ll_hci_adv_enable` returned `c` (not
 0); `5` still `STARTING` after 5 s, and `c` is the stage it stalled in (the list above). At a timeout the line ends with `wait XXXXXXXX`: the address of the semaphore or mutex the controller task is blocked on (look it up in `firmware/build-ble/symbols.txt`; a value below 0x10 is a task state instead). Example: `FAILED 5 3` only means the last marker passed was the entry of the radio replay; it does not say the replay hung. (In the second hardware run it was a deadlock after the radio start-up: see "Found on hardware" below.) The codes and the text come from `firmware/apps/gamut/ble/ble_status.h`, checked on the PC by
-`tests/test_ble_status.c`. Please report the whole `FAILED s c` text.
+`firmware/apps/gamut/tests/test_ble_status.c`. Please report the whole `FAILED s c` text.
 
 ### The advertising line (proof counters)
 
@@ -159,7 +159,7 @@ The third flash froze: the screen was drawn but the controls were dead, and the 
 openpocket.c (OP_BLE_TEST)  ble_test_start() after the screen is up, ble_test_poll() in the main loop
 firmware/apps/gamut/ble/ble_test.c     a task that starts the controller and the host
 firmware/apps/gamut/ble/ble_midi.c     the GATT table, the host's callbacks, pairing, advertising
-firmware/apps/gamut/px_ble_midi.h      a BLE MIDI write -> USB-MIDI event packets (tests/midisim.c)
+firmware/apps/gamut/px_ble_midi.h      a BLE MIDI write -> USB-MIDI event packets (firmware/apps/gamut/tests/midisim.c)
 firmware/apps/gamut/ble/ble_os.c       the operating-system services the library calls (below)
 firmware/apps/gamut/ble/ble_rf.c       the Wi-Fi front-end half of the radio start-up (below)
 firmware/apps/gamut/ble/ble_cfg.c      configuration: LE only, advertising, one slave link, a GATT server

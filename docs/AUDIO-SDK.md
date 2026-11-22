@@ -256,14 +256,14 @@ Driver setup: `iis_open` IIS_PORTA, channel_in = BIT(1), channel_out = BIT(0), m
 - SLOW SWELL: 2.9 ms look-ahead and a more sensitive attack detector, so a pick attack is not heard before the swell.
 - 24 factory presets near noon; 25..52: USER.
 - Screen: PLAY (number and name large, amp / cab, the chain in colour, the selected block) and EDIT (the block on its
-  colour, model, 5 settings with value + bar), new Inter fonts (26 and 58 px). `tests/uisim.c` draws every page on
+  colour, model, 5 settings with value + bar), new Inter fonts (26 and 58 px). `firmware/apps/gamut/tests/uisim.c` draws every page on
   the PC and checks that each full page paints every pixel.
 
 ## v37: NAM A2-Lite, user models
 - AMP type 8, NAM: a Neural Amp Modeler A2-Lite network (3 channels, 23 dilated layers, LeakyReLU, 16-tap head;
   1871 weights, about 1,730 multiply-adds a sample) in fixed point, `firmware/apps/gamut/engine/px_nam.c` ([NAM.md](NAM.md)). Activations
   Q20, weights Q24, 64-bit sums shifted by a constant. Against the float reference (`tools/nam_a2.py`): 83 to 100 dB
-  signal to error on the factory models (`tests/test_nam.py`).
+  signal to error on the factory models (`firmware/apps/gamut/tests/test_nam.py`).
 - This CPU has no data cache in front of the SRAM, a taken branch costs about 8 cycles, and it issues two
   instructions together (a 32-bit multiply-add with a 16-bit load). A first version (a loop over taps per frame,
   16-frame chunks) measured 223 % of real time on the pedal. Now: blocks of 32 frames, layer by layer. Gather: each
@@ -304,7 +304,7 @@ Driver setup: `iis_open` IIS_PORTA, channel_in = BIT(1), channel_out = BIT(0), m
 - Delay at half rate: one tick every two samples, with the pair averaged in, the output interpolated between the last two
   ticks, and a fixed lift `1.15 d - 0.15 d_prev` on the wet output. Glide and envelope coefficients are doubled, and
   depths and LFO steps are converted to ticks; the lane's lag is 128 ticks. On the lead loop through an amp and a
-  cabinet, the wet part is within 0.1 dB, and within 0.4 dB up to 6 kHz. `tests/engine/wet_test.c` still checks the
+  cabinet, the wet part is within 0.1 dB, and within 0.4 dB up to 6 kHz. `firmware/apps/gamut/tests/engine/wet_test.c` still checks the
   lane against the inline delay, bit for bit.
 - Reverb: the low cut after the tank runs at the tank's rate. TONE stays at the full rate, because it takes down the
   half rate's images. The output is within 2e-4 of v39 on every type.
@@ -331,7 +331,7 @@ Driver setup: `iis_open` IIS_PORTA, channel_in = BIT(1), channel_out = BIT(0), m
   type and settings in both presets is not touched.
 - The trails' voices are a `px_dly` and a `px_rev` like the ones that play (the delay's and the reverb's fields in
   `px_engine` became those two structs, and their functions take the struct and its memory; the output is the same,
-  `tests/equiv.sh`). Their state (1.9 KB with their lane) is in the low RAM, one engine's at a time. Nothing is sent
+  `firmware/apps/gamut/tests/equiv.sh`). Their state (1.9 KB with their lane) is in the low RAM, one engine's at a time. Nothing is sent
   to them; their sound is added to the engine's output after the limiter, at the level the outgoing chain gave it
   (the block's trim, a delay or reverb after it, the preset level), coming in over 256 frames.
 - With the wet lanes they are made in `px_wet_run` after the delay and the reverb, in a lane of their own, and are the
@@ -341,7 +341,7 @@ Driver setup: `iis_open` IIS_PORTA, channel_in = BIT(1), channel_out = BIT(0), m
 - The firmware (`audio_apply`) calls `px_engine_switch()` for every full change. A preset loaded that differs from the
   last one only by settings goes the full way too when `px_trail_due()` says its delay or reverb would ring; a knob
   turned still glides.
-- `tests/engine/trail_test.c`: each delay and reverb type's trail against an engine that stays on the outgoing
+- `firmware/apps/gamut/tests/engine/trail_test.c`: each delay and reverb type's trail against an engine that stays on the outgoing
   preset (within one step of the 16-bit delay memory, wherever the write index is), the lanes, the two-core pipeline,
   the ends, the cases without room, and changes at random with the stretches checked (never overlapping, free ticks
   zero) under the address sanitizer.

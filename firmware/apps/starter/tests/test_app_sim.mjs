@@ -5,14 +5,14 @@
 // loop, controls, audio stages, store, MIDI reader and product reply are the pedal's own code.
 // Driven over the simulator's HTTP interface: who it says it is, each control, its sound at the two outputs, its MIDI
 // map, its own editor requests, a save that survives a restart and stays inside its flash range, safe mode.
-//   node tests/test_app_sim.mjs
+//   node firmware/apps/starter/tests/test_app_sim.mjs
 import assert from "node:assert/strict";
 import { mkdtempSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { startSim } from "../tools/sim.mjs";
-import { parseIdentity, parseInfo, IS_ALT, Updater } from "../docs/pxota.js";
-import { Editor } from "../docs/pxedit.js";
+import { startSim } from "../../../../tools/sim.mjs";
+import { parseIdentity, parseInfo, IS_ALT, Updater } from "../../../../docs/pxota.js";
+import { Editor } from "../../../../docs/pxedit.js";
 
 const TMP = mkdtempSync(join(tmpdir(), "opapp-"));
 let failed = 0;

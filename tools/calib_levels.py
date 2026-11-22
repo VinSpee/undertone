@@ -41,7 +41,7 @@ def lufs(x):
 
 
 def build():
-    subprocess.run(["cc", "-O2", "-I" + os.path.join(ROOT, "firmware", "apps", "gamut", "engine"), os.path.join(ROOT, "tests", "engine", "chain.c"),
+    subprocess.run(["cc", "-O2", "-I" + os.path.join(ROOT, "firmware", "apps", "gamut", "engine"), os.path.join(ROOT, "firmware", "apps", "gamut", "tests", "engine", "chain.c"),
                     os.path.join(ROOT, "firmware", "apps", "gamut", "engine", "px_dsp.c"), os.path.join(ROOT, "firmware", "px_math.c"), "-lm", "-o", EXE],
                    check=True)
 

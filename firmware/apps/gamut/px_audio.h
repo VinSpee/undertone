@@ -81,7 +81,7 @@ static int a_hwait(void) { return fm1_cpu1_wait(); }
 /* v37: a NAM amp on two cores, pipelined (one block more latency: 2.9 ms). In each block's interrupt CPU1 first runs
  * the blocks after the amp on the previous block's network output (and makes its output), while CPU0 runs the blocks
  * before the amp on this block; then both run the network on this block (CPU1 as its helper). PRE and POST never touch
- * the same block's state (tests/engine/pipe_test.c: the same output as one core, one block later). */
+ * the same block's state (firmware/apps/gamut/tests/engine/pipe_test.c: the same output as one core, one block later). */
 static float a_nb[2][A_FR];                            /* the network's output: being made / the previous block's */
 static uint8_t a_nbi, a_nbv, a_prun;                  /* a_nb[a_nbi] is this block's; a_nbv: the other one holds one */
 static void post_run(uint32_t prev, int run, int nbv)   /* run: the engine on; nbv: a_nb[prev] holds a block */
@@ -132,7 +132,7 @@ static void dsp_pipe_run(int run)                      /* run: the engine on (el
 /* v40.2: the network split between the cores by layers (firmware/apps/gamut/engine/px_nam.c pxn_lp_*). CPU0 runs the blocks before the amp
  * and the network's first layers in each block's interrupt; CPU1 runs the blocks after the amp on the block before's
  * network output, the network's other layers and its head. Every layer runs on whole blocks: no per-layer waits; the
- * output is the same (tests/engine/lp_test.c).
+ * output is the same (firmware/apps/gamut/tests/engine/lp_test.c).
  * v40.4: CPU1 works on through the interrupts. Until now its job ended with the block's last network block, which CPU0
  * hands over at the end of its own share: CPU1 idled at the start of each block, the next interrupt waited for it, and
  * the two cores' work in a block had to fit one after the other (the blocks before the amp + CPU0's share of the

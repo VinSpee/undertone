@@ -182,14 +182,14 @@ transmit power must not exceed what the stock firmware uses.
 
 Run `node tools/op.mjs test` (see [BUILDING.md](BUILDING.md)):
 
-- `tests/midisim.c`: the packet decoder (channel filter, bad status, bad data bytes, SysEx never decoded, cable number), the CC
+- `firmware/apps/gamut/tests/midisim.c`: the packet decoder (channel filter, bad status, bad data bytes, SysEx never decoded, cable number), the CC
   map (unique, reserved numbers free, exact inverse, value scaling round trips), what the pedal sends (Program Change, one
   Control Change per change, no echo, SEND off), the settings byte, MIDI clock (120 BPM, jitter, gaps, a changing tempo), and
   that a sound sent by one pedal is applied unchanged by another.
-- `tests/midiio.c`: the real glue code against the ring: Program Change and Control Change change the sound, are ignored while
+- `firmware/apps/gamut/tests/midiio.c`: the real glue code against the ring: Program Change and Control Change change the sound, are ignored while
   SAVE, tuner or the MIDI page is open, channel filtering, a flood is drained and recovers, clock sync on and off.
-- `tests/test_store.c`: the settings survive a power cycle, a preset save and a power cut at every step.
-- `tests/uisim.c`: the MIDI page is drawn completely, the channel wraps, leaving saves only if changed.
+- `firmware/apps/gamut/tests/test_store.c`: the settings survive a power cycle, a preset save and a power cut at every step.
+- `firmware/apps/gamut/tests/uisim.c`: the MIDI page is drawn completely, the channel wraps, leaving saves only if changed.
 - `tests/test_installer.mjs`: an update still succeeds after a foreign SysEx.
 - `tests/test_op.mjs`, `tests/test_page.mjs`: the test package command and the installer's test channel.
 

@@ -42,7 +42,7 @@ the categories of the changesets are. Leaving pre-release mode gives `1.0.0`. Af
 the waiting changesets decides the next number, as semantic versioning says.
 
 A changeset does not change a firmware. A pull request that changes a firmware's bytes still moves that firmware's
-version and its release pin by hand, as before (`tests/release_pin.sh`).
+version and its release pin, `firmware/apps/<name>/release.sha256`, by hand, as before (`tests/release_pin.sh`).
 
 ## Cutting a release
 
@@ -78,10 +78,10 @@ The jobs `files` and `release` of `.github/workflows/release.yml` make the draft
 found a tag without a release, and for a pushed tag.
 
 1. `files`, with read access only: it checks out the tag and builds as the `build` workflow does. `node tools/op.mjs
-   all` builds OpenPocket, which fails when its packages are not the pinned release's bytes, and every app of
-   `firmware/apps`, then runs the host tests with the packages built. `node tools/op.mjs kit` builds the rescue kit.
-   The job then compares the files on disk with their pins: OpenPocket's image and packages with
-   `tests/release.sha256`, the kit with `rescue/kit.sha256`. The apps have no pin. Then
+   all` builds OpenPocket and every app of `firmware/apps`; a firmware with a pin fails when its packages are not the
+   pinned release's bytes. It then runs the host tests with the packages built. `node tools/op.mjs kit` builds the rescue kit.
+   The job then compares the files on disk with their pins: each pinned firmware's image and packages with its
+   `firmware/apps/<name>/release.sha256`, the kit with `rescue/kit.sha256`. STARTER has no pin. Then
    `node .github/scripts/assets.mjs` assembles the files, and the job keeps them as the workflow artifact
    `release-files`.
 2. `release`, the only job of these two that can write: it creates the draft release with those files

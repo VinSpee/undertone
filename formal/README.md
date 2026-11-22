@@ -73,12 +73,12 @@ The table below lists every configuration. A row that starts with "The code" mod
 
 ### Check the code against the flash model
 
-`conformance/flash_trace.c` runs the firmware's own `px_store.h`, `px_models.h`, and `px_irs.h` on a PC, in the way `tests/test_store.c` runs `px_store.h`.
+`conformance/flash_trace.c` runs the firmware's own `px_store.h`, `px_models.h`, and `px_irs.h` on a PC, in the way `firmware/apps/gamut/tests/test_store.c` runs `px_store.h`.
 It records each mask, each `a_collect`, each flash access, and each unmask of `st_save`, `nm_commit`, `nm_erase`, `ir_commit`, and `ir_erase`.
 `everystate conform` then checks that each recorded run is a behaviour of `FlashHold.tla`.
 All five are behaviours of `FlashHold.cfg` and of `FlashHoldFixed.cfg`.
 Before the fix of finding F1, `FlashHoldFixed.cfg` accepted only `st_save`, which was F1 seen from the code's side.
-`tests/test_flash_hold.c` checks the same order without the checker, in the host tests.
+`firmware/apps/gamut/tests/test_flash_hold.c` checks the same order without the checker, in the host tests.
 
 `repro/editor_watch.mjs` reproduced finding F2 on the simulated pedal of the editor tests. `FINDINGS.md` gives the command. Since the fix both of its runs end the same, and `tests/test_editor.mjs` holds the case as a test. It depends on timing, so `check.mjs` does not run it.
 
@@ -123,7 +123,7 @@ When you change one of the files below, read the model's actions against the new
 
 | When you change | Look at |
 |---|---|
-| `st_audio_hold`, or any code that erases, programs, or reads the flash at run time | `FlashHold.tla`, `conformance/flash_trace.c`, and `tests/test_flash_hold.c` |
+| `st_audio_hold`, or any code that erases, programs, or reads the flash at run time | `FlashHold.tla`, `conformance/flash_trace.c`, and `firmware/apps/gamut/tests/test_flash_hold.c` |
 | `a_enc`, `a_dec`, `a_block`, `a_send`, `a_collect`, `lp_job`, or the mailbox of `fm1_cpu1.h` | `FlashHold.tla` |
 | `ed_service`, `ed_handle`, or the editor's `request`, `_onMessage`, `ping`, and `sendParam` | `EditorWatch.tla` |
 | `st_commit` or `st_load` | `PresetStore.tla` |

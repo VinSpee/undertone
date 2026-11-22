@@ -2,7 +2,7 @@
 
 The models in this folder were checked with everystate 0.4.1 against the code at commit `5fce8f5`.
 Two findings were real in the code at that commit. One note describes a promise the store does not make. Three models passed.
-Both findings have since been fixed, and the release pin (`tests/release.sha256`) moved with each fix.
+Both findings have since been fixed, and the release pin (now `firmware/apps/gamut/release.sha256`) moved with each fix.
 
 | Id | What | Verdict | Found by |
 |---|---|---|---|
@@ -14,7 +14,7 @@ Both findings have since been fixed, and the release pin (`tests/release.sha256`
 
 **Fixed.** [Pull request 37](https://github.com/VinSpee/undertone/pull/37) moved `nm_scan` and `ir_scan` above `st_audio_hold(0)` in the four functions.
 `FlashHold.cfg`, `FlashHoldOneShot.cfg`, and `FlashHoldOneShotGap.cfg` now model that order and pass. The four recorded runs conform to `FlashHoldFixed.cfg`.
-`tests/test_flash_hold.c` runs the same firmware files in the host tests. It fails when a flash access of a save or an erase falls outside the hold: before the fix it counted the 16 reads of `nm_scan` and the 8 of `ir_scan`.
+`firmware/apps/gamut/tests/test_flash_hold.c` runs the same firmware files in the host tests. It fails when a flash access of a save or an erase falls outside the hold: before the fix it counted the 16 reads of `nm_scan` and the 8 of `ir_scan`.
 The rest of this section describes the code before the fix, at commit `5fce8f5`. To see the trace again, set `ScanInsideHold = FALSE` in `FlashHold.cfg`.
 
 Only a pedal can show two things, and neither was tested. The first is that a save and an erase of a NAM model and of an IR still work on the real flash, with the audio back afterwards and both cores running, also while a NAM amp plays on two cores. The second is that the mute around a save is not audibly longer: the scan adds 16 or 8 short reads to the hold.

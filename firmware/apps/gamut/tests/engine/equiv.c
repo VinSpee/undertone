@@ -1,5 +1,5 @@
 /* v40.4: the engine's output hashed bit for bit over a wide set of runs, to compare two versions of the engine
- * (tests/equiv.sh REF builds this file against the engine of commit REF and against this tree's, and compares the lists):
+ * (firmware/apps/gamut/tests/equiv.sh REF builds this file against the engine of commit REF and against this tree's, and compares the lists):
  *  A  every block x type x 8 settings, the block alone (no amp, no cabinet): the block's own arithmetic
  *  B  every block x type x 2 settings with a drive, a NAM amp and a USER IR cabinet (the drive at x2 before NAM)
  *  C  60 random chains (types, settings, order, on/off), with knob changes and blocks switched while playing (the

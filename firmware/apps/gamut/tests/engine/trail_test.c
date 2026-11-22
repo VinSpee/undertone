@@ -20,7 +20,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
-#include "../../firmware/apps/gamut/engine/px_dsp.c"
+#include "../../engine/px_dsp.c"
 #define SR 44100
 #define NB 64
 #define MAXS (44 * SR)

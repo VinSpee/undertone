@@ -195,13 +195,13 @@ A web page needs no more than these.
 
 ## 8. Verification without a pedal
 
-- `tests/test_palette.c` runs the engine's own code with the firmware's math library: every effect is finite, not
+- `firmware/apps/palette/tests/test_palette.c` runs the engine's own code with the firmware's math library: every effect is finite, not
   silent, and bounded on loud, quiet, and silent input, at every knob's ends; an effect change, an order change, and a
   bypass make no step in the output; nothing the engine keeps decays into a denormal; a sound that fails the check is
   refused.
-- `tests/test_palette_sim.mjs` drives the app in the simulator: its identity, controls, screen, MIDI map, editor
+- `firmware/apps/palette/tests/test_palette_sim.mjs` drives the app in the simulator: its identity, controls, screen, MIDI map, editor
   requests, store, and safe mode.
-- `tests/palette_render.c` renders each effect on a standard signal and prints the tables of the report: loudness,
+- `firmware/apps/palette/tests/palette_render.c` renders each effect on a standard signal and prints the tables of the report: loudness,
   peak, and time. It can write each effect as a WAV file.
 - `node tools/op.mjs sim --app palette` opens a page with the screen and the controls. Its Listen button plays a guitar
   loop through the app's own code ([SIMULATOR.md](SIMULATOR.md), "An app on the base firmware").
@@ -213,8 +213,8 @@ A web page needs no more than these.
 
 ## 9. Merging upstream changes
 
-PALETTE is files of its own: `firmware/apps/palette/`, `tests/test_palette.c`, `tests/test_palette_sim.mjs`,
-`tests/palette_render.c`, `tools/cyclecount.py`, and its documents (`docs/PALETTE*.md`, `docs/palette-guide.html`,
+PALETTE is files of its own: `firmware/apps/palette/`, `firmware/apps/palette/tests/test_palette.c`, `firmware/apps/palette/tests/test_palette_sim.mjs`,
+`firmware/apps/palette/tests/palette_render.c`, `tools/cyclecount.py`, and its documents (`docs/PALETTE*.md`, `docs/palette-guide.html`,
 `docs/audio/`, `docs/screens/palette/`, `docs/recordings/palette-controls.gif`). It changes no file of the base firmware
 (`firmware/base/`, `px_usb.h`, `app.ld`, `build.sh`) and none of OpenPocket's.
 

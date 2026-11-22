@@ -2,11 +2,11 @@
 
 ## Sub-features
 - The base (`firmware/base/`, `docs/BASE-FIRMWARE.md`): the code every image shares.
-- OpenPocket built on it: the same bytes as the pinned release (`tests/release.sha256`: v43, which is v42 with the bass tuner fix, trails, the editor watch fix, the flash hold fix, the built-in amps and cabinets removed and slot IR1's factory IR).
+- OpenPocket built on it: the same bytes as the pinned release (`firmware/apps/gamut/release.sha256`: v43, which is v42 with the bass tuner fix, trails, the editor watch fix, the flash hold fix, the built-in amps and cabinets removed and slot IR1's factory IR).
 - STARTER (`firmware/apps/starter`, `docs/ALT-FIRMWARE.md`): an alternative firmware, a product of its own.
   `build/apps/starter/starter.bin`, its two packages, its manifest.
 - PALETTE (`firmware/apps/palette`, `docs/PALETTE.md`): a four-module stereo instrument, an alternative firmware too.
-  `tests/test_palette.c` runs its engine, `tests/test_palette_sim.mjs` the app in the simulator, and
+  `firmware/apps/palette/tests/test_palette.c` runs its engine, `firmware/apps/palette/tests/test_palette_sim.mjs` the app in the simulator, and
   `docs/PALETTE-REPORT.md` has its measured costs and its checks on a pedal.
 - The product identity: an app's INFO reply, the installer's card per firmware, the flasher's `--app`, the editor's notice.
 

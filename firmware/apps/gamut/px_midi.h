@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-3.0-only
  * OpenPocket — musical MIDI over USB: what a message means for the pedal, and what the pedal says back.
- * The map is documented in docs/MIDI.md. No hardware here (tests/midisim.c runs this file on a PC); the rings and
+ * The map is documented in docs/MIDI.md. No hardware here (firmware/apps/gamut/tests/midisim.c runs this file on a PC); the rings and
  * the pedal's state are in px_midi_io.h.
  *
  *   px_midi_decode   one 4-byte USB-MIDI event packet (from usb.c's input ring) -> a message, or "ignore"

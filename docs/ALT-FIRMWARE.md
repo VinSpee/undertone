@@ -58,7 +58,11 @@ controls. It is small on purpose. It uses every part of the base that a larger p
    address of a page with the app's screen and the pedal's controls.
 6. Replace `engine.c` and `app.h` with your own, a part at a time. Keep `mine.c` short: it is the list of what the
    app declares to the base. Section 3 of [BASE-FIRMWARE.md](BASE-FIRMWARE.md) has that list.
-7. Copy `tests/test_app_sim.mjs` for your app and change it as the app changes. It drives the simulator over HTTP.
+7. The copy brings STARTER's tests: `tests/run.sh`, which `node tools/op.mjs test` runs for every firmware, and
+   `tests/test_app_sim.mjs`, which drives the simulator over HTTP. Change `starter` to your app's name in both, and
+   change the test as the app changes.
+8. When the app has a release, pin its bytes: copy `build/apps/mine/SHA256SUMS` to `firmware/apps/mine/release.sha256`.
+   From then on `node tools/op.mjs app mine` fails when a change elsewhere alters them (`tests/release_pin.sh`).
 
 Rules that keep the pedal recoverable and OpenPocket's data safe:
 

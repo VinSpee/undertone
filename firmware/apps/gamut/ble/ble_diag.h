@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-only OR MPL-2.0 */
 /* The Bluetooth test image's log channel (DIAG in docs/EDITOR-PROTOCOL.md, node tools/op.mjs log): this boot and the boot
  * before it as text, so that the "LAST BOOT FAILED" report can be read from a computer as well as photographed. The
- * Bluetooth line itself is ble_test_line, the text of the status area. No hardware access, so tests/test_ble_status.c
+ * Bluetooth line itself is ble_test_line, the text of the status area. No hardware access, so firmware/apps/gamut/tests/test_ble_status.c
  * compiles it on the PC. */
 #pragma once
 #include "ble_status.h"

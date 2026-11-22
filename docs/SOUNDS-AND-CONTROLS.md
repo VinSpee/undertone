@@ -231,7 +231,7 @@ high-gain amps turned it into a constant hiss, even with nothing plugged in.
   at every crossfade (SOLA).
 - Digital silence: no more denormal numbers (silence used to cost 25× more CPU on the PC).
 - Memory: engine 247 KB in the 336 KB POOL area (v35: delay and reverb in 16 bits; v34: 332 KB).
-- Preset saving (`tests/test_store.c`): power cut simulated at 1,286 points of a save → old version kept 578 times,
+- Preset saving (`firmware/apps/gamut/tests/test_store.c`): power cut simulated at 1,286 points of a save → old version kept 578 times,
   new one 708 times, never a damaged slot; no write outside the preset area.
 - CPU: v25 loaded the pedal too much (DOOM SLUDGE in BYP at 89 % on v26). v27 computes the cabinets and the amp
   differently (same sound, 0.5 dB on average): about −16 % on DOOM SLUDGE, −19 % on GROOVE METAL, i.e. +16 to +22 %

@@ -88,7 +88,7 @@ firmware read in three passes), `docs/NAM.md` (the fixed-point network), `docs/B
      before). CPU1 takes the first 12 or 16 frames of each 32 through all layers without waiting. CPU0 takes the rest,
      waiting per layer on one counter.
   3. **Pipeline:** CPU1 runs the effects after the amp on the previous block while CPU0 runs the effects before the amp
-     on this block, then both share the network. This costs one extra block of latency (`tests/engine/pipe_test.c`: same
+     on this block, then both share the network. This costs one extra block of latency (`firmware/apps/gamut/tests/engine/pipe_test.c`: same
      output, one block later).
   4. **v39 "wet lanes"**: delay and reverb run beside the chain, two blocks late (section 8).
 - **Lesson from v40.4 (measured):** a job per interrupt that must end before the next one puts the two cores' work in
@@ -314,7 +314,7 @@ Measured on the pedal or proven on the PC against a reference. The engine is `fi
 9. **The wet lanes (v39, from the stock firmware):** the delay and the reverb no longer run in series in the critical
    path. At their slot the chain sends the signal and mixes in the lane's wet output of two blocks before. The lane runs
    beside the chain (the other core). The delay's taps that are *heard* read the lag less far back; the taps *fed back*
-   keep the delay time, so echo timing and repeat spacing are exact, bit for bit (`tests/engine/wet_test.c`). Mind the
+   keep the delay time, so echo timing and repeat spacing are exact, bit for bit (`firmware/apps/gamut/tests/engine/wet_test.c`). Mind the
    gap lesson in section 1.
 10. **The audio path from RAM, the delays at half rate (v40, from the stock firmware):** the per-block code is copied to
     RAM at boot (no misses in the instruction cache the two cores share), placed within call range of the flash

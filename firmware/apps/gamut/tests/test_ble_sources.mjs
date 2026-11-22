@@ -6,7 +6,7 @@ import { readdirSync, readFileSync, statSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-const repo = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+const repo = resolve(dirname(fileURLToPath(import.meta.url)), "../../../..");
 const dir = join(repo, "third_party/jieli-ble");
 const listed = readFileSync(join(dir, "MEMBERS"), "utf8").split("\n").filter((l) => l && !l.startsWith("#")).map((l) => l.split("\t")[2]);
 assert.ok(listed.length > 0 && listed.every(Boolean), "MEMBERS has archive, member and file on each line");

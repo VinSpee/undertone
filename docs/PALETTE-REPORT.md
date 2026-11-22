@@ -73,7 +73,7 @@ cycles a sample at 360 MHz. The script leaves out three costs the handbook docum
 feasibility report checked the method against a loop whose load on a pedal is known, and it agreed within a factor of
 two.
 
-**Estimate B, host time converted.** `tests/palette_render.c` times each effect on the signal of section 2 on an
+**Estimate B, host time converted.** `firmware/apps/palette/tests/palette_render.c` times each effect on the signal of section 2 on an
 Apple M3 Pro, built with clang and `-O2 -fno-vectorize -fno-slp-vectorize`. The time is the process's CPU time, the
 least of 15 runs, less the same engine with every module off (the chain's row). In the same run it times three blocks
 of OpenPocket's engine whose load on a pedal an earlier task read with `node tools/op.mjs dsp` on v40:
@@ -227,7 +227,7 @@ node tools/op.mjs all                                  # every product, the rele
 node tools/op.mjs sim --app palette                    # the app on this computer; the page plays a guitar loop
 mkdir -p build/palette-wav
 cc -O2 -fno-vectorize -fno-slp-vectorize -DPL_REFERENCE -Ifirmware/apps/palette -Ifirmware/apps/gamut/engine -o build/palette_render \
-   tests/palette_render.c firmware/apps/palette/engine.c firmware/apps/gamut/engine/px_dsp.c firmware/px_math.c -lm    # (clang)
+   firmware/apps/palette/tests/palette_render.c firmware/apps/palette/engine.c firmware/apps/gamut/engine/px_dsp.c firmware/px_math.c -lm    # (clang)
 build/palette_render --runs 15 --wav build/palette-wav # section 2's levels and times; each effect as a WAV file
 ```
 

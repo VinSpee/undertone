@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-3.0-only
  * OpenPocket — NAM A2-Lite in fixed point (see px_nam.h). Written from the published A2 architecture; checked
- * against tools/nam_a2.py (tests/test_nam.py).
+ * against tools/nam_a2.py (firmware/apps/gamut/tests/test_nam.py).
  *
  * How it is computed, for this CPU (no data cache in front of the SRAM, a taken branch costs about 8 cycles, two
  * instructions can issue together): a block of up to PXN_N frames goes through the network layer by layer.
@@ -205,7 +205,7 @@ static void pxn_rr2(const int32_t *rr, int32_t *r2)
 #define PXN_LEAN 0
 #endif
 /* ---- the same, by hand (v40: moved to RAM with their callers on the pedal, tools/ramcode.py --plain). v40.2: PXN_HAND
- * runs their start-up check, timing and dispatch: on the pedal; on the PC only in tests/engine/hand_test.c, which gives
+ * runs their start-up check, timing and dispatch: on the pedal; on the PC only in firmware/apps/gamut/tests/engine/hand_test.c, which gives
  * them C stand-ins that read exactly what the hand code reads (a fault in the check shows there, not as a boot loop) */
 void pxn_dot3x4_asm(const pxn_dot *j);
 void pxn_dot1_asm(const pxn_dot *j);

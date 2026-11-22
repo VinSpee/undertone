@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-only
  * OpenPocket — the button lights in the normal firmware (firmware/apps/gamut/px_lights.h over px_leds.h, issue #8) on the PC,
  * against fake port C registers and a model of the 74HC595 with its output enable on PC7:
- *   cc -O1 -Wall -Ifirmware/apps/gamut/engine -Ifirmware -o build/lightsim tests/lightsim.c && build/lightsim
+ *   cc -O1 -Wall -Ifirmware/apps/gamut/engine -Ifirmware -o build/lightsim firmware/apps/gamut/tests/lightsim.c && build/lightsim
  * Checks: after leds_init the lights are enabled (PC7 low) with all of them dark; every one of the twelve blocks,
  * alone, lights exactly its button (the FX group's seven lights FX); all on lights the six effect buttons and not
  * HOME; HOME blinks at 2 Hz in the tuner and only there; bit 7 is never lit; the byte is written only when it
@@ -34,7 +34,7 @@ static uint8_t lit(void) { return enabled() ? (uint8_t)~q : 0u; }   /* what the 
 #define LEDS_PC(r) (pc[(r) / 4u])
 #define LEDS_WAIT() (waits++)
 #define LEDS_EDGE() edge()
-#include "../firmware/apps/gamut/px_lights.h"
+#include "../px_lights.h"
 
 static int failed;
 static void ok(int c, const char *what) { printf("%-66s %s\n", what, c ? "ok" : "FAIL"); if (!c) failed++; }
