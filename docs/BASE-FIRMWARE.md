@@ -67,7 +67,7 @@ The app's file defines these names before `base/board.h`:
 | `AUDIO_PROBE` | `0`. `1` builds the audio test in place of the app. |
 | `DSP_CPU1` | `1` starts the second core for the DSP. `build.sh` reads this line to link the second core's entry. |
 | `OP_NAME` | The product's name: the boot screen, the installer. |
-| `OP_VERSION_NUM`, `OP_VERSION` | The package's number (`"42"` gives `PocketX_942`) and the text on the screens. |
+| `OP_VERSION_NUM`, `OP_VERSION` | The package's number (`"43"` gives `PocketX_943`) and the text on the screens. |
 | `OP_APP_ID` | An app other than OpenPocket: its folder's name under `firmware/apps`. OpenPocket defines none. |
 | `A_CH` | `2` when the app's sound has a left and a right side. The default is `1`. |
 
@@ -284,7 +284,7 @@ which product runs. Three other things do.
 | Where | OpenPocket | An app |
 | --- | --- | --- |
 | In the image | No product descriptor. | A descriptor found by its mark `OP-APP:`: id, name, version, what it can do. |
-| In the package | `PocketX_942.fwsc`. The manifest has no `app`. | `starter-PocketX_901.fwsc`. The manifest's `app` holds the descriptor. |
+| In the package | `PocketX_943.fwsc`. The manifest has no `app`. | `starter-PocketX_901.fwsc`. The manifest's `app` holds the descriptor. |
 | On the pedal | INFO answers protocol 1 to 4. | INFO answers protocol 0, then the descriptor. |
 
 INFO is the first request of the editor protocol, `F0 7D 4F 50 01 F7` ([EDITOR-PROTOCOL.md](EDITOR-PROTOCOL.md)).
