@@ -56,7 +56,7 @@ let s = sim(["--dump", flash1]);
 await s.ready;
 let ed = new Editor(s.access);
 const info = await ed.connect();
-ok(info && info.proto === 4 && info.version === "v39" && info.identity === "PocketX_939", `INFO: ${info && `${info.version} ${info.identity}`}`);
+ok(info && info.proto === 5 && info.version === "v39" && info.identity === "PocketX_939", `INFO: ${info && `${info.version} ${info.identity}`}`);
 ok(info && info.nblk === 12 && info.npar === 5 && info.nslot === 52 && info.nameMax === 13, "INFO: 12 blocks, 5 parameters, 52 slots, names of 13");
 const t0 = Date.now();
 const cat = await ed.catalog();
@@ -266,7 +266,11 @@ list = await ed.list();
   const f32 = prepareIr(parseWav(wav(44100, 32, 1, resp(44100, 10).map((f) => [f[0]]))));
   ok(f32.note === "" && f32.h[1000] === 0, "IR: a short float WAV at 44.1 kHz is kept as it is (zeros after its end)");
   let il = await ed.irList();
-  ok(il.length === 8 && il.every((x) => !x.used), "IR_LIST: 8 empty slots");
+  ok(ed.hasFactoryIr && il.length === 8 && il[0].used && il[0].factory && il[0].name === "ML BEST IR" && il.slice(1).every((x) => !x.used),
+     `IR_LIST: IR1 holds the factory IR (${il[0].name}), the 7 others are empty`);
+  ok(await ed.irUpload(0, packIr("MY CAB", ir.h)) === 0 && (il = await ed.irList()) && il[0].used && !il[0].factory && il[0].name === "MY CAB",
+     "IR: an IR of the user's written into IR1 replaces the factory one");
+  ok(await ed.irErase(0) === 0 && (il = await ed.irList()) && il[0].factory && il[0].name === "ML BEST IR", "IR: IR1 emptied plays the factory IR again");
   const name = irName("Mesa_4x12 V30.wav");
   const rc = await ed.irUpload(2, packIr(name, ir.h));
   il = await ed.irList();

@@ -6,6 +6,7 @@ import { app, $, h, icon, on, emit, blk, typeOf, choices, act, menu, slotName } 
 import { save, saveAs, revert, exportOne, setCompare, comparing, duplicate, moveTo, restoreFactory } from "./edpresets.js";
 import { knobIndex, indexKnob, KINDS } from "./pxlib.js";
 import { t3kLink } from "./pxt3k.js";
+import { FACTORY_IR } from "./pxir.js";
 
 let dragging = null;
 
@@ -262,6 +263,8 @@ function renderNote() {
   const e = slot >= 0 ? app.held[kind].get(slot) : null, src = e && e.source;
   if (slot >= 0 && list[slot] && !list[slot].used) {
     box.append(h("p", { class: "warn" }, icon("alert"), ` ${K.tag(slot)} is empty: this preset plays without ${K.without}. Choose another ${K.thing} above, or load one into ${K.tag(slot)}.`));
+  } else if (kind === "ir" && slot >= 0 && list[slot] && list[slot].factory) {
+    box.append(h("p", { class: "src" }, "The firmware's factory IR: ", h("a", { href: FACTORY_IR.url, target: "_blank", rel: "noopener", text: FACTORY_IR.title }), ` by ${FACTORY_IR.by}.`));
   } else if (src && src.from === "tone3000") {
     box.append(h("p", { class: "src" }, h("span", { class: "t3k-mark", text: "T3K" }), " ",
       t3kLink(src.url) ? h("a", { href: t3kLink(src.url), target: "_blank", rel: "noopener", text: src.title }) : src.title, src.creator ? ` by ${src.creator}` : "", src.gear ? ` · ${src.gear.toUpperCase()} · NAM` : ""));

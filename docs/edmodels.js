@@ -6,7 +6,7 @@
 import { app, $, h, fill, icon, on, emit, slotName, say, task, sleep, confirmDialog, promptDialog, pickDialog, menu, plural, dropTarget } from "./edcore.js";
 import { writeSlots, entry, selectPreset } from "./edpresets.js";
 import { parseNam, levelTrim, packModel, readDi } from "./pxnam.js";
-import { parseWav, prepareIr, packIr, irName } from "./pxir.js";
+import { parseWav, prepareIr, packIr, irName, FACTORY_IR } from "./pxir.js";
 import { Library, KINDS, slotRef, usage, retarget, renamePacked, cleanSlotName, pedalKey, planMove, indexKnob, presetSlot } from "./pxlib.js";
 import { t3kReady, t3kSelect, t3kSignIn, t3kSignedIn, t3kSignOut, t3kTone, t3kModels, t3kDownload, t3kUser, t3kList, t3kA2Count, t3kLink, t3kPicture, T3K_LISTS } from "./pxt3k.js";
 
@@ -81,6 +81,8 @@ async function leave(kind, slot) {
   await clear(kind, slot);
   if (e) await lib.put({ ...e, home: slot });
 }
+// slot IR1 of a firmware with the factory IR: emptied, it plays that IR again
+const factoryBack = (kind, slot) => kind === "ir" && slot === FACTORY_IR.slot && app.ed.hasFactoryIr;
 const freeSlot = (kind, taken = new Set()) => { const s = BANKS[kind].slots().find((x) => !x.used && !taken.has(x.slot)); return s ? s.slot : -1; };
 const usedBy = (kind) => (app.refs[kind] ? usage(app.bank, app.refs[kind]) : new Map());
 // the presets using each slot, once every preset has been read: null (with the reason shown) when one cannot be read
@@ -149,12 +151,13 @@ function install(kind, e, slot) {
 async function removeFromPedal(kind, s) {
   const K = KINDS[kind], use = await knownUse(kind);
   if (!use) return;
-  const u = use.get(s.slot) || [], kept = app.held[kind].has(s.slot);
+  const u = use.get(s.slot) || [], kept = app.held[kind].has(s.slot), back = factoryBack(kind, s.slot);
+  const after = back ? `the factory IR, ${FACTORY_IR.title}, instead` : `without ${K.without} until another ${K.thing} is in ${tag(kind, s.slot)}`;
   const body = h("div", {},
-    u.length ? h("p", { class: "warn", text: `${plural(u.length, "preset")} ${u.length === 1 ? "uses" : "use"} it: ${presetNames(u)}. ${u.length === 1 ? "It plays" : "They play"} without ${K.without} until another ${K.thing} is in ${tag(kind, s.slot)}.` }) : h("p", { text: "No saved preset uses it." }),
+    u.length ? h("p", { class: "warn", text: `${plural(u.length, "preset")} ${u.length === 1 ? "uses" : "use"} it: ${presetNames(u)}. ${u.length === 1 ? "It plays" : "They play"} ${after}.` }) : h("p", { text: "No saved preset uses it." }),
     h("p", { class: "dim", text: kept ? "It stays in the library on this computer: you can send it back later." : `It is not in this browser's library: to get it back you need its file again.` }));
   if (!(await confirmDialog({ title: `Remove ${s.name} from ${tag(kind, s.slot)}?`, body, confirm: "Remove from the pedal", danger: true }))) return;
-  await task(`Emptying ${tag(kind, s.slot)}`, async () => { await leave(kind, s.slot); await refreshAssets(kind); return `${tag(kind, s.slot)} is empty.`; });
+  await task(`Emptying ${tag(kind, s.slot)}`, async () => { await leave(kind, s.slot); await refreshAssets(kind); return back ? `${tag(kind, s.slot)} plays the factory IR again.` : `${tag(kind, s.slot)} is empty.`; });
 }
 async function renameSlot(kind, s) {
   const e = app.held[kind].get(s.slot);
@@ -175,7 +178,7 @@ async function moveSlot(kind, s) {
   const to = await pickDialog({
     title: `Move ${s.name} to…`, intro: "Presets that use it follow it to its new slot.", searchable: false,
     items: slots.map((x) => ({ value: x.slot, n: tag(kind, x.slot), name: x.used ? x.name : "Empty", tag: x.used ? "changes places" : "",
-      disabled: x.slot === s.slot || (x.used && !held.has(x.slot)), why: x.slot === s.slot ? "It is here now." : "Not in this browser's library: it cannot change places." })),
+      disabled: x.slot === s.slot || (x.used && !held.has(x.slot)), why: x.slot === s.slot ? "It is here now." : x.factory ? "The factory IR is part of the firmware: it cannot change places. Use Replace with a file on it." : "Not in this browser's library: it cannot change places." })),
     consequence: (it) => {
       const n = (use.get(s.slot) || []).length + (slots[it.value].used ? (use.get(it.value) || []).length : 0);
       return { text: `${slots[it.value].used ? `${s.name} and ${slots[it.value].name} change places.` : `${s.name} goes to ${it.n}.`} ${n ? `${plural(n, "preset")} ${n === 1 ? "is" : "are"} updated to follow.` : "No saved preset is affected."}`, confirm: `Move to ${it.n}` };
@@ -215,6 +218,7 @@ function pickFile(kind, into = -1) {
 }
 
 // ---- a kind's card ----
+const factoryLine = () => h("span", { class: "meta" }, "Factory IR: ", h("a", { href: FACTORY_IR.url, target: "_blank", rel: "noopener", text: FACTORY_IR.title }), ` by ${FACTORY_IR.by}`);
 function sourceLine(e) {
   if (!e) return h("span", { class: "meta dim", text: "Not in this browser's library" });
   const s = e.source || {};
@@ -255,17 +259,18 @@ function render(kind) {
       queue[kind].every((q) => q.state !== "wait" && q.state !== "work") && h("button", { type: "button", class: "btn small", text: "Clear this list", onclick: () => { queue[kind] = []; render(kind); } })) : null,
     h("div", { class: "slots", id: `${kind}list` },
       slots.filter((s) => s.used).map((s) => {
-        const e = held.get(s.slot);
+        const e = held.get(s.slot), fw = "The factory IR is part of the firmware: ";
         return h("div", { class: "srow", "data-slot": s.slot },
           h("span", { class: "n", text: tag(kind, s.slot) }),
-          h("span", { class: "nm" }, h("b", { text: s.name }), sourceLine(e)),
+          h("span", { class: "nm" }, h("b", { text: s.name }), s.factory ? factoryLine() : sourceLine(e)),
           usageChip(kind, s.slot, use),
           h("button", { type: "button", class: "btn icon small", "aria-label": `Actions for ${tag(kind, s.slot)} ${s.name}`, "aria-haspopup": "menu", onclick: (ev) => menu(ev.currentTarget, [
-            { label: "Rename…", run: () => renameSlot(kind, s), disabled: !e, why: "Not in this browser's library: load its file again to rename it." },
-            { label: "Move to another slot…", run: () => moveSlot(kind, s), disabled: !e, why: "Not in this browser's library: load its file again to move it." },
+            { label: "Rename…", run: () => renameSlot(kind, s), disabled: !e, why: s.factory ? `${fw}it cannot be renamed.` : "Not in this browser's library: load its file again to rename it." },
+            { label: "Move to another slot…", run: () => moveSlot(kind, s), disabled: !e, why: s.factory ? `${fw}it cannot move. Load an IR into another slot instead.` : "Not in this browser's library: load its file again to move it." },
             { label: "Replace with a file…", run: () => pickFile(kind, s.slot) },
             "-",
-            { label: "Remove from the pedal", run: () => removeFromPedal(kind, s), danger: true },
+            { label: "Remove from the pedal", run: () => removeFromPedal(kind, s), danger: true, disabled: s.factory,
+              why: `${fw}it cannot be removed. Load an IR of yours into ${tag(kind, s.slot)} to play it instead; remove yours and this one comes back.` },
           ]) }, icon("more")));
       }),
       // the empty slots, small: one click loads a file into that very slot (a preset may be waiting for it)

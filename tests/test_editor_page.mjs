@@ -493,7 +493,10 @@ const free = (kind, slot) => page.locator(`#${kind}list .free [data-slot="${slot
   const [ch] = await Promise.all([page.waitForEvent("filechooser"), free("ir", 2).click()]);
   await ch.setFiles(fw);
   ok(await toast(/1 IR on the pedal/, 20000), "a WAV file loaded into IR slot 3 from its own row");
-  ok((await srow("ir", 2).textContent()).includes("GREEN 412") && /1 of 8 slots used/.test(await text("#ircap")) && /resampled from 48 kHz/.test(await text("#ir .queue")), "IR3 GREEN 412, with what was done to the file");
+  ok((await srow("ir", 2).textContent()).includes("GREEN 412") && /2 of 8 slots used/.test(await text("#ircap")) && /resampled from 48 kHz/.test(await text("#ir .queue")), "IR3 GREEN 412, with what was done to the file");
+  const ir1 = srow("ir", 0);
+  ok((await ir1.textContent()).includes("ML BEST IR") && /Factory IR: BEST IR IN THE WORLD by ML Sound Lab/.test(await ir1.textContent()) &&
+     /facebook\.com\/watch\/.*v=1053603041469100/.test(await ir1.locator("a").getAttribute("href")), "IR1 holds the factory IR, credited to ML Sound Lab with a link");
   ok((await pedalState()).writesOk, "the flash was written only inside the preset store, the model slots and the IR slots");
 }
 

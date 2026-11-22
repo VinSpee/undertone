@@ -549,9 +549,8 @@ enum { NPRESETS = 52 };
 int px_preset_count(void) { return NPRESETS; }
 /* v37: 24 factory presets built round the factory NAM A2 models (NAM(model, gain, bass, mid, treble): knobs at noon
  * = the captured amp), each one levelled (LEVEL, tools/level_presets.py: -23 LUFS on DI guitar, as v36); slots 25..52: USER,
- * a clean starting point. Store format 6: their cabinet is USER IR in slot IR1 (IR1), which passes the sound while the
- * slot is empty; LEVEL then keeps the loudness each preset had with its built-in cabinet (measured on docs/nam_di.wav:
- * 0 to 6 dB up). With an IR in IR1 they play that much louder. */
+ * a clean starting point. Store format 6: their cabinet is USER IR in slot IR1 (IR1), which plays the factory IR
+ * (px_ir_factory.h) until the user loads one there; LEVEL is set with it (docs/nam_di.wav). */
 #define LVL(v) (p->p[PX_B_GATE][PX_PATCH_LEVEL] = (uint8_t)(v))
 #define NOGATE (p->on[PX_B_GATE] = 0)
 #define NAM(m, g, b, md, t) blk(p, PX_B_AMP, 1, PX_AMP_NAM, px_nam_knob(m), g, b, md, t)
@@ -564,86 +563,86 @@ void px_preset_factory(px_preset_t *p, int idx)
     p->on[PX_B_AMP] = p->on[PX_B_CAB] = 1;
     switch (idx) {
     /* ---- clean ---- */
-    case 0: setname(p, "TWIN CLEAN"); blk(p, PX_B_GATE, 1, 0, 15, 50, 50, 0, 0); LVL(59);
+    case 0: setname(p, "TWIN CLEAN"); blk(p, PX_B_GATE, 1, 0, 15, 50, 50, 0, 0); LVL(37);
         blk(p, PX_B_COMP, 1, PX_CMP_STUDIO, 30, 50, 50, 50, 0);
         NAM(M_TWIN, 50, 50, 50, 55); IR1;
         blk(p, PX_B_REVERB, 1, PX_REV_PLATE, 40, 50, 22, 0, 0); break;
-    case 1: setname(p, "CHORUS CLEAN"); blk(p, PX_B_GATE, 1, 0, 15, 50, 50, 0, 0); LVL(63);
+    case 1: setname(p, "CHORUS CLEAN"); blk(p, PX_B_GATE, 1, 0, 15, 50, 50, 0, 0); LVL(43);
         NAM(M_TWIN, 45, 50, 50, 55); IR1;
         blk(p, PX_B_MOD, 1, PX_MOD_CHORUS, 30, 50, 50, 0, 0);
         blk(p, PX_B_DELAY, 1, PX_DLY_DIGITAL, 35, 25, 18, 50, 0); blk(p, PX_B_REVERB, 1, PX_REV_HALL, 45, 50, 22, 0, 0); break;
-    case 2: setname(p, "AC15 CHIME"); blk(p, PX_B_GATE, 1, 0, 20, 50, 50, 0, 0); LVL(56);
+    case 2: setname(p, "AC15 CHIME"); blk(p, PX_B_GATE, 1, 0, 20, 50, 50, 0, 0); LVL(34);
         NAM(M_AC15, 50, 48, 50, 52); IR1;
         blk(p, PX_B_REVERB, 1, PX_REV_SPRING, 40, 50, 20, 40, 0); break;
-    case 3: setname(p, "FUNK WAH"); NOGATE; LVL(62);
+    case 3: setname(p, "FUNK WAH"); NOGATE; LVL(32);
         blk(p, PX_B_COMP, 1, PX_CMP_SQUASH, 55, 35, 50, 0, 0); blk(p, PX_B_SFX, 1, PX_SFX_AUTOWAH, 55, 50, 55, 40, 0);
         NAM(M_TWIN, 45, 45, 55, 60); IR1;
         blk(p, PX_B_REVERB, 1, PX_REV_ROOM, 35, 50, 15, 0, 0); break;
-    case 4: setname(p, "SURF SPRING"); blk(p, PX_B_GATE, 1, 0, 15, 50, 50, 0, 0); LVL(70);
+    case 4: setname(p, "SURF SPRING"); blk(p, PX_B_GATE, 1, 0, 15, 50, 50, 0, 0); LVL(41);
         NAM(M_SUPER59, 45, 50, 45, 58); IR1;
         blk(p, PX_B_DELAY, 1, PX_DLY_TAPE, 7, 10, 15, 50, 20); blk(p, PX_B_REVERB, 1, PX_REV_SPRING, 55, 55, 40, 60, 0); break;
-    case 5: setname(p, "AMBIENT SWELL"); blk(p, PX_B_GATE, 1, 0, 18, 50, 50, 0, 0); LVL(73);
+    case 5: setname(p, "AMBIENT SWELL"); blk(p, PX_B_GATE, 1, 0, 18, 50, 50, 0, 0); LVL(68);
         blk(p, PX_B_COMP, 1, PX_CMP_SWELL, 50, 50, 50, 0, 0);
         NAM(M_TWIN, 45, 50, 50, 50); IR1;
         blk(p, PX_B_MOD, 1, PX_MOD_CHORUS, 20, 30, 30, 0, 0);
         blk(p, PX_B_DELAY, 1, PX_DLY_DUAL, 35, 45, 30, 40, 0); blk(p, PX_B_REVERB, 1, PX_REV_AMBIENT, 50, 45, 40, 0, 0); break;
     /* ---- edge of break-up, crunch ---- */
-    case 6: setname(p, "TS BLUES"); blk(p, PX_B_GATE, 1, 0, 18, 50, 50, 0, 0); LVL(69);
+    case 6: setname(p, "TS BLUES"); blk(p, PX_B_GATE, 1, 0, 18, 50, 50, 0, 0); LVL(40);
         blk(p, PX_B_DRIVE, 1, PX_DRV_TS9, 35, 50, 50, 0, 0);
         NAM(M_SUPER59, 55, 50, 50, 52); IR1;
         blk(p, PX_B_REVERB, 1, PX_REV_SPRING, 40, 50, 18, 40, 0); break;
-    case 7: setname(p, "BLUES BREAKUP"); blk(p, PX_B_GATE, 1, 0, 22, 50, 50, 0, 0); LVL(59);
+    case 7: setname(p, "BLUES BREAKUP"); blk(p, PX_B_GATE, 1, 0, 22, 50, 50, 0, 0); LVL(34);
         NAM(M_SHIRLCL, 55, 50, 50, 50); IR1;
         blk(p, PX_B_DELAY, 1, PX_DLY_ANALOG, 29, 20, 15, 40, 0); blk(p, PX_B_REVERB, 1, PX_REV_ROOM, 40, 50, 18, 0, 0); break;
-    case 8: setname(p, "KLON CRUNCH"); blk(p, PX_B_GATE, 1, 0, 18, 50, 50, 0, 0); LVL(70);
+    case 8: setname(p, "KLON CRUNCH"); blk(p, PX_B_GATE, 1, 0, 18, 50, 50, 0, 0); LVL(37);
         blk(p, PX_B_DRIVE, 1, PX_DRV_KLON, 40, 50, 55, 0, 0);
         NAM(M_JCM900, 45, 50, 50, 50); IR1;
         blk(p, PX_B_REVERB, 1, PX_REV_ROOM, 40, 50, 18, 0, 0); break;
-    case 9: setname(p, "BRIT CRUNCH"); blk(p, PX_B_GATE, 1, 0, 25, 30, 50, 0, 0); LVL(57);
+    case 9: setname(p, "BRIT CRUNCH"); blk(p, PX_B_GATE, 1, 0, 25, 30, 50, 0, 0); LVL(27);
         NAM(M_JCM900, 55, 50, 55, 50); IR1;
         blk(p, PX_B_REVERB, 1, PX_REV_ROOM, 35, 50, 15, 0, 0); break;
-    case 10: setname(p, "70S ROCK"); blk(p, PX_B_GATE, 1, 0, 25, 30, 50, 0, 0); LVL(53);
+    case 10: setname(p, "70S ROCK"); blk(p, PX_B_GATE, 1, 0, 25, 30, 50, 0, 0); LVL(29);
         blk(p, PX_B_DRIVE, 1, PX_DRV_M77, 20, 50, 65, 0, 0);
         NAM(M_AC15, 60, 55, 55, 50); IR1;
         blk(p, PX_B_REVERB, 1, PX_REV_PLATE, 35, 50, 15, 0, 0); break;
-    case 11: setname(p, "BOUTIQUE"); blk(p, PX_B_GATE, 1, 0, 25, 30, 50, 0, 0); LVL(55);
+    case 11: setname(p, "BOUTIQUE"); blk(p, PX_B_GATE, 1, 0, 25, 30, 50, 0, 0); LVL(35);
         NAM(M_SHIRLEY, 50, 50, 50, 50); IR1;
         blk(p, PX_B_DELAY, 1, PX_DLY_DIGITAL, 29, 15, 12, 45, 0); blk(p, PX_B_REVERB, 1, PX_REV_ROOM, 40, 50, 15, 0, 0); break;
     /* ---- lead ---- */
-    case 12: setname(p, "BRIT LEAD"); blk(p, PX_B_GATE, 1, 0, 30, 30, 50, 0, 0); LVL(55);
+    case 12: setname(p, "BRIT LEAD"); blk(p, PX_B_GATE, 1, 0, 30, 30, 50, 0, 0); LVL(34);
         NAM(M_JCM2000, 55, 50, 55, 50); IR1;
         blk(p, PX_B_DELAY, 1, PX_DLY_ANALOG, 39, 30, 20, 45, 0); blk(p, PX_B_REVERB, 1, PX_REV_HALL, 45, 45, 20, 0, 0); break;
-    case 13: setname(p, "SMOOTH LEAD"); blk(p, PX_B_GATE, 1, 0, 30, 30, 50, 0, 0); LVL(54);
+    case 13: setname(p, "SMOOTH LEAD"); blk(p, PX_B_GATE, 1, 0, 30, 30, 50, 0, 0); LVL(36);
         NAM(M_MARK4, 55, 50, 55, 50); IR1;
         blk(p, PX_B_DELAY, 1, PX_DLY_TAPE, 35, 30, 20, 45, 20); blk(p, PX_B_REVERB, 1, PX_REV_HALL, 45, 45, 18, 0, 0); break;
-    case 14: setname(p, "HAIR METAL"); blk(p, PX_B_GATE, 1, 0, 35, 30, 50, 0, 0); LVL(56);
+    case 14: setname(p, "HAIR METAL"); blk(p, PX_B_GATE, 1, 0, 35, 30, 50, 0, 0); LVL(41);
         blk(p, PX_B_DRIVE, 1, PX_DRV_M77, 25, 55, 60, 0, 0);
         NAM(M_JVM, 50, 55, 45, 55); IR1;
         blk(p, PX_B_DELAY, 1, PX_DLY_DIGITAL, 33, 25, 15, 50, 0); blk(p, PX_B_REVERB, 1, PX_REV_PLATE, 40, 50, 18, 0, 0); break;
-    case 15: setname(p, "SPACE LEAD"); blk(p, PX_B_GATE, 1, 0, 30, 30, 50, 0, 0); LVL(61);
+    case 15: setname(p, "SPACE LEAD"); blk(p, PX_B_GATE, 1, 0, 30, 30, 50, 0, 0); LVL(35);
         NAM(M_PROMOD, 50, 50, 50, 50); IR1;
         blk(p, PX_B_DELAY, 1, PX_DLY_DUAL, 29, 40, 25, 40, 0); blk(p, PX_B_REVERB, 1, PX_REV_SHIMMER, 55, 45, 30, 40, 0); break;
     /* ---- high gain ---- */
-    case 16: setname(p, "MODERN ROCK"); blk(p, PX_B_GATE, 1, 0, 40, 30, 50, 0, 0); LVL(57);
+    case 16: setname(p, "MODERN ROCK"); blk(p, PX_B_GATE, 1, 0, 40, 30, 50, 0, 0); LVL(32);
         NAM(M_PROMOD, 55, 50, 50, 50); IR1;
         blk(p, PX_B_REVERB, 1, PX_REV_ROOM, 30, 50, 12, 0, 0); break;
-    case 17: setname(p, "5150 RHYTHM"); blk(p, PX_B_GATE, 1, 0, 45, 25, 50, 0, 0); LVL(57);
+    case 17: setname(p, "5150 RHYTHM"); blk(p, PX_B_GATE, 1, 0, 45, 25, 50, 0, 0); LVL(39);
         blk(p, PX_B_DRIVE, 1, PX_DRV_TS9, 0, 55, 75, 0, 0);
         NAM(M_5150, 50, 50, 50, 50); IR1; break;
-    case 18: setname(p, "TIGHT METAL"); blk(p, PX_B_GATE, 1, 0, 50, 20, 50, 0, 0); LVL(54);
+    case 18: setname(p, "TIGHT METAL"); blk(p, PX_B_GATE, 1, 0, 50, 20, 50, 0, 0); LVL(37);
         NAM(M_6505, 50, 55, 45, 55); IR1; break;
-    case 19: setname(p, "SWEDE DEATH"); blk(p, PX_B_GATE, 1, 0, 55, 25, 50, 0, 0); LVL(69);
+    case 19: setname(p, "SWEDE DEATH"); blk(p, PX_B_GATE, 1, 0, 55, 25, 50, 0, 0); LVL(50);
         blk(p, PX_B_DRIVE, 1, PX_DRV_HM2, 70, 80, 80, 50, 0);
         NAM(M_JCM900, 40, 50, 50, 50); IR1; break;
-    case 20: setname(p, "DOOM"); blk(p, PX_B_GATE, 1, 0, 40, 35, 50, 0, 0); LVL(46);
+    case 20: setname(p, "DOOM"); blk(p, PX_B_GATE, 1, 0, 40, 35, 50, 0, 0); LVL(33);
         NAM(M_5150, 60, 62, 45, 45); IR1;
         blk(p, PX_B_DELAY, 1, PX_DLY_ANALOG, 45, 20, 10, 40, 0); blk(p, PX_B_REVERB, 1, PX_REV_HALL, 40, 35, 15, 0, 0); break;
     /* ---- effects ---- */
-    case 21: setname(p, "VIBE ROCK"); blk(p, PX_B_GATE, 1, 0, 18, 50, 50, 0, 0); LVL(56);
+    case 21: setname(p, "VIBE ROCK"); blk(p, PX_B_GATE, 1, 0, 18, 50, 50, 0, 0); LVL(22);
         blk(p, PX_B_MOD, 1, PX_MOD_UNIVIBE, 35, 55, 60, 0, 0);
         NAM(M_JCM900, 55, 50, 50, 50); IR1;
         blk(p, PX_B_REVERB, 1, PX_REV_ROOM, 40, 50, 18, 0, 0); break;
-    case 22: setname(p, "ORGAN"); NOGATE; LVL(79);
+    case 22: setname(p, "ORGAN"); NOGATE; LVL(54);
         blk(p, PX_B_SYN, 1, PX_SYN_ORGAN, 50, 70, 40, 30, 0);
         NAM(M_TWIN, 45, 50, 50, 50); IR1;
         blk(p, PX_B_MOD, 1, PX_MOD_ROTARY, 30, 60, 50, 0, 0); blk(p, PX_B_REVERB, 1, PX_REV_ROOM, 40, 50, 18, 0, 0); break;
@@ -1256,6 +1255,17 @@ PX_HOT __attribute__((noinline)) static void ir_run(float *xb)
 #ifndef PX_IR_USER_GIVEN                               /* (a test that includes this file gives its own) */
 __attribute__((weak)) int px_ir_user(int slot, char *name12, float *h) { (void)slot; (void)name12; (void)h; return 0; }
 #endif
+#include "px_ir_factory.h"                             /* slot IR1's factory IR (tools/mk_ir_factory.mjs) */
+/* a slot's IR: the user's, else in slot IR1 the factory one (loading an IR there replaces it, emptying the slot brings
+ * it back) */
+static int ir_get(int s, char *name12, float *h)
+{
+    if (px_ir_user(s, name12, h)) return 1;
+    if (s != 0) return 0;
+    memcpy(name12, PXI_FNAME, 12);
+    if (h) for (int i = 0; i < PX_IR_LEN; i++) h[i] = (float)PXI_FS[i] * (PXI_FSCALE / 32767.0f);
+    return 1;
+}
 int px_ir_slot(int v) { if (v < 0) v = 0; if (v > 100) v = 100; return v * PX_IR_N / 101; }
 int px_ir_knob(int s)
 {
@@ -1267,7 +1277,7 @@ int px_ir_knob(int s)
 }
 int px_ir_name(int s, char *buf)
 {
-    if (s >= 0 && s < PX_IR_N && px_ir_user(s, buf, 0)) { buf[11] = 0; return 1; }
+    if (s >= 0 && s < PX_IR_N && ir_get(s, buf, 0)) { buf[11] = 0; return 1; }
     const char *e = " EMPTY";
     int i = 0;
     buf[i++] = 'I'; buf[i++] = 'R'; buf[i++] = (char)('1' + (s < 0 ? 0 : s % 9));
@@ -1284,7 +1294,7 @@ static void rc_cab(px_engine *e)
         char nm[12];
         float *h = &ir_X[0][0];                        /* (scratch: cleared after; the IR in the first half, ir_load_h's in the second) */
         if (!fft_ready) fft_init();
-        ir_ok = px_ir_user(s, nm, h);
+        ir_ok = ir_get(s, nm, h);
         if (ir_ok) ir_load_h(h, &ir_X[IR_P / 2][0]);
         ir_clear();
         e->ir_slot = s;

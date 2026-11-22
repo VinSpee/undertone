@@ -49,10 +49,10 @@ The 12 blocks, by index: 0 GATE, 1 COMP, 2 PITCH, 3 SFX, 4 DRIVE, 5 AMP, 6 CAB, 
 | 21 NAM_COMMIT | slot (0..15) | slot, rc (0 ok, 1 invalid: header, a weight that is not a number, CRC; 2 flash). Checks the pieces received and writes them to the user slot |
 | 22 NAM_ERASE | slot (0..15) | slot, rc (0 ok, 1 invalid, 2 flash). Empties the user slot |
 | 23 DIAG | — | n (5), then n strings: this boot, the last boot, the status line, the link, the trace. Read only. Only the Bluetooth test image answers: other firmware gives no reply. `docs/BLE-TEST.md`, "Reading the pedal from a computer" |
-| 24 IR_LIST | — | slots (8), then per slot: present (0/1), name string (11 characters at most; an empty slot reads "IR3 EMPTY") |
+| 24 IR_LIST | — | slots (8), then per slot: present (0 empty, 1 an IR of the user's; since protocol 5 also 2: slot IR1's factory IR, which it plays while it holds none of the user's), name string (11 characters at most; an empty slot reads "IR3 EMPTY") |
 | 25 IR_WRITE | piece (2 bytes), 128 packed bytes | the 2 piece bytes, rc (0 ok, 1 invalid). As `NAM_WRITE`: piece i holds bytes 112 i .. 112 i + 111 of an IR (2112 bytes, 19 pieces). Stored in RAM only (the same buffer as `NAM_WRITE`: one upload at a time) |
 | 26 IR_COMMIT | slot (0..7) | slot, rc (0 ok, 1 invalid: header, CRC; 2 flash). Checks the pieces received and writes them to the slot |
-| 27 IR_ERASE | slot (0..7) | slot, rc (0 ok, 1 invalid, 2 flash). Empties the slot |
+| 27 IR_ERASE | slot (0..7) | slot, rc (0 ok, 1 invalid, 2 flash). Empties the slot (IR1 then plays the factory IR again) |
 | 28 USB_AUDIO | nothing, or on (0/1) | on (0/1), rc (0 ok, 1 this firmware has no USB audio, 2 flash), state, n (20), then n counts of 4 bytes each (bits 0-6, 7-13, 14-20, 21-27). Without an argument it only reads. With one it sets the USB AUDIO setting and, if it changed, writes it to the flash; see "USB audio" below |
 
 ### Another product (protocol 0)
@@ -131,7 +131,10 @@ The Bluetooth test image has no USB audio: it answers `0, 1, 0, 0`.
 The CAB block's type `USER IR` (type 7 up to store format 6, type 0 and the only one since) plays a cabinet impulse response (`engine/px_dsp.c`: uniform partitioned FFT
 convolution, 1024 taps at 44.1 kHz). Its settings: IR (the slot, 0..7), LOW CUT (20..400 Hz), HIGH CUT (20 kHz..2 kHz).
 The 8 slots are in the pedal's flash (`firmware/px_irs.h`, 0xF4000..0xFC000, kept by firmware updates). `TEXTS` of the
-`USER IR` type, parameter 0 gives each value's IR name.
+`USER IR` type, parameter 0 gives each value's IR name. Slot IR1 has a factory IR in the firmware image
+(`engine/px_ir_factory.h`, "BEST IR IN THE WORLD" by ML Sound Lab, named `ML BEST IR`): the pedal plays it while the
+slot holds no IR of the user's. An IR written to IR1 replaces it, and `IR_ERASE` of IR1 brings it back. Since
+protocol 5, `IR_LIST` marks it (present 2); the firmware's image holds it, so the editor cannot send it back or move it.
 
 An IR is 2112 bytes, little endian: a 64-byte header, then 1024 samples as int16 (sample k = s[k] / 32767 x scale).
 

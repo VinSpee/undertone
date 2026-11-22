@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-only
  * OpenPocket v38 — USER IR (CAB type): the partitioned FFT convolution against the plain one (direct FIR) on noise and
- * on a guitar-like signal, the FFT round trip, the engine's slots (empty slot, names, a new slot is a full change). */
+ * on a guitar-like signal, the FFT round trip, the engine's slots (empty slot, names, a new slot is a full change), slot
+ * IR1's factory IR (played while the slot holds no IR of the user's, replaced by one, back when it is emptied). */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -8,9 +9,10 @@
 #define PX_IR_USER_GIVEN
 #include "../../engine/px_dsp.c"
 static float IRS[2][PX_IR_LEN];
+static int user0 = 1;                                  /* slot 0 holds the user's IR (0: emptied) */
 int px_ir_user(int slot, char *name12, float *h)       /* slots 0 and 1 hold test IRs, the others are empty */
 {
-    if (slot < 0 || slot > 1) return 0;
+    if (slot < 0 || slot > 1 || (slot == 0 && !user0)) return 0;
     strcpy(name12, slot ? "TEST B" : "TEST A");
     if (h) memcpy(h, IRS[slot], sizeof IRS[slot]);
     return 1;
@@ -98,6 +100,21 @@ int main(void)
         for (int i = 0; i < 64; i++) x[i] = 0.1f;
         for (int b = 0; b < 20; b++) px_engine_process(&E, x, y, 64);
         CHECK(fabsf(y[63]) > 0.0f && fabsf(y[63]) < 1.0f, "an empty slot passes");
+        /* slot IR1: the factory IR while it holds none of the user's; the user's when it does; the factory one again */
+        static float want[IR_P][IR_F], fh[PX_IR_LEN];
+        for (int i = 0; i < PX_IR_LEN; i++) fh[i] = (float)PXI_FS[i] * (PXI_FSCALE / 32767.0f);
+        ir_load_h(fh, &ir_X[IR_P / 2][0]); memcpy(want, ir_H, sizeof want);
+        ir_load_h(IRS[0], &ir_X[IR_P / 2][0]); static float user[IR_P][IR_F]; memcpy(user, ir_H, sizeof user);
+        q = p; q.p[PX_B_CAB][0] = (uint8_t)px_ir_knob(0);
+        user0 = 0; px_engine_set(&E, &q);
+        CHECK(ir_ok && E.ir_slot == 0 && !memcmp(ir_H, want, sizeof want), "IR1 empty: the factory IR plays");
+        CHECK(px_ir_name(0, nm) && !strcmp(nm, "ML BEST IR"), "the factory IR's name (%s)", nm);
+        user0 = 1; E.ir_slot = -1; px_engine_set(&E, &q);       /* (the firmware's ir_changed after IR_COMMIT) */
+        CHECK(ir_ok && !memcmp(ir_H, user, sizeof user) && px_ir_name(0, nm) && !strcmp(nm, "TEST A"), "an IR of the user's in IR1 replaces it");
+        user0 = 0; E.ir_slot = -1; px_engine_set(&E, &q);       /* (IR_ERASE) */
+        CHECK(ir_ok && !memcmp(ir_H, want, sizeof want) && px_ir_name(0, nm) && !strcmp(nm, "ML BEST IR"), "IR1 emptied: the factory IR plays again");
+        CHECK(!px_ir_name(1 + 4, nm), "the other slots have no factory IR");
+        user0 = 1;
         CHECK(px_ntypes(PX_B_CAB) == 1 && px_ntypes(PX_B_AMP) == 1, "the CAB block plays USER IR only, the AMP block NAM only");
         printf("CAB types: %d, \"%s\" with %d settings: %s, %s, %s\n", px_ntypes(PX_B_CAB), px_type_name(PX_B_CAB, PX_CAB_IR),
                px_nparams(PX_B_CAB, PX_CAB_IR), px_param_name(PX_B_CAB, PX_CAB_IR, 0), px_param_name(PX_B_CAB, PX_CAB_IR, 1),

@@ -277,12 +277,14 @@ export class Editor {
     return rc;
   }
   async namErase(slot) { return (await this.request(C.NAM_ERASE, [slot], 6000))[1]; }
-  // v38 (protocol 3): cabinet IRs. list -> [{ slot, used, name }]
+  // v38 (protocol 3): cabinet IRs. list -> [{ slot, used, factory, name }]; protocol 5: IR1 plays the firmware's
+  // factory IR (pxir.js FACTORY_IR) while it holds none of the user's, and lists it as used, factory
   get hasIr() { return !!(this.info && this.info.proto >= 3); }
+  get hasFactoryIr() { return !!(this.info && this.info.proto >= 5); }
   async irList() {
     const r = new Reader(await this.request(C.IR_LIST));
     const n = r.b(), out = [];
-    for (let i = 0; i < n; i++) { const used = !!r.b(), name = r.s(); out.push({ slot: i, used, name }); }
+    for (let i = 0; i < n; i++) { const st = r.b(), name = r.s(); out.push({ slot: i, used: st !== 0, factory: st === 2, name }); }
     return out;
   }
   // a packed IR (pxir.js packIr) into slot `slot`: pieces, then the flash write. rc 0 ok, 1 invalid, 2 flash

@@ -10,6 +10,8 @@ export const IR_LEN = 1024;
 export const IR_SR = 44100;
 export const IR_BYTES = 64 + IR_LEN * 2;
 export const IR_CHUNK = 112;          // bytes per IR_WRITE (firmware/px_irs.h IR_CHUNK)
+// the firmware's factory IR, which slot IR1 plays while it holds none of the user's (engine/px_ir_factory.h)
+export const FACTORY_IR = { slot: 0, title: "BEST IR IN THE WORLD", by: "ML Sound Lab", url: "https://www.facebook.com/watch/?ref=embed_video&v=1053603041469100" };
 
 // a WAV file (ArrayBuffer) -> { sampleRate, channels, bits, x: Float32Array (the first channel) } or throws
 export function parseWav(buf) {
