@@ -210,7 +210,7 @@ Safe mode, the way back, and the data:
 18. Switch the pedal off, on, and off again within 3 seconds, then on. If the record of an unfinished start survives
     this pedal's power switch, the screen shows LAST START FAILED, then PALETTE with SAFE MODE, the guitar passes, and
     the installer still finds the pedal. If the pedal starts as usual, note that and go on.
-19. Run `node tools/op.mjs flash --confirm-flash`. It ends with "the pedal reports PocketX_942 (OpenPocket v42)" or the
+19. Run `node tools/op.mjs flash --confirm-flash`. It ends with "the pedal reports PocketX_943 (OpenPocket v43)" or the
     BlackBox's line. The preset saved in step 3 is there, and so are the NAM models and the cabinet IRs.
 20. Install PALETTE once more. It starts on the preset saved in step 15: its own data stayed through the stay on
     OpenPocket. STARTER keeps its data in the same flash range under another magic number, so a save on one of the two

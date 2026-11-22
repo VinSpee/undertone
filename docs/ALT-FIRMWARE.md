@@ -241,8 +241,8 @@ The way back:
 20. The preset saved in step 3 is there, and so are the NAM models and the cabinet IRs.
 21. Install STARTER once more with `node tools/op.mjs flash --confirm-flash --app starter`. It starts on the preset
     saved in step 11: its own data stayed through the stay on OpenPocket.
-22. Go back with `node tools/op.mjs flash --confirm-flash`. It ends with "the pedal reports PocketX_942 (OpenPocket
-    v42)" or the BlackBox's line.
+22. Go back with `node tools/op.mjs flash --confirm-flash`. It ends with "the pedal reports PocketX_943 (OpenPocket
+    v43)" or the BlackBox's line.
 
 Rescue, on one pedal only, after everything above has passed:
 

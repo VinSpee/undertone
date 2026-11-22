@@ -20,7 +20,7 @@
 #define ED_H0 0x7Du
 #define ED_H1 0x4Fu
 #define ED_H2 0x50u
-#define ED_PROTO 5u                             /* 5: IR1's factory IR (IR_LIST 2); 4: v42, USB_AUDIO; 3: v38, cabinet IRs (IR_LIST .. IR_ERASE); 2: v37, NAM models */
+#define ED_PROTO 5u                             /* 5: v43, IR1's factory IR (IR_LIST 2); 4: v42, USB_AUDIO; 3: v38, cabinet IRs (IR_LIST .. IR_ERASE); 2: v37, NAM models */
 #define ED_NAME_MAX 13u
 #define ED_P_SIZE 110u
 #if OP_UADEV

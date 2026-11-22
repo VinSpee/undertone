@@ -24,7 +24,7 @@ static uint8_t preset_new;                             /* v40.3: a preset was lo
 static void load_preset(uint32_t i) { st_get(i, &PRESET); preset_new = 1; }
 
 #ifndef OP_VERSION_NUM                  /* a test channel build (firmware/build.sh, OP_CHANNEL) sets its own number and tag */
-#define OP_VERSION_NUM "42"
+#define OP_VERSION_NUM "43"
 #endif
 #ifndef OP_TAG
 #define OP_TAG ""
