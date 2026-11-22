@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-only
  * OpenPocket — the pedal's screen on the PC: firmware/apps/gamut/ui.h + ui_text.h + fonts.h drawn into a 240x240 RGB565
  * frame buffer, exactly as the pedal streams it (window + pixels). Writes PPM screenshots of a script of actions.
- *   cc -O1 -Ifirmware/apps/gamut/engine -Ifirmware -o build/uisim tests/uisim.c firmware/apps/gamut/engine/px_dsp.c firmware/px_math.c -lm
+ *   cc -O1 -Ifirmware/apps/gamut/engine -Ifirmware -o build/uisim firmware/apps/gamut/tests/uisim.c firmware/apps/gamut/engine/px_dsp.c firmware/px_math.c -lm
  *   build/uisim OUTDIR        -> OUTDIR/NN_name.ppm ; also checks that every pixel is drawn on each full page
  * The frame buffer starts (and is re-poisoned before each full page) in magenta: any pixel left magenta after a
  * full redraw is a gap in the page's layout. */
@@ -11,9 +11,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include "px_dsp.h"
-#include "../firmware/apps/gamut/px_midi.h"
+#include "../px_midi.h"
 
-#include "simlcd.h"
+#include "../../../../tests/simlcd.h"
 #define POISON 0xF81F
 
 static void fm1_wdt_feed(void) { }
@@ -45,7 +45,7 @@ static void midi_persist(void) { midi_saved++; }
 int px_nam_user(int slot, char *name12, float *level_db, float *w) { (void)w; if (slot != 2) return 0; strcpy(name12, "MY AMP"); if (level_db) *level_db = 0; return 1; }
 int px_ir_user(int slot, char *name12, float *h) { (void)h; if (slot != 1 && slot != 4) return 0; strcpy(name12, slot == 1 ? "V30 4X12" : "GREENBACK"); return 1; }
 #include "ui_text.h"
-#include "../firmware/apps/gamut/ui.h"
+#include "../ui.h"
 
 static void shot(const char *dir, const char *name)
 {

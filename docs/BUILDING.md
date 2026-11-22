@@ -33,7 +33,7 @@ Apple silicon and other ARM machines Docker emulates it (Rosetta or QEMU); you c
 | `make all` | every product from this tree: `package`, each app of `firmware/apps`, then `tests/run_tests.sh` with the packages just built (`node tools/op.mjs test --built`) |
 | `make serve-app APP=starter` | `make serve` with that alternative firmware offered too (`install.html?app=starter`); builds it first if missing. A firmware of `firmware/catalog.json` is offered without it |
 | `make serve-ble` | `make serve` with `build/ble/` as the installer's package folder, to flash the test image |
-| `make package` | `build`, then `build/SHA256SUMS`, then the release pin: it fails when OpenPocket's image or packages are not the bytes of `tests/release.sha256` ([BASE-FIRMWARE.md](BASE-FIRMWARE.md), section 9) |
+| `make package` | `build`, then `build/SHA256SUMS`, then the release pin: it fails when OpenPocket's image or packages are not the bytes of `firmware/apps/gamut/release.sha256` ([BASE-FIRMWARE.md](BASE-FIRMWARE.md), section 9) |
 | `make package-test` | the MIDI test channel (`OP_CHANNEL=midi-test`): `firmware/openpocket-midi-test.bin` and `docs/firmware/midi-test/` (v37 MIDI TEST, its own `manifest.json`), with `build/SHA256SUMS-midi-test`. The release files are not touched and the installer offers it only with `?channel=midi-test` |
 | `make test` | `tests/run_tests.sh` (engine, preset store, screen, simulated pedal, installer, editor; the browser page tests also run when Playwright is installed) |
 | `make clean` | remove every build output (on the host; needs neither Docker nor the image) |
@@ -50,7 +50,7 @@ Apple silicon and other ARM machines Docker emulates it (Rosetta or QEMU); you c
 
 `make NATIVE=1 build` skips Docker and uses a toolchain installed on the machine (`sh firmware/setup.sh` installs it in
 `~/.jieli`; Linux x86-64 only). `tests/run_tests.sh` also runs directly on macOS and Linux with only a C compiler, Node and
-Python 3. Its NAM check (`tests/test_nam.py`, the fixed-point network against the float reference) also needs NumPy
+Python 3. Its NAM check (`firmware/apps/gamut/tests/test_nam.py`, the fixed-point network against the float reference) also needs NumPy
 and is skipped without it (the container has none).
 
 The NAM factory models (`firmware/apps/gamut/engine/px_nam_factory.h`, v37) are generated, not hand-written: `tools/train_a2.py` trains each

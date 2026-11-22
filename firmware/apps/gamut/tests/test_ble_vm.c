@@ -1,9 +1,9 @@
 /* SPDX-License-Identifier: GPL-3.0-only OR MPL-2.0 */
 /* firmware/apps/gamut/ble/ble_vm.h: the reader of the JieLi VM item log, on synthetic areas built to the layout read off the stock
- * firmware's mount (docs/BLE-TEST.md). Run: cc -O1 -Wall -o build/ble_vm tests/test_ble_vm.c && build/ble_vm */
+ * firmware's mount (docs/BLE-TEST.md). Run: cc -O1 -Wall -o build/ble_vm firmware/apps/gamut/tests/test_ble_vm.c && build/ble_vm */
 #include <stdio.h>
 #include <string.h>
-#include "../firmware/apps/gamut/ble/ble_vm.h"
+#include "../ble/ble_vm.h"
 
 static int bad;
 #define CHECK(c, m) do { if (!(c)) { printf("FAIL: %s\n", m); bad++; } } while (0)

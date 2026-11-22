@@ -1,22 +1,7 @@
 #!/bin/sh
 # OpenPocket host tests (Linux / macOS, or in the container: tools/op.mjs test; no pedal, no JieLi toolchain needed):
 #   tests/run_tests.sh [PocketX_016.fwsc]
-#  - engine: every block x model x extreme knob, signal / silence / overload, with the pedal's own libm (px_math.c):
-#    no NaN; long runs (3 s pluck + 8 s silence): nothing runs away (only delays at FDBK 100 hold on, by design)
-#  - the two-core pipeline (PRE / NAM / POST stages) gives the plain engine's output one block later
-#  - NAM hand routines: their start-up check and dispatch with C stand-ins under the sanitizers; post5's assembly text
-#    against the C post through a model of its instructions (tests/test_post5.py)
-#  - (not run here, it needs the git history: tests/equiv.sh REF, this tree's engine against commit REF's, bit for bit)
-#  - changes without clicks (v38): knob changes glide to exactly where a full set goes, blocks on / off fade, fewer clicks
-#  - USER IR (v38): the partitioned FFT convolution against the direct FIR, slots, names
-#  - wet lanes (v39): the delay through its lane as inline bit for bit, the reverb's tail lag frames later, the pipeline
-#  - trails: after px_engine_switch the outgoing delay and reverb are their own tails, sample for sample, on every type;
-#    they end; the stretches of the delay memory never overlap through changes at random (under the sanitizers)
-#  - NAM: firmware/apps/gamut/engine/px_nam.c against tools/nam_a2.py with every factory model (needs numpy)
-#  - MIDI: the musical-MIDI code (firmware/apps/gamut/px_midi.h) on a PC: decoder, CC map, messages sent, settings byte, clock
-#  - preset store: save / reload / power cut at every step of a save (firmware/apps/gamut/px_store.h on a simulated flash)
-#  - flash hold (firmware/apps/gamut/px_store.h, px_models.h, px_irs.h): every erase, program and SPI read of a save or an erase
-#    of a preset, a NAM model or an IR falls inside the audio hold (formal/FINDINGS.md, F1)
+#  (each firmware's own tests are in firmware/apps/<name>/tests/run.sh, which this script runs after the shared ones)
 #  - the audio callbacks' order (v42, firmware/px_aorder.h): the I2S driver calls the output's callback before the
 #    input's when its interrupt enters late; every output block must still be the sound of that interrupt's guitar block
 #  - tuner (firmware/px_tuner.h): bass and guitar notes, sine and plucked, in tune and off it, read every 100 ms: the
@@ -33,7 +18,6 @@
 #    it on, the descriptors, the requests, 10 minutes of each stream with the clocks apart (no gap, no repeat)
 #    and the MIDI input ring with an app's reader of it (firmware/base/midi.h): unread, it blocks the installer's SysEx
 #  - LED map + lights driver (led_probe.h, px_leds.h): PC7 enable after the first byte, the 595 timing, the table
-#  - button lights (px_lights.h): each block lights its button, FX for its group, HOME blinks in the tuner
 #  - package reader: tools/pocketx_fw.py on packages built to the old (0x4000) and the V22 (0x6000) layout: info, unpack, pack
 #  - packages: tools/pxpkg.py rebuilds the official PocketX_016 app area byte for byte (needs the official file)
 #  - both flash heads: each package's app area placed at 0x4000 and at 0x6000 (BlackBox V22 and later) passes every
@@ -52,11 +36,6 @@
 #  - rescue kit: rescue/build_kit.py gives the pinned bytes twice; an unzipped kit's own files restore a simulated pedal
 #    on a V20, a V22 and a V23 flash head, and refuse the file of the other head (tests/test_rescue_kit.py)
 #  - hosted simulator: tools/sim.mjs driven over HTTP (controls, held buttons, screen, flash file, SysEx, the Web MIDI shim)
-#  - an app in the hosted simulator: firmware/apps/starter's own C files with tests/host as the chip, over the same HTTP
-#    interface: its controls, its sound at the two outputs, MIDI, its store, safe mode, the boot guard
-#  - PALETTE (firmware/apps/palette, docs/PALETTE.md): its engine's own code with the firmware's math library, under the
-#    sanitizers (every effect at its knobs' ends, changes without a step, bypass, the tempo); each effect on the standard
-#    signal (tests/palette_render.c); the app in the hosted simulator (controls, MIDI map, editor requests, store)
 #  - pedal skin: its input mapping (tools/sim/pedal-input.js)
 #  - sound: the WebAssembly engine on known signals, against the native build; the bundled loops against their manifest
 #  - Chocolate Plus files: tools/chocolate/fcp.py against a made-up export
@@ -68,38 +47,12 @@ set -e
 cd "$(dirname "$0")/.."
 mkdir -p build
 CC="${CC:-cc}"
-echo "== engine"
-$CC -O2 -Ifirmware/apps/gamut/engine tests/engine/sweep2.c firmware/apps/gamut/engine/px_dsp.c firmware/px_math.c -lm -o build/sweep && build/sweep | tail -1
-$CC -O2 -Ifirmware/apps/gamut/engine tests/engine/long.c firmware/apps/gamut/engine/px_dsp.c firmware/px_math.c -lm -o build/long && build/long | tail -1
-$CC -O2 -Ifirmware/apps/gamut/engine tests/engine/pipe_test.c firmware/apps/gamut/engine/px_dsp.c firmware/px_math.c -lm -o build/pipe_test && build/pipe_test | tail -1
-# v40.2: the network split between the cores by layers, against one core and through the pipeline
-$CC -O1 -g -fsanitize=address,undefined -fno-sanitize-recover=all -DPXN_EMUVEC -Ifirmware/apps/gamut/engine tests/engine/lp_test.c firmware/px_math.c -lm -o build/lp_test && build/lp_test | tail -1
-# v40.5: CPU0's waits for a second core that never moves end after the limit (a stuck CPU1: LATE, not the watchdog)
-$CC -O1 -g -fsanitize=address,undefined -fno-sanitize-recover=all -Ifirmware/apps/gamut/engine tests/engine/lp_stuck.c firmware/px_math.c -lm -o build/lp_stuck && build/lp_stuck | tail -1
-# v40.2: the NAM hand routines' start-up check, timing and dispatch, with C stand-ins under the sanitizers (a fault there
-# would be a boot loop on the pedal)
-$CC -O1 -g -fsanitize=address,undefined -fno-sanitize-recover=all -DPXN_HAND=1 -Ifirmware/apps/gamut/engine tests/engine/hand_test.c firmware/px_math.c -lm -o build/hand_test && build/hand_test | tail -1
-$CC -O1 -g -fsanitize=address,undefined -fno-sanitize-recover=all -DPXN_HAND=1 -DPXN_LEAN=1 -Ifirmware/apps/gamut/engine tests/engine/hand_test.c firmware/px_math.c -lm -o build/hand_test_lean && build/hand_test_lean | tail -1   # (the Bluetooth image's)
-# v40.5: post5's assembly text itself, run by a model of its instructions against the C post (tests/test_post5.py), and
-# the same with one offset changed, which must fail
-python3 tests/test_post5.py
-if python3 tests/test_post5.py "r6 = [sp+40]" "r6 = [sp+44]" > /dev/null 2>&1; then echo "test_post5 accepts a wrong routine"; exit 1; fi
-$CC -O2 -Ifirmware/apps/gamut/engine -Ifirmware tests/engine/change_test.c firmware/px_math.c -lm -o build/change_test && build/change_test | tail -1
-$CC -O2 -Ifirmware/apps/gamut/engine -Ifirmware tests/engine/ir_test.c firmware/px_math.c -lm -o build/ir_test && build/ir_test | tail -1
-$CC -O2 -Ifirmware/apps/gamut/engine tests/engine/wet_test.c firmware/apps/gamut/engine/px_dsp.c firmware/px_math.c -lm -o build/wet_test && build/wet_test | tail -1
-$CC -O1 -g -fsanitize=address,undefined -fno-sanitize-recover=all -Ifirmware/apps/gamut/engine -Ifirmware tests/engine/trail_test.c firmware/px_math.c -lm -o build/trail_test && build/trail_test | tail -1
-echo "== NAM (fixed point against the float reference, every factory model)"
-$CC -O2 -DPXN_EMUVEC -Ifirmware/apps/gamut/engine tests/engine/nam_test.c firmware/apps/gamut/engine/px_nam.c -o build/nam_test
-if python3 -c "import numpy" 2>/dev/null; then mkdir -p build/nam; python3 tests/test_nam.py build/nam_test > build/nam/log.txt || { cat build/nam/log.txt; exit 1; }; tail -1 build/nam/log.txt; else echo "(numpy not installed: NAM comparison skipped)"; fi
-echo "== preset store"
-$CC -O1 -Ifirmware/apps/gamut/engine tests/test_store.c firmware/apps/gamut/engine/px_dsp.c firmware/px_math.c -lm -o build/test_store && build/test_store | tail -2
+. tests/lib.sh
 echo "== audio callbacks' order (the output block is its interrupt's, whichever callback the driver calls first)"
 $CC -O1 -Wall -Ifirmware tests/test_aorder.c -o build/test_aorder && build/test_aorder | tail -1
 echo "== tuner (bass and guitar notes through the pedal's capture and estimate)"
 $CC -O1 -Wall -Ifirmware tests/test_tuner.c -lm -o build/test_tuner && build/test_tuner | tail -1
 echo "== base audio (the stages every app shares, under the plain schedule: firmware/base/audio.h, audio_plain.h)"
-# (a base test's last line is its result; its whole output is shown when it fails)
-base_test() { t="$1"; shift; "$@" -o "build/$t"; "build/$t" > "build/$t.log" || { cat "build/$t.log"; exit 1; }; tail -1 "build/$t.log"; }
 BAF="-O1 -Wall -Wno-unused-function -Wno-unused-variable -Wno-int-to-pointer-cast -Ifirmware"
 base_test test_base_audio $CC $BAF tests/test_base_audio.c firmware/px_math.c -lm
 base_test test_base_audio2 $CC $BAF -DA_CH=2 tests/test_base_audio.c firmware/px_math.c -lm   # an app with a stereo sound
@@ -107,12 +60,6 @@ echo "== base controls (firmware/base/input.h over base/controls.h: the pins and
 base_test test_base_input $CC -O1 -Wall -Wno-unused-function -Wno-unused-variable -Itests/host -Ifirmware tests/test_base_input.c
 echo "== base store (firmware/base/store.h: an app's own data in flash, kept by every update loader)"
 base_test test_base_store $CC -O1 -Wall -Wno-unused-function -Ifirmware tests/test_base_store.c
-echo "== flash hold (every flash access of a save or an erase with the audio held and the second core collected)"
-base_test test_flash_hold $CC -O1 -Wall -Wno-unused-function -Ifirmware/apps/gamut/engine tests/test_flash_hold.c firmware/apps/gamut/engine/px_dsp.c firmware/px_math.c -lm
-echo "== PALETTE's engine (firmware/apps/palette/engine.c: twenty effects in four modules, changes without a step)"
-base_test test_palette $CC -O1 -g -fsanitize=address,undefined -fno-sanitize-recover=all -Wall -Ifirmware/apps/palette tests/test_palette.c firmware/apps/palette/engine.c firmware/px_math.c -lm
-$CC -O2 -Wall -Ifirmware/apps/palette -o build/palette_render tests/palette_render.c firmware/apps/palette/engine.c firmware/px_math.c -lm
-build/palette_render --runs 1 > build/palette_render.log || { cat build/palette_render.log; exit 1; }; echo "palette render: each effect on the standard signal is finite, under full scale and not silent (build/palette_render.log)"
 echo "== USB audio (the device code and the audio glue against a model of the controller and a computer)"
 UAF="-O1 -Wall -Wno-unused-function -Wno-int-to-pointer-cast -Ifirmware/apps/gamut/engine -Ifirmware -Ifirmware/bsp/chip"
 $CC $UAF tests/test_usb_audio.c -lm -o build/test_usb_audio
@@ -123,21 +70,8 @@ if cmp -s build/usb_desc_off.txt build/usb_desc_ref.txt; then echo "USB AUDIO of
 else echo "USB AUDIO off: the descriptors differ from the earlier device's"; diff build/usb_desc_ref.txt build/usb_desc_off.txt; exit 1; fi
 build/test_usb_audio > build/usb_audio.log || { cat build/usb_audio.log; exit 1; }
 tail -1 build/usb_audio.log
-echo "== screen (every page fully drawn)"
-mkdir -p build/ui && $CC -O1 -Wall -Wno-unused-function -Ifirmware/apps/gamut/engine -Ifirmware -o build/uisim tests/uisim.c firmware/apps/gamut/engine/px_dsp.c firmware/px_math.c -lm
-build/uisim build/ui > build/ui/log.txt
-if grep -q "never drawn" build/ui/log.txt; then grep "never drawn" build/ui/log.txt; echo "screen: FAIL"; exit 1; else echo "screen: $(wc -l < build/ui/log.txt) pages ok (build/ui/*.ppm)"; fi
-echo "== MIDI (firmware/apps/gamut/px_midi.h: decoder, Control Change map, what the pedal sends, settings, clock)"
-for t in midisim midiio; do
-  $CC -O1 -Wall -Wno-unused-function -Ifirmware/apps/gamut/engine -Ifirmware -o build/$t tests/$t.c firmware/apps/gamut/engine/px_dsp.c firmware/px_math.c -lm
-  build/$t > build/$t.log || { grep FAIL build/$t.log; exit 1; }
-  tail -1 build/$t.log
-done
 echo "== LED map and the lights driver (LED_PROBE build, issue #8)"
 mkdir -p build/lp && $CC -O1 -Wall -Wno-unused-function -Ifirmware -o build/lpsim tests/lpsim.c && build/lpsim build/lp
-echo "== button lights in the normal firmware (px_lights.h, issue #8)"
-$CC -O1 -Wall -Wno-unused-function -Ifirmware/apps/gamut/engine -Ifirmware -o build/lightsim tests/lightsim.c
-build/lightsim > build/lightsim.log || { cat build/lightsim.log; exit 1; }; tail -1 build/lightsim.log
 echo "== simulated pedal"
 $CC -O1 -Wall -Wno-unused-function -o build/devsim tests/devsim.c
 if [ -n "$1" ]; then echo "== packages"; python3 tests/test_pxpkg.py "$1"; fi
@@ -158,11 +92,15 @@ node tests/test_products.mjs ${OP_BUILT:+--built}
 echo "== build entry point (tools/op.mjs)"
 node tests/test_op.mjs
 echo "== release pin (tests/release_pin.sh: the same sums pass, one changed byte's sum fails)"
-sh tests/release_pin.sh tests/release.sha256 > /dev/null || { echo "release pin: refuses its own sums"; exit 1; }
-sed '1s/^./0/;1s/^00/01/' tests/release.sha256 > build/release_pin_wrong.sums
-if sh tests/release_pin.sh build/release_pin_wrong.sums > /dev/null 2>&1; then echo "release pin: accepts a changed image"; exit 1; fi
-if sh tests/release_pin.sh build/no-such.sums > /dev/null 2>&1; then echo "release pin: accepts a missing build"; exit 1; fi
-echo "release pin: ok"
+for pin in firmware/apps/*/release.sha256; do
+  n=$(basename "$(dirname "$pin")")
+  sh tests/release_pin.sh "$n" "$pin" > /dev/null || { echo "release pin: $n refuses its own sums"; exit 1; }
+  sed '1s/^./0/;1s/^00/01/' "$pin" > build/release_pin_wrong.sums
+  if sh tests/release_pin.sh "$n" build/release_pin_wrong.sums > /dev/null 2>&1; then echo "release pin: $n accepts a changed image"; exit 1; fi
+  if sh tests/release_pin.sh "$n" build/no-such.sums > /dev/null 2>&1; then echo "release pin: $n accepts a missing build"; exit 1; fi
+done
+if sh tests/release_pin.sh starter > /dev/null 2>&1; then echo "release pin: accepts a firmware with no pin"; exit 1; fi
+echo "release pin: ok ($(ls firmware/apps/*/release.sha256 | wc -l | tr -d ' ') pinned firmwares)"
 echo "== release files (.github/scripts/assets.mjs, release.mjs --draft: the assets, site.sha256 through the site's own steps)"
 node tests/test_release_files.mjs > build/release_files.log || { cat build/release_files.log; exit 1; }; tail -1 build/release_files.log
 echo "== rescue tool (tools/uboot_rescue.py on a simulated UBOOT pedal)"
@@ -171,15 +109,6 @@ echo "== rescue kit (rescue/build_kit.py: the pinned bytes; the unzipped kit on 
 python3 tests/test_rescue_kit.py
 echo "== hosted simulator (tools/sim.mjs)"
 node tests/test_sim.mjs
-echo "== an app on the base firmware in the simulator (firmware/apps/starter, from its own C files: tools/sim.mjs --app)"
-node tests/test_app_sim.mjs
-echo "== PALETTE in the simulator (firmware/apps/palette, from its own C files)"
-node tests/test_palette_sim.mjs
-echo "== Bluetooth test image sources (third_party/jieli-ble)"
-node tests/test_ble_sources.mjs
-echo "== Bluetooth test image status codes"
-$CC -O1 -Wall -Wno-unused-function -o build/ble_status tests/test_ble_status.c && build/ble_status
-$CC -O1 -Wall -Wno-unused-function -o build/ble_vm tests/test_ble_vm.c && build/ble_vm
 echo "== Chocolate Plus files (tools/chocolate/fcp.py)"
 python3 tests/test_fcp.py
 echo "== pedal skin input"
@@ -194,4 +123,6 @@ node tests/test_editor_logic.mjs
 echo "== log channel (tools/op.mjs log)"
 $CC -O1 -Wall -Wno-unused-function -DOP_BLE_TEST=1 -o build/edsim_diag tests/edsim.c firmware/apps/gamut/engine/px_dsp.c firmware/px_math.c -lm
 node tests/test_log.mjs
+# each firmware's own tests (firmware/apps/<name>/tests/run.sh), with this script's arguments
+for t in firmware/apps/*/tests/run.sh; do echo "==== $(basename "$(dirname "$(dirname "$t")")")"; sh "$t" "$@"; done
 if node -e "require('playwright')" 2>/dev/null; then echo "== page"; node tests/test_page.mjs build/page; echo "== editor page"; node tests/test_editor_page.mjs build/editor; echo "== pedal skin"; node tests/test_pedal_page.mjs build/pedal; echo "== pedal sound"; node tests/test_audio_page.mjs build/audio; else echo "(Playwright not installed: page tests skipped)"; fi

@@ -2,9 +2,9 @@
  * return value, and the stage a timeout stalled in. The header has no hardware access, so it is compiled as is. */
 #include <stdio.h>
 #include <string.h>
-#include "../firmware/apps/gamut/ble/ble_status.h"
-#include "../firmware/apps/gamut/ble/ble_diag.h"
-#include "../firmware/apps/gamut/ble/ble_adv.h"
+#include "../ble/ble_status.h"
+#include "../ble/ble_diag.h"
+#include "../ble/ble_adv.h"
 
 static int bad;
 static void is(const char *what, const char *want)

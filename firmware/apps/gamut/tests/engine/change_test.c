@@ -9,7 +9,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
-#include "../../firmware/apps/gamut/engine/px_dsp.c"
+#include "../../engine/px_dsp.c"
 static px_engine A, B;
 #define SR 44100
 #define NB 64

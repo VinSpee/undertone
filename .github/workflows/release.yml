@@ -59,14 +59,14 @@ jobs:
         with:
           ref: ${{ needs.version.outputs.tag || github.ref }}
           persist-credentials: false
-      - name: Build OpenPocket (it fails when its packages are not the pinned release's bytes, tests/release.sha256) and every app of firmware/apps, then run the host tests with the packages built
+      - name: Build OpenPocket and every app of firmware/apps (a firmware with a pin, firmware/apps/NAME/release.sha256, fails when its packages are not the pinned release's bytes), then run the host tests with the packages built
         run: node tools/op.mjs all
       - name: Build the rescue kit and compare it with its pin (rescue/kit.sha256)
         run: |
           node tools/op.mjs kit
           (cd docs/rescue && sha256sum -c ../../rescue/kit.sha256)
-      - name: Compare the image and packages of OpenPocket on disk with the release pin (the apps have no pin)
-        run: sha256sum -c tests/release.sha256
+      - name: Compare the image and packages of each pinned firmware on disk with its release pin (STARTER has none)
+        run: for pin in firmware/apps/*/release.sha256; do sha256sum -c "$pin"; done
       - name: Assemble the release's files, with site.sha256 and SHA256SUMS
         run: node .github/scripts/assets.mjs "$RUNNER_TEMP/release-files"
       - name: Check the files against their own SHA256SUMS

@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: GPL-3.0-only
- * OpenPocket — firmware/apps/gamut/engine/px_nam.c on the PC: nam_test weights.f32 in.f32 out.f32 [block]   (tests/test_nam.py)
+ * OpenPocket — firmware/apps/gamut/engine/px_nam.c on the PC: nam_test weights.f32 in.f32 out.f32 [block]   (firmware/apps/gamut/tests/test_nam.py)
  * weights.f32: the 1871 A2-Lite weights (float32, file order); in/out: float32 samples.
  * NAM_GATHER=1: the CPU's layers through gathered X rows instead of rdot.
  * NAM_PIPE=m: mode m (2..8: the vector unit beside the CPU, a second core) with a simulated unit and core (built with

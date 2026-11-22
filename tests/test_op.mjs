@@ -52,6 +52,11 @@ r = op(["app", "none"]);
 assert.ok(r.status !== 0 && r.calls.length === 0 && /firmware\/apps\/none\/app\.sh not found/.test(r.err), "app: a name without a folder is refused before Docker");
 r = op(["app", "../starter"]);
 assert.ok(r.status !== 0 && r.calls.length === 0, "app: a path is not a name");
+touch("firmware/apps/pinned/app.sh");
+touch("firmware/apps/pinned/release.sha256");
+r = op(["app", "pinned"]);
+assert.match(r.calls.at(-1).at(-1), /> build\/apps\/pinned\/SHA256SUMS && cat build\/apps\/pinned\/SHA256SUMS && sh tests\/release_pin\.sh pinned$/, "app: a firmware with a pin (firmware/apps/NAME/release.sha256) ends with its release pin");
+rmSync(join(root, "firmware/apps/pinned"), { recursive: true });
 
 r = op(["test"]);
 assert.deepEqual(r.calls.at(-1), base(["sh", "tests/run_tests.sh"]), "test");
@@ -62,7 +67,7 @@ r = op(["all"]);
 const runs = r.calls.filter((c) => c[0] === "run").map((c) => c.at(-1));
 assert.equal(r.status, 0);
 assert.equal(runs.length, 3, "all: OpenPocket, the one app of this tree, the tests");
-assert.match(runs[0], /^sh firmware\/build\.sh && .*sh tests\/release_pin\.sh$/, "all: OpenPocket first, with its release pin");
+assert.match(runs[0], /^sh firmware\/build\.sh && .*sh tests\/release_pin\.sh gamut$/, "all: OpenPocket first, with its release pin");
 assert.match(runs[1], /^OP_APP=starter sh firmware\/build\.sh /, "all: then each app of firmware/apps");
 assert.equal(runs[2], "OP_BUILT=1 sh tests/run_tests.sh", "all: then the tests, on the packages just built");
 
@@ -70,7 +75,7 @@ r = op(["package"]);
 assert.equal(r.calls.filter((c) => c[0] === "run").length, 1, "package is one container run");
 assert.deepEqual(r.calls.at(-1).slice(0, -1), base(["sh", "-c"]));
 assert.match(r.calls.at(-1).at(-1), /^sh firmware\/build\.sh && .*sha256sum .*openpocket\.bin.*> build\/SHA256SUMS/);
-assert.match(r.calls.at(-1).at(-1), /> build\/SHA256SUMS && sh tests\/release_pin\.sh$/, "package ends with the release pin: a changed OpenPocket image fails it");
+assert.match(r.calls.at(-1).at(-1), /> build\/SHA256SUMS && sh tests\/release_pin\.sh gamut$/, "package ends with the release pin: a changed OpenPocket image fails it");
 
 r = op(["package-test"]);
 assert.equal(r.calls.filter((c) => c[0] === "run").length, 1, "package-test is one container run");

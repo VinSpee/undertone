@@ -154,7 +154,7 @@ in v42, for every use of the pedal.
   real control-transfer code and compares them with a build without audio).
 - Requests for the streams are refused as before, endpoint 4 is not set up, and nothing is ever queued on it.
 - The audio interrupt tests one flag a block. The loads it measures are computed as before.
-- The engine is not touched: `tests/equiv.sh` against the base gives identical output on its 852 runs.
+- The engine is not touched: `firmware/apps/gamut/tests/equiv.sh` against the base gives identical output on its 852 runs.
 
 ### Cost
 
@@ -206,9 +206,9 @@ code.
   once and in order, and the rings keep 0.6 ms in hand.
 - `tests/test_aorder.c`: the audio callbacks in either order (`firmware/px_aorder.h`): every output block is the sound
   of its own interrupt's guitar block.
-- `tests/test_store.c`: the setting survives a power cycle and a preset save; an older store reads as off.
+- `firmware/apps/gamut/tests/test_store.c`: the setting survives a power cycle and a preset save; an older store reads as off.
 - `tests/test_editor.mjs`, `tests/test_editor_page.mjs`: `USB_AUDIO` on the simulated pedal, the editor's button.
-- `tests/uisim.c`: the MIDI page's fourth row.
+- `firmware/apps/gamut/tests/uisim.c`: the MIDI page's fourth row.
 - On a pedal: the editor's `USB_AUDIO` command gives the streams' counts ([EDITOR-PROTOCOL.md](EDITOR-PROTOCOL.md));
   the record ring's "empty" and "no packet ready" counts must not rise while a preset simply plays.
 - Measurements on a pedal: a build with `OP_UADEV 1` (`firmware/base/audio.h`, never a release) adds the timing of the

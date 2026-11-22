@@ -72,6 +72,8 @@ function inside(path) {
 
 // the apps of this tree other than OpenPocket: the folders of firmware/apps that hold an app.sh
 const apps = () => { const d = resolve(root, "firmware/apps"); return existsSync(d) ? readdirSync(d).filter((n) => existsSync(resolve(d, n, "app.sh"))).sort() : []; };
+// a firmware with a release pin (firmware/apps/NAME/release.sha256): its build fails when its bytes are not the pin's
+const pinned = (name) => existsSync(resolve(root, "firmware/apps", name, "release.sha256"));
 
 const commands = {
   doctor() {                                   // prerequisites, one line each; exit 1 when the build cannot work
@@ -100,7 +102,7 @@ const commands = {
     if (!/^[a-z0-9-]+$/.test(name || "")) fail("usage: app NAME   (a folder of firmware/apps, such as starter). See docs/ALT-FIRMWARE.md.");
     if (!existsSync(resolve(root, "firmware/apps", name, "app.sh"))) fail(`firmware/apps/${name}/app.sh not found.`);
     const out = `build/apps/${name}`;
-    return inContainer(["sh", "-c", `OP_APP=${name} sh firmware/build.sh && sha256sum ${out}/${name}.bin ${out}/*.fwsc ${out}/manifest.json > ${out}/SHA256SUMS && cat ${out}/SHA256SUMS`]);
+    return inContainer(["sh", "-c", `OP_APP=${name} sh firmware/build.sh && sha256sum ${out}/${name}.bin ${out}/*.fwsc ${out}/manifest.json > ${out}/SHA256SUMS && cat ${out}/SHA256SUMS${pinned(name) ? ` && sh tests/release_pin.sh ${name}` : ""}`]);
   },
   // --built: the tests also take the packages the build made (OpenPocket's, each app's), which must be there
   test: (args = []) => inContainer(args.includes("--built") ? ["sh", "-c", "OP_BUILT=1 sh tests/run_tests.sh"] : ["sh", "tests/run_tests.sh"]),
@@ -110,7 +112,7 @@ const commands = {
     return rc || commands.test(["--built"]);
   },
   // (the release pin, tests/release_pin.sh: OpenPocket's outputs must be the pinned release's bytes, or this fails)
-  package: () => inContainer(["sh", "-c", `sh firmware/build.sh && mkdir -p build && sha256sum ${OUTS} > build/SHA256SUMS && sh tests/release_pin.sh`]),
+  package: () => inContainer(["sh", "-c", `sh firmware/build.sh && mkdir -p build && sha256sum ${OUTS} > build/SHA256SUMS && sh tests/release_pin.sh gamut`]),
   "package-test": () => inContainer(["sh", "-c", `OP_CHANNEL=midi-test sh firmware/build.sh && mkdir -p build && sha256sum ${TEST} > build/SHA256SUMS-midi-test && cat build/SHA256SUMS-midi-test`]),
   clean() {
     for (const p of ["build", "firmware/build", "firmware/build-ble", "firmware/openpocket.bin", "firmware/openpocket-ble.bin", "firmware/openpocket-midi-test.bin", "docs/firmware/midi-test", "docs/firmware/manifest.json", "docs/firmware/release.json", "docs/rescue", "firmware/apps/gamut/engine/px_render"]) {

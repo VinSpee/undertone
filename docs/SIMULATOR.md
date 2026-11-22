@@ -254,7 +254,7 @@ used. The loop goes in at the level a guitar has at the pedal's converter, and t
 louder.
 
 `/site/install.html?app=NAME` is the installer page with the app offered, and it names the simulated pedal's product.
-`tests/test_app_sim.mjs` drives the simulator for STARTER, and `tests/test_palette_sim.mjs` for PALETTE
+`firmware/apps/starter/tests/test_app_sim.mjs` drives the simulator for STARTER, and `firmware/apps/palette/tests/test_palette_sim.mjs` for PALETTE
 ([PALETTE.md](PALETTE.md)).
 
 ## Tests

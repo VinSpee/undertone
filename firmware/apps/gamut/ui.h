@@ -178,7 +178,7 @@ static void draw_status(int force)
     draw_battery(force);
 }
 /* the DSP load, from the main loop: "DSP 42%", "DSP 88%!" (a block ran late), "SAFE 42%", "PEAK 150%" (bypassed). v42: which
- * cores ran is on the diagnostics page (ui_dg). Every text fits ST_W (tests/uisim.c checks the worst ones). */
+ * cores ran is on the diagnostics page (ui_dg). Every text fits ST_W (firmware/apps/gamut/tests/uisim.c checks the worst ones). */
 static struct {                        /* the main loop's last DSP figures, for the diagnostics page */
     uint32_t load, peak, cl[2];        /* the load (the peak while bypassed), the peak since the preset, each core's (layer split) */
     uint8_t cores, split, guard, late, bypass;   /* cores: 0 C0, 1 C1, 2 both ("2C"); guard: the safety bypass's limit, % */

@@ -16,14 +16,15 @@ time), taken branch 6.35. Usage: test_post5.py [OLD NEW] (with OLD and NEW: the 
 must make the test fail: the test of the test)."""
 import os, re, subprocess, sys, random
 HERE = os.path.dirname(os.path.abspath(__file__))
+ROOT = os.path.join(HERE, "..", "..", "..", "..")
 def strip(text):
     out = []
     for ln in text.split("\n"):
         m = re.match(r'\s*"(.*)\\n"$', ln)
         if m: out.append(m.group(1).replace("\\t", "").strip())
     return out
-gen = strip(subprocess.run([sys.executable, os.path.join(HERE, "..", "tools", "gen_rdq.py"), "--post5"], capture_output=True, text=True, check=True).stdout)
-src = open(os.path.join(HERE, "..", "firmware", "apps", "gamut", "engine", "px_nam.c")).read()
+gen = strip(subprocess.run([sys.executable, os.path.join(ROOT, "tools", "gen_rdq.py"), "--post5"], capture_output=True, text=True, check=True).stdout)
+src = open(os.path.join(ROOT, "firmware", "apps", "gamut", "engine", "px_nam.c")).read()
 a = src.index('    "\\t.global pxn_post5_asm\\n"'); b = src.index('    "\\t{pc, r15-r4} = [sp++]\\n"', a)
 lines = strip(src[a:src.index("\n", b) + 1])
 if lines != gen: raise SystemExit("post5: the routine in firmware/apps/gamut/engine/px_nam.c is not tools/gen_rdq.py --post5's output")

@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-only
  * OpenPocket: a BLE MIDI packet (the write to the characteristic of the MIDI service, "MIDI over Bluetooth Low Energy" 1.0)
  * -> the 4-byte USB-MIDI event packets px_midi_decode takes, so a message means the same on both roads. No hardware here:
- * tests/midisim.c runs this file on a PC.
+ * firmware/apps/gamut/tests/midisim.c runs this file on a PC.
  *
  *   header, then for each message a timestamp byte and the message. Both have bit 7 set, so a byte with bit 7 set where a
  *   message may start is a timestamp. The next byte is a status, or a data byte (running status). A message may also follow

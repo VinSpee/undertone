@@ -18,7 +18,7 @@
 enum { RED = 0xF800, GRN = 0x07E0, BLU = 0x001F, WHT = 0xFFFF, BLK = 0x0000, CYN = 0x07FF, YEL = 0xFFE0, ORG = 0xFD20 };
 enum { UI_BG = 0x0841, UI_PANEL = 0x18E3, UI_SEL = 0xFB00, UI_ACC = 0xFD20, UI_TXT = 0xEF7D, UI_DIM = 0x8410, UI_OK = 0x4E6B, UI_OFF = 0x2124 };
 
-/* ---- screen: as tests/uisim.c */
+/* ---- screen: as firmware/apps/gamut/tests/uisim.c */
 static uint16_t fb[240 * 240];
 static uint32_t wx, wy, ww, wi;
 static void lcd_win(uint32_t x, uint32_t y, uint32_t w, uint32_t h) { (void)h; wx = x; wy = y; ww = w; wi = 0; }

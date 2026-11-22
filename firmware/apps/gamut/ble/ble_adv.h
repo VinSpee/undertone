@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-3.0-only OR MPL-2.0 */
 /* The advertisement the Bluetooth test image sends, as the Bluetooth Core Specification wants it (Vol 3 Part C 11, Vol 6
- * Part B 2.3, Vol 4 Part E 7.8.5-7.8.9). No hardware access: tests/test_ble_status.c checks it on the PC.
+ * Part B 2.3, Vol 4 Part E 7.8.5-7.8.9). No hardware access: firmware/apps/gamut/tests/test_ble_status.c checks it on the PC.
  *
  *   PDU            ADV_IND: connectable and scannable, undirected, as the stock firmware.
  *   interval       0x00A0 x 0.625 ms = 100 ms (min = max).

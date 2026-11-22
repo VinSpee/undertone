@@ -10,7 +10,7 @@
 #define AINL static inline __attribute__((always_inline))
 #define XF (1.0f / 256.0f)                      /* a blend's step a sample: 5.8 ms from end to end, as the base's change fade */
 /* Denormals: the pedal's FPU slows on them (docs/HARDWARE-HANDBOOK.md), and digital silence through a filter that
- * feeds back decays into them. Three rules keep every number the engine keeps out of them (tests/test_palette.c):
+ * feeds back decays into them. Three rules keep every number the engine keeps out of them (firmware/apps/palette/tests/test_palette.c):
  * a module's input gets +-1e-15 (pl_run); a filter fed from 16-bit memory, which holds exact zeros, gets DN at each
  * step; a glide that ends at zero ends there exactly. */
 #define DN 1e-18f

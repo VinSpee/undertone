@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-3.0-only
  * OpenPocket — screen drawing over lcd_win / lcd_px / lcd_end / lcd_rect (firmware/apps/gamut/openpocket.c on the pedal,
- * tests/uisim.c on the PC): anti-aliased text and rounded boxes. */
+ * firmware/apps/gamut/tests/uisim.c on the PC): anti-aliased text and rounded boxes. */
 #pragma once
 /* ================= ANTI-ALIASED text (Inter font, 4-bit alpha) =================
  * ft_box(x, y, w, ...) draws a box of fixed width w and of the font's height: padding + text + padding,

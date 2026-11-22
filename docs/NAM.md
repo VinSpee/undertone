@@ -81,7 +81,7 @@ trained at 44.1 kHz and are not affected.
 ## How it runs
 
 - `firmware/apps/gamut/engine/px_nam.c`: the network in fixed point (activations with 20 fraction bits, weights with 24, 64-bit sums),
-  checked against a float reference (`tools/nam_a2.py`) for every factory model by `tests/test_nam.py`: about 99 dB
+  checked against a float reference (`tools/nam_a2.py`) for every factory model by `firmware/apps/gamut/tests/test_nam.py`: about 99 dB
   signal to error.
 - Blocks of 32 frames, layer by layer. On the CPU, each output channel of a layer is computed for 4 frames at a time
   straight from the layer's history ring (`rdot`): for each kernel tap, the 4 frames' 3 channels sit side by side in
@@ -108,7 +108,7 @@ trained at 44.1 kHz and are not affected.
   layer until CPU1 has posted the one before (one counter). With a NAM amp in two-core mode the audio block runs on
   CPU0 (in the audio interrupt) as a pipeline (`dsp_pipe` in `firmware/apps/gamut/px_audio.h`, `px_engine_part`): CPU1 first runs
   the effects after the amp on the previous block's network output while CPU0 runs the effects before the amp on this
-  block, then both run the network (one block, 2.9 ms, more latency; `tests/engine/pipe_test.c` checks it gives the
+  block, then both run the network (one block, 2.9 ms, more latency; `firmware/apps/gamut/tests/engine/pipe_test.c` checks it gives the
   one-core output one block later). In the pipeline the roles are the other way round (`pxn_serve`): CPU1 comes to
   the network after its effects, so it takes the last frames of each 32-frame block and waits per layer for CPU0,
   which takes the first frames and never waits, and up to 12 more of them in the first blocks by how late CPU1 came
@@ -120,7 +120,7 @@ trained at 44.1 kHz and are not affected.
   other at every layer, and the head no longer runs on CPU0 alone. A layer of a block runs only after the same layer of
   the block before, and layer s's output goes to a hand-over buffer that CPU1 copies into layer s+1's ring, so s can move
   from one block to the next: it follows the difference between the two cores' times. The output is the one-core output
-  bit for bit (`tests/engine/lp_test.c`: every model, the split moved at random, the second core's work at random
+  bit for bit (`firmware/apps/gamut/tests/engine/lp_test.c`: every model, the split moved at random, the second core's work at random
   moments; the pipeline on every NAM preset; on the pedal a development build checks it with both cores at boot). The
   load shown is the busier core's. The hand-over queue (6 KB) sits in the cache RAM after the vector unit's buffers.
 - v40.4: CPU1 works on through the interrupts (`lp_job` is one worker for as long as the layer split is on). Before, its
@@ -137,19 +137,19 @@ trained at 44.1 kHz and are not affected.
   (`pxn_lp_share`); in the first two blocks after a change, before CPU1's work is timed, CPU0 takes as many layers
   as fit in 80 % of its block. CPU1 takes layers over at once; CPU0 takes more only as CPU1 has finished them for the
   blocks before (`pxn_lp_a`), or waits for it once when told to (`pxn_lp_force`: a rise of two layers or more). The
-  output does not depend on any of it (`tests/engine/lp_test.c`).
+  output does not depend on any of it (`firmware/apps/gamut/tests/engine/lp_test.c`).
 - v40.5: CPU0's waits for CPU1 end after a limit. CPU1's worker is one job for as long as the split runs, so the
   limit of `fm1_cpu1_wait` (8 ms, then CPU1 is retired as LATE and CPU0 goes on alone) did not apply to the interrupt's
   waits for it: in `a_lp_post` (its output), in `pxn_lp_a` (the queue full) and in a forced rise (`pxn_lp_wait`). A CPU1
   that stopped without a fault would have held the audio interrupt until the watchdog reset the pedal. These waits now
   end after the same 8 ms (`pxn_lp_clock`, set after the start-up check; none on the PC): `pxn_lp_a` returns without
   handing the block over, CPU1 is retired (LATE), and the next collect goes to one core with the engine reset, as for a
-  CPU1 that faults. `tests/engine/lp_stuck.c` checks the network's side with a second core that never moves.
+  CPU1 that faults. `firmware/apps/gamut/tests/engine/lp_stuck.c` checks the network's side with a second core that never moves.
 - v40.5: `post5` (`tools/gen_rdq.py --post5`) does `post4`'s work two frames a turn for every layer with an output: the
   residual's 9 weights are read once for the two frames, and every load and store is written with an instruction that
   computes (free with a multiply or multiply-add; with a 1-cycle instruction it costs only its own time), each value
   loaded 2 instructions or more before its use. No word outside the job is read. An odd first frame and the last layer
-  go to `post4`. A turn takes 109 cycles against 159 for two of `post4`'s frames. `tests/test_post5.py` runs the
+  go to `post4`. A turn takes 109 cycles against 159 for two of `post4`'s frames. `firmware/apps/gamut/tests/test_post5.py` runs the
   assembly text itself through a model of its instructions against the C post, on the PC; the pedal checks it at
   start-up like the others and times it.
 - v40.5: `rdm6`, `rdm15` and `post5` run from the flash, the other routines from RAM as before. On this chip code in RAM
@@ -166,7 +166,7 @@ trained at 44.1 kHz and are not affected.
   paired) and row 2 as `rdl`; `post4` reads the layer's input straight from its ring in a loop with no counter in memory,
   the residual's weights on the stack so that their loads pair, and LeakyReLU as `smax(z, (z * 42949673) >> 32)`, the
   same value for every z (checked over all 2^32). Both are checked against C at start-up like the others and timed against
-  them; the start-up check, the timing and the dispatch also run on the PC (`tests/engine/hand_test.c`) with C stand-ins
+  them; the start-up check, the timing and the dispatch also run on the PC (`firmware/apps/gamut/tests/engine/hand_test.c`) with C stand-ins
   that read exactly what the hand code reads, under the address sanitizer, so that a check that would fault on the pedal
   (a boot loop) fails there first. `pxn_equiv` runs the whole network with the routines in use against C.
 - At start-up the pedal times the ways to run it (CPU alone; the unit one command after the other; the unit and the

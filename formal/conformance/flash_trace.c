@@ -2,7 +2,7 @@
  * OpenPocket — the order in which the firmware's own flash code holds the audio and takes the flash, recorded for
  * formal/FlashHold.tla (formal/check.mjs runs `everystate conform` on what this writes).
  *
- * It runs firmware/apps/gamut/px_store.h, firmware/apps/gamut/px_models.h and firmware/apps/gamut/px_irs.h on a PC, as tests/test_store.c does, on a
+ * It runs firmware/apps/gamut/px_store.h, firmware/apps/gamut/px_models.h and firmware/apps/gamut/px_irs.h on a PC, as firmware/apps/gamut/tests/test_store.c does, on a
  * 1 MiB flash array. What st_audio_hold and the flash routines call on the pedal writes one line here, named after
  * the model's step: fm1_irq_mask "Mask", a_collect "CollectBegin", fm1_irq_unmask "Unmask", and each fl_erase4k,
  * fl_write and ota_fread the SFC off and on again (the model's FlashOff and FlashOn).

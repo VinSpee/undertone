@@ -10,7 +10,7 @@
  * goes out inverted (as the stock firmware sends it), and only when it changes. Confirmed on a BlackBox: each
  * light follows its block, HOME blinks in the tuner. Not yet: a setting to switch the lights off (it belongs with
  * the settings store isod89/openpocket#10 adds).
- * Included by openpocket.c (after ui.h: UI_FXB) and by tests/lightsim.c. */
+ * Included by openpocket.c (after ui.h: UI_FXB) and by firmware/apps/gamut/tests/lightsim.c. */
 #pragma once
 #include <stdint.h>
 #include "px_leds.h"

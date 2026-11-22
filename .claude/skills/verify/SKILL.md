@@ -39,7 +39,7 @@ Run it first whenever anything looks off.
 | Installer page, update flow | `pages.sh` (runs `tests/test_page.mjs`) | `build/page/page_1..4*.png`, last line `page test passed` |
 | Editor page | `pages.sh` (runs `tests/test_editor_page.mjs`) | `build/editor/editor_1..10*.png`, last line `editor page test passed` |
 | The site container (`site/Dockerfile`): its build, the bytes of the release it serves (pinned, or the newest with `latest`), the rescue kit, both pages served by it | `pages.sh site` (runs `tests/test_site.mjs`, needs Docker) | last line `site test passed`; `build/site/page/*.png`, `build/site/editor/*.png` |
-| Screen layout | `cc ... tests/uisim.c` (see toolchain skill), `build/uisim build/ui` | PPM pages, `never drawn` absent from the log |
+| Screen layout | `cc ... firmware/apps/gamut/tests/uisim.c` (see toolchain skill), `build/uisim build/ui` | PPM pages, `never drawn` absent from the log |
 | The pedal as a user plays it: footswitches, knob, pages, save, tuner, the live screen | `node tools/op.mjs sim`, then the HTTP API (skill `openpocket-simulator`, `docs/SIMULATOR.md`) | `GET /api/state` and `/api/screen.png` after each press; the flash file `build/sim/flash.bin` survives a restart |
 | The pedal skin: every control by mouse, touch and keyboard, the backlights, the live LCD | `pages.sh` (runs `tests/test_pedal_page.mjs`) | `build/pedal/pedal-skin*.png`, last line `pedal page: ok` |
 | The sound in the simulator: the engine on known signals, against its native build; the input picker, meters, bypass, the preset heard | `node tests/test_audio.mjs`, `pages.sh` (runs `tests/test_audio_page.mjs`) | every line `ok`; `build/audio/sound.png`; `node tools/sim/render.mjs DIR` renders WAV files to listen to |

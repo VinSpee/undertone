@@ -3,12 +3,12 @@
 # OpenPocket — the NAM engine (firmware/apps/gamut/engine/px_nam.c, fixed point, the pedal's C path) against the float reference
 # (tools/nam_a2.py), with each factory model's weights (firmware/apps/gamut/engine/px_nam_factory.h): DI clip (docs/nam_di.wav) at the
 # pedal's input level, several block sizes, the rings in one piece and in two. Wants SNR > 80 dB. Modes 2..8 (the
-# vector unit beside the CPU, a second core, simulated: tests/engine/nam_test.c) must give exactly the same output as the CPU alone.
-#   python3 tests/test_nam.py build/nam_test
+# vector unit beside the CPU, a second core, simulated: firmware/apps/gamut/tests/engine/nam_test.c) must give exactly the same output as the CPU alone.
+#   python3 firmware/apps/gamut/tests/test_nam.py build/nam_test
 import os, re, subprocess, sys, wave
 import numpy as np
 
-ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..", ".."))
 sys.path.insert(0, os.path.join(ROOT, "tools"))
 import nam_a2  # noqa: E402
 

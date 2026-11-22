@@ -6,7 +6,7 @@
  * under a running effect is blended, Vibrato's depth and Phaser's stages glide; bypass is the guitar bit for bit; the order is heard;
  * a tempo sets the delay's time; the left output alone and the sum of both are each a whole sound; a sound that is out
  * of range is refused; after a note no number the engine keeps decays into a denormal (the pedal's FPU slows on them).
- *   cc -O1 -Wall -Ifirmware/apps/palette tests/test_palette.c firmware/apps/palette/engine.c firmware/px_math.c -lm -o build/test_palette
+ *   cc -O1 -Wall -Ifirmware/apps/palette firmware/apps/palette/tests/test_palette.c firmware/apps/palette/engine.c firmware/px_math.c -lm -o build/test_palette
  */
 #include <math.h>
 #include <stddef.h>

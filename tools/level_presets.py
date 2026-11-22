@@ -14,7 +14,7 @@ NFACT = 24                                           # the levelled ones (the US
 
 
 def build():
-    subprocess.run(["cc", "-O2", "-I" + os.path.join(ROOT, "firmware", "apps", "gamut", "engine"), os.path.join(ROOT, "tests", "engine", "preset.c"),
+    subprocess.run(["cc", "-O2", "-I" + os.path.join(ROOT, "firmware", "apps", "gamut", "engine"), os.path.join(ROOT, "firmware", "apps", "gamut", "tests", "engine", "preset.c"),
                     os.path.join(ROOT, "firmware", "apps", "gamut", "engine", "px_dsp.c"), os.path.join(ROOT, "firmware", "px_math.c"), "-lm", "-o", EXE], check=True)
 
 

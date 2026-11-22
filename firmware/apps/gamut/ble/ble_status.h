@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-3.0-only OR MPL-2.0 */
 /* What the Bluetooth test image shows on the screen (docs/BLE-TEST.md, "Reading the status text"): where start-up has got
- * to, and, when it failed, which step and which return value. No hardware access, so tests/test_ble_status.c compiles it
+ * to, and, when it failed, which step and which return value. No hardware access, so firmware/apps/gamut/tests/test_ble_status.c compiles it
  * on the PC.
  *
  *   STARTING <stage>      the last stage reached (BLE_STAGE_*): a timeout names the stage it stalled in

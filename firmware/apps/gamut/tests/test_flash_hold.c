@@ -3,15 +3,15 @@
  * every erase, program and SPI read of a preset save and of a NAM model's or an IR's save and erase must fall between
  * the hold's a_collect and its release, because the flash switches the SFC off under the second core
  * (formal/FINDINGS.md, F1). It runs firmware/apps/gamut/px_store.h, px_models.h and px_irs.h on a simulated NOR flash, as
- * tests/test_store.c does.
- *   cc -O1 -Ifirmware/apps/gamut/engine tests/test_flash_hold.c firmware/apps/gamut/engine/px_dsp.c firmware/px_math.c -lm -o build/test_flash_hold && build/test_flash_hold */
+ * firmware/apps/gamut/tests/test_store.c does.
+ *   cc -O1 -Ifirmware/apps/gamut/engine firmware/apps/gamut/tests/test_flash_hold.c firmware/apps/gamut/engine/px_dsp.c firmware/px_math.c -lm -o build/test_flash_hold && build/test_flash_hold */
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include "px_dsp.h"
 #include "px_nam.h"
-#include "../firmware/apps/gamut/px_midi.h"
+#include "../px_midi.h"
 
 static uint8_t nor[0x100000];
 static int fails;
@@ -48,9 +48,9 @@ static px_preset_t PRESET;
 static void st_get(uint32_t k, px_preset_t *p);
 static void load_preset(uint32_t i) { st_get(i, &PRESET); }
 #define ST_IRQ_OFF() ((void)0)
-#include "../firmware/apps/gamut/px_store.h"
-#include "../firmware/apps/gamut/px_models.h"
-#include "../firmware/apps/gamut/px_irs.h"
+#include "../px_store.h"
+#include "../px_models.h"
+#include "../px_irs.h"
 
 /* after one save or erase: it took the flash, only inside the hold, and gave the audio back */
 static void held(const char *what)

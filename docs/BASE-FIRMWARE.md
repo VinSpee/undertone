@@ -259,21 +259,24 @@ The parts can be run alone:
 An app's outputs go to `build/apps/<name>/`. The OpenPocket build's outputs are not touched. The installer offers an app
 only when `firmware/catalog.json` lists it, or with `?app=<name>` ([ALT-FIRMWARE.md](ALT-FIRMWARE.md)).
 
-**The release pin.** `tests/release.sha256` holds the SHA-256 of OpenPocket's image, both packages, and the
-manifest. They are the sums of upstream's published v42 packages with the bass tuner fix (the tuner reads a bass's
+**The release pins.** Each firmware that is released has a pin, `firmware/apps/<name>/release.sha256`: the SHA-256
+of its image, both packages, and the manifest. STARTER, the template, has none. OpenPocket's pin,
+`firmware/apps/gamut/release.sha256`, holds the sums of upstream's published v42 packages with the bass tuner fix (the tuner reads a bass's
 low strings), trails (the delay and the reverb ring out over a new preset), the editor watch fix (a request from
 the editor no longer cancels a push the pedal owes it) and the flash hold fix (a save or an erase of a NAM model or an
 IR reads the slots' names with the audio still held) and store format 6 (the built-in amps and cabinets removed:
 the AMP block plays NAM only, the CAB block USER IR only) and slot IR1's factory IR (ML Sound Lab's "BEST IR IN THE
-WORLD", with the factory presets' levels set for it), numbered v43 (`PocketX_943`, `BlackBox_943`). `package` ends with `tests/release_pin.sh`, which fails when a sum differs. The build is deterministic: CI and a local build give the same bytes.
+WORLD", with the factory presets' levels set for it), numbered v43 (`PocketX_943`, `BlackBox_943`). `package` ends with `tests/release_pin.sh gamut`, and `app <name>` with `tests/release_pin.sh <name>` for a firmware
+with a pin; each fails when a sum differs. The build is deterministic: CI and a local build give the same bytes.
 
 The same sums mean that nothing in OpenPocket needs a check on a pedal. A change to a base file changes every app,
 so run `package` after one. A change that only moves code, or that adds lines for a case OpenPocket does not
 compile, leaves the image the same bytes.
 
 To pin a new OpenPocket release after a merge of upstream's next version, compare the packages with upstream's
-published ones, then copy `build/SHA256SUMS` over `tests/release.sha256` in the same commit. A change made to
-OpenPocket on purpose, such as the bass tuner fix or trails, is pinned the same way once its own tests pass.
+published ones, then copy `build/SHA256SUMS` over `firmware/apps/gamut/release.sha256` in the same commit. A change
+made to OpenPocket on purpose, such as the bass tuner fix or trails, is pinned the same way once its own tests pass.
+Another firmware's release is pinned by copying `build/apps/<name>/SHA256SUMS` over its `release.sha256`.
 
 ## 10. Which product an image is
 

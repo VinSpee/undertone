@@ -1,23 +1,28 @@
 #!/bin/sh
-# The release pin: OpenPocket's image and packages must be the bytes of the pinned release (upstream's published v42
-# with the bass tuner fix, trails, the editor watch fix, the flash hold fix, the built-in amps and cabinets removed and
-# slot IR1's factory IR, numbered v43, its update loader refusing a flash head it does not know, its packages
-# fitting both flash heads),
-# whatever changed in the base firmware or in another app (docs/BASE-FIRMWARE.md, section 9).
-# tests/release.sha256 holds their SHA-256.
-#   tests/release_pin.sh [SUMS]   compare SUMS (default build/SHA256SUMS, which `tools/op.mjs package` writes) with the pin
-# The same sums mean that nothing in OpenPocket needs a check on a pedal. To pin a new OpenPocket release (a merge of
-# upstream's next version): compare the packages with upstream's published ones, then copy build/SHA256SUMS over
-# tests/release.sha256 in the same commit. A change made to OpenPocket on purpose, such as the bass tuner fix or
-# trails, is pinned the same way once its own tests pass.
-HERE="$(cd "$(dirname "$0")" && pwd)"
-SUMS="${1:-$HERE/../build/SHA256SUMS}"
-if [ ! -f "$SUMS" ]; then echo "release pin: $SUMS not found (run: node tools/op.mjs package)"; exit 1; fi
-if diff -u "$HERE/release.sha256" "$SUMS"; then
-  echo "release pin: OpenPocket's image and packages are the release's, byte for byte ($(wc -l < "$SUMS" | tr -d ' ') files)"
+# A firmware's release pin: its image and packages must be the bytes of its pinned release, whatever changed in the base
+# firmware or in another firmware (docs/BASE-FIRMWARE.md, section 9). firmware/apps/NAME/release.sha256 holds their
+# SHA-256; a firmware with no such file has no pin (STARTER, the template, is never released).
+#   tests/release_pin.sh NAME [SUMS]   compare SUMS with NAME's pin. The default SUMS is what the build wrote:
+#                                      build/SHA256SUMS for OpenPocket (gamut, `tools/op.mjs package`), and
+#                                      build/apps/NAME/SHA256SUMS for another firmware (`tools/op.mjs app NAME`)
+# The same sums mean that nothing in that firmware needs a check on a pedal. To pin a new release of it, such as a merge
+# of upstream's next OpenPocket or a change made on purpose once its own tests pass, copy the build's SHA256SUMS over
+# its release.sha256 in the same commit. OpenPocket's pin (gamut) is upstream's published v42 with the bass tuner fix,
+# trails, the editor watch fix, the flash hold fix, the built-in amps and cabinets removed and slot IR1's factory IR,
+# numbered v43, its update loader refusing a flash head it does not know, its packages fitting both flash heads.
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+NAME="$1"
+case "$NAME" in ""|*[!a-z0-9-]*) echo "usage: tests/release_pin.sh NAME [SUMS]   (NAME: a folder of firmware/apps)"; exit 2;; esac
+PIN="$ROOT/firmware/apps/$NAME/release.sha256"
+if [ ! -f "$PIN" ]; then echo "release pin: $NAME has no pin (firmware/apps/$NAME/release.sha256)"; exit 1; fi
+if [ "$NAME" = gamut ]; then DEF="$ROOT/build/SHA256SUMS"; BUILD=package; else DEF="$ROOT/build/apps/$NAME/SHA256SUMS"; BUILD="app $NAME"; fi
+SUMS="${2:-$DEF}"
+if [ ! -f "$SUMS" ]; then echo "release pin: $SUMS not found (run: node tools/op.mjs $BUILD)"; exit 1; fi
+if diff -u "$PIN" "$SUMS"; then
+  echo "release pin: $NAME's image and packages are the release's, byte for byte ($(wc -l < "$SUMS" | tr -d ' ') files)"
 else
-  echo "release pin: FAILED. OpenPocket's image or packages changed (lines with + above are this build's)."
-  echo "  A change to the base firmware or to another app must leave them the same: find what changed OpenPocket's code."
-  echo "  A new OpenPocket release is pinned on purpose: see the head of tests/release_pin.sh."
+  echo "release pin: FAILED. $NAME's image or packages changed (lines with + above are this build's)."
+  echo "  A change to the base firmware or to another firmware must leave them the same: find what changed $NAME's code."
+  echo "  A new release of $NAME is pinned on purpose: see the head of tests/release_pin.sh."
   exit 1
 fi

@@ -7,13 +7,13 @@
 // bypass on the right footswitch, the presets on its hold, the tap on the left one), its sound at the two outputs, the
 // reference's MIDI map, the MIDI clock, its own editor requests, a save that survives a restart and stays inside its
 // flash range, a store that fails its check, safe mode, a guitar loop.
-//   node tests/test_palette_sim.mjs
+//   node firmware/apps/palette/tests/test_palette_sim.mjs
 import assert from "node:assert/strict";
 import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { startSim } from "../tools/sim.mjs";
-import { parseIdentity, parseInfo, IS_ALT } from "../docs/pxota.js";
+import { startSim } from "../../../../tools/sim.mjs";
+import { parseIdentity, parseInfo, IS_ALT } from "../../../../docs/pxota.js";
 
 const TMP = mkdtempSync(join(tmpdir(), "oppal-"));
 let failed = 0;
