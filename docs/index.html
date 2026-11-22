@@ -394,7 +394,7 @@ h2{font-size:clamp(40px,6.4vw,104px);line-height:.88;font-weight:900;font-variat
     btn.setAttribute('aria-busy','true');label.textContent='Loading the riff…';note.textContent='';
     audio.play().then(function(){btn.removeAttribute('aria-busy');btn.setAttribute('aria-pressed','true');label.textContent='Stop the riff';
       if(!reduce.matches) run(function(){return audio.currentTime;},4.4);})
-      .catch(function(){stopped();note.textContent='The riff could not play in this browser.';});
+      .catch(function(err){stopped();if(err&&err.name==='AbortError')return;note.textContent='The riff could not play in this browser.';});
   });
   audio.addEventListener('ended',stopped);
 })();
