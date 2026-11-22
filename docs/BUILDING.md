@@ -58,6 +58,11 @@ A2-Lite network from a capture (needs `pip install jax optax numpy scipy`, about
 then `tools/mk_nam_factory.py LIST.txt DIR docs/nam_di.wav` writes the header with each model's level trim
 ([NAM.md](NAM.md)).
 
+Slot IR1's factory IR (`engine/px_ir_factory.h`) is generated too: `node tools/mk_ir_factory.mjs "ML Sound Lab's BEST IR
+IN THE WORLD.wav"` converts ML Sound Lab's WAV file as the editor converts any IR (`docs/pxir.js`) and writes the header.
+The WAV is not in the repository (credits in `NOTICE.md`); the tool checks its SHA-256. After a change of the factory
+IR, `python3 tools/level_presets.py docs/nam_di.wav` sets the factory presets' levels again.
+
 The `.bat` files `makeimage.bat` and `render.bat` only check that Node is installed and call `tools/op.mjs`. `build.bat` does the same when Node and Docker are there, and otherwise builds in WSL (`build.bat docker` or `build.bat wsl` forces one way). `INSTALL-OFFLINE.bat` needs nothing installed: it serves `docs\` with PowerShell (`tools/serve_offline.ps1`), and falls back to Python (`tools/serve.py`) or WSL only if PowerShell cannot open a port. `tests/test_op.mjs` (part of `make test`) checks the Docker command lines, the friendly errors and `make clean` without Docker, using a fake `docker`. `PUBLISH-GITHUB.bat` and `PUBLISH-SOURCE.bat` (PowerShell
 `tools/publish_github.ps1`) are the maintainer's release tool and still need Windows; nothing else does.
 

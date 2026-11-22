@@ -21,7 +21,8 @@ Written from scratch for the pedal's own chip (JieLi AC791N, two cores), install
   trained for it (Twin, AC15, Super 59, Dirty Shirley, JCM900, JCM2000, JVM, Mark IV, Pro Mod, 5150, 6505+) and 16
   user slots you fill from the web editor with A2 captures (TONE3000...). Details: [docs/NAM.md](docs/NAM.md)
 - **Your own cabinet IRs (v38)**: the CAB block plays an impulse response you load from the web editor (8 slots).
-  There are no built-in amps or cabinets: the AMP block is NAM and the CAB block is USER IR
+  There are no built-in amps or cabinets: the AMP block is NAM and the CAB block is USER IR. Slot IR1 comes with one
+  IR, ML Sound Lab's free "BEST IR IN THE WORLD", which the factory presets play until you load your own
 - **4 drives** (TS9, Klon, MXR M77, HM-2), knobs at noon set like the captured pedals
 - **Pro levels (v36)**: every NAM model, block and preset at the same loudness (-23 LUFS, measured on real guitar);
   24 factory presets round the NAM models, 28 USER slots; a PRESET LVL per preset; soft output limiter
@@ -170,6 +171,8 @@ GPL-3.0-only. Board support and loader: MPL-2.0 (felucca-bsp). JieLi SDK files: 
 The factory NAM models were trained, and the drives' settings matched, on the NAM captures of
 [pelennor2170/NAM_models](https://github.com/pelennor2170/NAM_models) (GPL-3.0, thanks to their authors) and the DI recordings of
 [Alec-Wright/Automated-GuitarAmpModelling](https://github.com/Alec-Wright/Automated-GuitarAmpModelling) (GPL-3.0); neither is shipped.
+The factory cabinet IR in slot IR1 is ["BEST IR IN THE WORLD"](https://www.facebook.com/watch/?ref=embed_video&v=1053603041469100) by ML Sound Lab, a free IR, redistributed with
+the creator's permission as stated by the project's owner (thanks to ML Sound Lab).
 Product names are trademarks of their owners, used only to describe the sound.
 See [NOTICE.md](NOTICE.md). Not affiliated with Donner or M-VAVE. Install at your own risk.
 

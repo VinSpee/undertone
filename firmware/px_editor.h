@@ -20,7 +20,7 @@
 #define ED_H0 0x7Du
 #define ED_H1 0x4Fu
 #define ED_H2 0x50u
-#define ED_PROTO 4u                             /* 4: v42, USB_AUDIO; 3: v38, cabinet IRs (IR_LIST .. IR_ERASE); 2: v37, NAM models */
+#define ED_PROTO 5u                             /* 5: IR1's factory IR (IR_LIST 2); 4: v42, USB_AUDIO; 3: v38, cabinet IRs (IR_LIST .. IR_ERASE); 2: v37, NAM models */
 #define ED_NAME_MAX 13u
 #define ED_P_SIZE 110u
 #if OP_UADEV
@@ -273,10 +273,10 @@ static void ed_handle(const uint8_t *a, uint32_t n)   /* a: the args, after the 
         nm_changed(a[0]);                              /* a sound playing that slot reloads it */
         ed_b(a[0]); ed_b((uint32_t)rc);
         break;
-    case ED_IR_LIST: {                                 /* v38: the cabinet IR slots */
+    case ED_IR_LIST: {                                 /* v38: the cabinet IR slots: 1 the user's IR, 2 IR1's factory one */
         char nm[12];
         ed_b(PX_IR_N);
-        for (k = 0; k < PX_IR_N; k++) { rc = px_ir_name((int)k, nm); ed_b(rc ? 1u : 0u); ed_str(nm, 11); }
+        for (k = 0; k < PX_IR_N; k++) { rc = px_ir_name((int)k, nm); ed_b(ir_cache[k].ok ? 1u : rc ? 2u : 0u); ed_str(nm, 11); }
         break;
     }
     case ED_IR_WRITE:                                  /* piece (2 bytes, 7 bits each), then 128 packed bytes */

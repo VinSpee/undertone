@@ -264,7 +264,8 @@ manifest. They are the sums of upstream's published v42 packages with the bass t
 low strings), trails (the delay and the reverb ring out over a new preset), the editor watch fix (a request from
 the editor no longer cancels a push the pedal owes it) and the flash hold fix (a save or an erase of a NAM model or an
 IR reads the slots' names with the audio still held) and store format 6 (the built-in amps and cabinets removed:
-the AMP block plays NAM only, the CAB block USER IR only). `package` ends with `tests/release_pin.sh`, which fails when a sum differs. The build is deterministic: CI and a local build give the same bytes.
+the AMP block plays NAM only, the CAB block USER IR only) and slot IR1's factory IR (ML Sound Lab's "BEST IR IN THE
+WORLD", with the factory presets' levels set for it). `package` ends with `tests/release_pin.sh`, which fails when a sum differs. The build is deterministic: CI and a local build give the same bytes.
 
 The same sums mean that nothing in OpenPocket needs a check on a pedal. A change to a base file changes every app,
 so run `package` after one. A change that only moves code, or that adds lines for a case OpenPocket does not

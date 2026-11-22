@@ -30,6 +30,11 @@ The CAB block plays a cabinet impulse response loaded from the web editor (8 slo
 (its name shows on the PLAY page), LOW CUT 20..400 Hz, HIGH CUT 20 kHz..2 kHz. An empty slot passes the sound as it
 is: the amp alone, as a DI.
 
+Slot IR1 comes with a factory IR, **ML BEST IR**: ["BEST IR IN THE WORLD"](https://www.facebook.com/watch/?ref=embed_video&v=1053603041469100), a free cabinet IR by ML Sound Lab,
+redistributed with the creator's permission as stated by the project's owner. It is in the firmware, not in the IR
+flash: IR1 plays it until you load an IR of yours there, and plays it again when you remove yours. It is converted as
+the editor converts any WAV file (48 kHz to 44.1 kHz, its first 23 ms of 1.37 s, which hold 99.8 % of its energy).
+
 The built-in amps (TWIN, AC15 TB, JCM900, JCM2000, MARK IV, SHIRLEY, PRO MOD, 5150) and cabinets (1x12 US OPEN,
 2x12 BLUE, 4x12 GREEN, 4x12 T75, 4x12 V30, 1x12 CREAM, DI) were removed in store format 6. A preset saved with one
 changes when it loads: a built-in amp becomes the NAM model trained on the same amp, with its GAIN, BASS, MID and
@@ -112,9 +117,9 @@ the trails come back with the sound.
 ## Factory presets (v37): 24 sounds, all at the same loudness, then 28 USER slots
 Built round the NAM models (v37) and the drives. Every preset is levelled to the same loudness (-23 LUFS, EBU R128,
 measured on real DI guitar by `tools/level_presets.py`): going from a clean to a high-gain preset no longer jumps by
-20 dB. Their CAB block is USER IR in slot IR1: load an IR there and every factory preset plays through it. With the
-slot empty a preset plays at the loudness it had with its built-in cabinet; with an IR it plays louder, by 0 to 6 dB
-(measured on `docs/nam_di.wav`, the most on the high-gain presets).
+20 dB. Their CAB block is USER IR in slot IR1, which plays the factory IR ML BEST IR, and their levels are set with
+it (`docs/nam_di.wav`). Load an IR of yours into IR1 and every factory preset plays through it instead; the pedal sets
+every IR to the same energy, so the loudness changes only as much as the two cabinets' tones differ.
 
 | | Clean | Crunch | Lead | High gain | Effects |
 |---|---|---|---|---|---|

@@ -14,7 +14,7 @@ networks of NAM's **A2** architecture, at its 3-channel size, **A2-Lite**. That 
 | BASS, MID, TREBLE | an EQ after the network: ±10 dB at 120 Hz, ±8 dB at 800 Hz, ±10 dB above 2.5 kHz |
 
 The factory models are amp captures without a cabinet, so keep a CAB after the AMP and load a cabinet IR into it (the
-editor's **Models** section; the factory presets play the IR in slot IR1). A capture of an amp and its cabinet together
+editor's **Models** section; the factory presets play slot IR1, which holds the factory IR until you load one there). A capture of an amp and its cabinet together
 needs no CAB: switch the block off. Every model plays at the same loudness (-20 LUFS on the reference clip
 `docs/nam_di.wav`), so switching models keeps the volume.
 

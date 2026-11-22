@@ -368,3 +368,28 @@ Driver setup: `iis_open` IIS_PORTA, channel_in = BIT(1), channel_out = BIT(0), m
   -0.9 and -3.5), which the soft limiter allows (it rounds off towards 1.2).
 - Image: 368,608 -> 355,636 bytes. RAM code 77,564 -> 72,104 bytes (17,952 free in its window), RAM 19,944 -> 21,244
   bytes free, the pool tail 2,048 -> 1,024 bytes. The engine's struct: 165,644 -> 164,288 bytes on the PC.
+
+## Slot IR1's factory IR (after v42)
+- Slot IR1 plays a factory IR while it holds no IR of the user's: "BEST IR IN THE WORLD", a free cabinet IR by ML
+  Sound Lab (credits in `NOTICE.md`), named `ML BEST IR`. It is compiled into the engine (`engine/px_ir_factory.h`,
+  1024 int16 samples and their scale, as a user slot holds them), so the pedal, the simulator, the editor's sound and
+  `px_render` all play it. `ir_get()` in `engine/px_dsp.c` asks the firmware's slot first (`px_ir_user`), then falls
+  back to the factory IR for IR1 only. An IR written to IR1 replaces it; `IR_ERASE` brings it back; the IR flash and
+  its format do not change. `IR_LIST` reports it as present 2 (editor protocol 5).
+- `tools/mk_ir_factory.mjs` converts the creator's WAV (mono, 24-bit, 48 kHz, 65,536 frames, 1.37 s) with the editor's
+  own code (`docs/pxir.js`): onset, 44.1 kHz, the first 1024 samples, the 64-sample fade, int16. Measured against the
+  original: the 23 ms kept hold 99.76 % of its energy (the tail after them is 26 dB below the whole, and already 48 dB
+  below the peak at 21 ms); no latency is added (the onset is at its first sample; the convolution has none); the
+  1/3-octave response matches within 0.17 dB from 80 Hz to 16 kHz (mean 0.03 dB). The loss is below 80 Hz, where
+  23 ms is too short to resolve the response: +2.3 dB at 40 Hz, -1.3 dB at 31 Hz, within 1 dB from 50 Hz up. The
+  level is the engine's (every IR at the same energy), so the original's level does not carry over.
+- The factory presets' LEVEL is set again with it (`tools/level_presets.py docs/nam_di.wav`, -23 LUFS). Before, with
+  IR1 empty, they measured -27.7 to -20.1 LUFS; with the factory IR and those levels they would play at -22.9 to
+  -12.7 LUFS, four of them above 0 dBFS (FUNK WAH, KLON CRUNCH, VIBE ROCK, SWEDE DEATH, up to +1.5 dBFS). Now
+  they measure -23.1 to -22.9 LUFS with peaks from -14.2 to -3.5 dBFS: each LEVEL is 5 to 34 steps lower (ACOUSTIC,
+  without a cabinet, is unchanged).
+- Load: a factory preset now runs the convolution it skipped while IR1 was empty, the same work as any USER IR
+  (about 420 instructions a sample: `engine/px_dsp.c`, WHATS-NEW-v38.md). On a PC (the simulator's engine, natively) the 24
+  factory presets take 49.8 us a 64-frame block with their CAB off and 51.6 us with the factory IR (+3.7 %, about
+  the run-to-run noise). The load on a pedal was not measured.
+- Image: 355,636 -> 357,700 bytes (the IR, 2,064 bytes). RAM unchanged.

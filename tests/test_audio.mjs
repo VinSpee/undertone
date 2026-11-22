@@ -20,7 +20,8 @@ const check = (what, fn) => { fn(); console.log(`${what.padEnd(76)} ok`); };
 
 check("the committed engine is built from these sources (else: node tools/op.mjs wasm)", () => {
   const sources = ["engine/px_wasm.c", "engine/px_dsp.c", "firmware/px_math.c", "engine/px_dsp.h", "engine/px_trim.h",
-    "engine/px_nam.c", "engine/px_nam.h", "engine/px_nam_factory.h"];   // (px_dsp.c includes the NAM network, v37)
+    "engine/px_nam.c", "engine/px_nam.h", "engine/px_nam_factory.h",    // (px_dsp.c includes the NAM network, v37)
+    "engine/px_ir_factory.h"];                                           // (and slot IR1's factory IR)
   assert.equal(sha256(...sources.map(read)), read("tools/sim/px_engine.wasm.sources").toString().trim());
 });
 
