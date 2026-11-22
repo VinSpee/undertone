@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // OpenPocket — end-to-end test of the web editor's protocol (docs/pxedit.js) against a simulated pedal (tests/edsim.c)
 // that runs the pedal's real editor code (firmware/apps/gamut/px_editor.h), preset store (px_store.h) and engine catalogue.
-//   cc -O1 -o build/edsim tests/edsim.c engine/px_dsp.c -lm && node tests/test_editor.mjs
+//   cc -O1 -o build/edsim tests/edsim.c firmware/apps/gamut/engine/px_dsp.c -lm && node tests/test_editor.mjs
 import { spawn } from "node:child_process";
 import { mkdtempSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";

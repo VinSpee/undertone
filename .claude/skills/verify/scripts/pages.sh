@@ -14,7 +14,7 @@ if [ ! -d "$PW_DIR/node_modules/playwright" ]; then
 fi
 mkdir -p build
 cc -O1 -Wall -Wno-unused-function -o build/devsim tests/devsim.c
-cc -O1 -Wall -Wno-unused-function -o build/edsim tests/edsim.c engine/px_dsp.c firmware/px_math.c -lm
+cc -O1 -Wall -Wno-unused-function -o build/edsim tests/edsim.c firmware/apps/gamut/engine/px_dsp.c firmware/px_math.c -lm
 export NODE_PATH="$PW_DIR/node_modules"
 if [ "$1" = site ]; then
   node tests/test_site.mjs build/site

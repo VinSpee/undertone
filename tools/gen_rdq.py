@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: GPL-3.0-only
-# OpenPocket — writes the rdq routines of engine/px_nam.c (pi32v2 assembly, as C string lines): a NAM layer's rows for 4
+# OpenPocket — writes the rdq routines of firmware/apps/gamut/engine/px_nam.c (pi32v2 assembly, as C string lines): a NAM layer's rows for 4
 # frames straight from the history ring, unrolled for 6, 15 and 16 taps, each multiply-add using a value loaded 2 to 4
 # steps before (on the pedal a multiply-add paired with the load of the value it needs next costs 3.2 cycles, without
 # that wait 2.2). Paste its output into px_nam.c's asm block (the lines after "rdq6, rdq15, rdq16").

@@ -92,9 +92,9 @@ assert.deepEqual(r.calls, [["info"], BUILD], "image");
 
 touch("guitar.wav");
 r = op(["render", "guitar.wav"]);
-assert.deepEqual(r.calls.at(-1), base(["bash", "engine/render.sh", "guitar.wav", "guitar_OpenPocket.wav", "1"]), "render defaults");
+assert.deepEqual(r.calls.at(-1), base(["bash", "firmware/apps/gamut/engine/render.sh", "guitar.wav", "guitar_OpenPocket.wav", "1"]), "render defaults");
 r = op(["render", "guitar.wav", "o.wav", "7"]);
-assert.deepEqual(r.calls.at(-1), base(["bash", "engine/render.sh", "guitar.wav", "o.wav", "7"]), "render args");
+assert.deepEqual(r.calls.at(-1), base(["bash", "firmware/apps/gamut/engine/render.sh", "guitar.wav", "o.wav", "7"]), "render args");
 r = op(["render", "../elsewhere.wav"]);
 assert.notEqual(r.status, 0);
 assert.match(r.err, /must be inside/);
@@ -125,15 +125,15 @@ r = op(["build"], { path: join(tmp, "empty") });
 assert.notEqual(r.status, 0);
 assert.match(r.err, /Docker is not installed or not running/, "no docker at all");
 
-for (const p of ["firmware/openpocket-midi-test.bin", "docs/firmware/midi-test/PocketX_937.fwsc", "build/x", "firmware/build/y", "firmware/build-ble/z", "firmware/openpocket-ble.bin", "docs/firmware/PocketX_900.fwsc", "docs/firmware/manifest.json", "docs/rescue/manifest.json", "engine/px_render"]) touch(p);
+for (const p of ["firmware/openpocket-midi-test.bin", "docs/firmware/midi-test/PocketX_937.fwsc", "build/x", "firmware/build/y", "firmware/build-ble/z", "firmware/openpocket-ble.bin", "docs/firmware/PocketX_900.fwsc", "docs/firmware/manifest.json", "docs/rescue/manifest.json", "firmware/apps/gamut/engine/px_render"]) touch(p);
 touch("docs/firmware/README.md");
-touch("engine/px_dsp.c");
+touch("firmware/apps/gamut/engine/px_dsp.c");
 r = op(["clean"], { path: join(tmp, "empty") });
 assert.equal(r.status, 0, "clean needs no docker");
-for (const p of ["build", "firmware/build", "firmware/build-ble", "firmware/openpocket-ble.bin", "firmware/openpocket.bin", "firmware/openpocket-midi-test.bin", "docs/firmware/midi-test", "docs/firmware/PocketX_900.fwsc", "docs/firmware/manifest.json", "docs/rescue", "engine/px_render"]) {
+for (const p of ["build", "firmware/build", "firmware/build-ble", "firmware/openpocket-ble.bin", "firmware/openpocket.bin", "firmware/openpocket-midi-test.bin", "docs/firmware/midi-test", "docs/firmware/PocketX_900.fwsc", "docs/firmware/manifest.json", "docs/rescue", "firmware/apps/gamut/engine/px_render"]) {
   assert.ok(!existsSync(join(root, p)), `${p} removed`);
 }
-for (const p of ["docs/firmware/README.md", "engine/px_dsp.c", "guitar.wav"]) assert.ok(existsSync(join(root, p)), `${p} kept`);
+for (const p of ["docs/firmware/README.md", "firmware/apps/gamut/engine/px_dsp.c", "guitar.wav"]) assert.ok(existsSync(join(root, p)), `${p} kept`);
 
 // rescue: sudo + python3 tools/uboot_rescue.py, read-only unless --write (fake sudo and python3 record their argv)
 const rescuebin = join(tmp, "rescuebin");
@@ -168,7 +168,7 @@ assert.deepEqual(r.calls, [], "sim runs on the host: no Docker");
 
 r = op(["wasm"]);
 assert.equal(r.status, 0);
-assert.deepEqual(r.calls.at(-1).slice(-2), ["sh", "engine/wasm.sh"], "wasm builds the engine in the container");
+assert.deepEqual(r.calls.at(-1).slice(-2), ["sh", "firmware/apps/gamut/engine/wasm.sh"], "wasm builds the engine in the container");
 
 const make = spawnSync("make", ["--version"], { encoding: "utf8" });
 if (make.status === 0) {

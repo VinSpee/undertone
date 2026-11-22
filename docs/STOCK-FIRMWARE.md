@@ -143,7 +143,7 @@ networks in **fixed point** from RAM, as OpenPocket does since v37. Its network 
 each weight is used once per sample, as in a WaveNet, 1,871 weights are about 1,871 multiply-adds per sample, against
 A2-Lite's ~1,730. **Read (fourth pass): it is A2-Lite.** The firmware holds the A2-Lite layer table at `0x2055A74`:
 kernel sizes 6 (x14), 15, 15, 6 (x7) and dilations 1, 3, 7, 17, 41, 101, 239 (twice), 1, 13, then 1..239 again,
-exactly the 23 layers OpenPocket's `engine/px_nam.c` runs, and 1,871 is A2-Lite's weight count. So the stock `NAM`
+exactly the 23 layers OpenPocket's `firmware/apps/gamut/engine/px_nam.c` runs, and 1,871 is A2-Lite's weight count. So the stock `NAM`
 type plays Neural Amp Modeler A2-Lite captures, in fixed point, at 44.1 kHz like OpenPocket.
 
 ## 5. What OpenPocket can take from it
@@ -171,7 +171,7 @@ In order of value for the sound, with what it would cost.
    both in RAM, instead of a polynomial or a library call per oversampled sample.
 5. **Real cabinet IRs.** OpenPocket's cabinets are filters and sparse taps. The stock firmware shows that a 64-frame
    uniform partitioned convolution fits beside its amp, with the FFTs on the FFT block of CPU1, with block floating
-   point. OpenPocket already drives that block (`engine/px_nam.c`); the FFT mode is the same `CON`/`CADR` protocol
+   point. OpenPocket already drives that block (`firmware/apps/gamut/engine/px_nam.c`); the FFT mode is the same `CON`/`CADR` protocol
    with a different job word. This would let the pedal load user IRs (and the `CAB` files of the stock firmware).
 6. **Sample rate 48 kHz?** Most NAM captures, TONE3000 included, are made at 48 kHz; at 44.1 kHz they play about 1.5
    semitones low (`docs/NAM.md`). (Corrected in section 8.1: the stock firmware runs at 44.1 kHz too.) Moving OpenPocket to 48 kHz fixes the
@@ -820,7 +820,7 @@ Errors get an 8-byte reply with status 1. Only objects 4 and 5 are registered (s
 **Read.** The init (`f_02008692`, from `0x2009A1E`) takes each of the 72 floats of the trailer in threes, converts them to
 Q20, and **writes the triplet into every frame of the layer's history ring** (`[layer + 56]`, `count + 72` frames of
 12 bytes). A2-Lite's layers have 3 channels and their rings are interleaved `[time][channel]`, 12 bytes a frame, as in
-OpenPocket's `engine/px_nam.c`. The `+ 72` is the runner's largest piece: `0x1C23464` runs the network in pieces of at
+OpenPocket's `firmware/apps/gamut/engine/px_nam.c`. The `+ 72` is the runner's largest piece: `0x1C23464` runs the network in pieces of at
 most 72 samples.
 
 So `BEND` is **each layer's output at silence, used to pre-fill its history**: 23 triplets for the 23 layers, one for

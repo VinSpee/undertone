@@ -40,7 +40,7 @@ bytes as the pinned release, upstream's published v42 with the bass tuner fix, t
 
 OpenPocket's own files are in `firmware/apps/gamut/` (`openpocket.c`, `px_audio.h`, `ui.h`, `ui_colors.h`,
 `px_lights.h`, `px_store.h`, `px_models.h`, `px_irs.h`, `px_editor.h`, `px_midi.h`, `px_midi_io.h`, `px_ble_midi.h`,
-`ble/` and `memory.ld`) and in `engine/`. Everything under `firmware/` outside `firmware/apps/` is the base.
+`ble/`, `memory.ld` and `engine/`). Everything under `firmware/` outside `firmware/apps/` is the base.
 
 A base file that was already a file of its own, such as `px_usb.h`, stays at its path. The tests include those files
 by path, and a file that does not move merges with upstream changes as before.

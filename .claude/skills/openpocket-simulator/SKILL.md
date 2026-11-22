@@ -55,11 +55,11 @@ its own C files, compiled for this computer. `/api/state` then gives the product
 
 ## Sound
 
-The skin's Sound section runs the real engine (`engine/px_dsp.c`, built to `tools/sim/px_engine.wasm`) in an AudioWorklet:
+The skin's Sound section runs the real engine (`firmware/apps/gamut/engine/px_dsp.c`, built to `tools/sim/px_engine.wasm`) in an AudioWorklet:
 pick a bundled loop (`assets/loops/`), a dropped file or a device, press Play (the first click starts the audio; a device
 starts muted), and the preset on the screen is what you hear. `window.pedal.audio()` reports it (`running`, `heard`,
 `muted`, ...), and `#in-meter`, `#out-meter` carry `data-db`. Without a browser, `node tools/sim/render.mjs OUTDIR [preset]`
-renders the loops to WAV. After any change to `engine/`, run `node tools/op.mjs wasm` (Docker) and commit the new binary:
+renders the loops to WAV. After any change to `firmware/apps/gamut/engine/`, run `node tools/op.mjs wasm` (Docker) and commit the new binary:
 `tests/test_audio.mjs` fails otherwise. `docs/SIMULATOR.md` ("The sound") has the reasons and limits.
 
 ## Limits (say so when verifying)

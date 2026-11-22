@@ -15,7 +15,7 @@ rm -rf "$B/ref"
 mkdir -p "$B/ref"
 git archive "$REF" engine firmware/px_math.c | tar -x -C "$B/ref"
 $CC -O2 -w -fno-builtin -ffp-contract=off -I"$B/ref/engine" -o "$B/ref-run" tests/engine/equiv.c "$B/ref/firmware/px_math.c" -lm
-$CC -O2 -w -fno-builtin -ffp-contract=off -Iengine -o "$B/new-run" tests/engine/equiv.c firmware/px_math.c -lm
+$CC -O2 -w -fno-builtin -ffp-contract=off -Ifirmware/apps/gamut/engine -o "$B/new-run" tests/engine/equiv.c firmware/px_math.c -lm
 "$B/ref-run" > "$B/ref.txt"
 "$B/new-run" > "$B/new.txt"
 if cmp -s "$B/ref.txt" "$B/new.txt"; then echo "equiv: identical to $REF, $(tail -1 "$B/new.txt")"; exit 0; fi

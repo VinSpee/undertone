@@ -4,7 +4,7 @@
  * by the project's owner; the creator's video: https://www.facebook.com/watch/?ref=embed_video&v=1053603041469100
  * From its WAV (SHA-256 0cafcee04e2c9e67..., 48 kHz, 24-bit, 65536 frames), converted as the
  * editor converts a user's (docs/pxir.js): resampled from 48 kHz, its first 23 ms kept (of 1365 ms).
- * The engine plays it while slot IR1 holds no IR of the user's (engine/px_dsp.c ir_get).
+ * The engine plays it while slot IR1 holds no IR of the user's (firmware/apps/gamut/engine/px_dsp.c ir_get).
  * Sample k = PXI_FS[k] / 32767 * PXI_FSCALE.
  */
 #pragma once

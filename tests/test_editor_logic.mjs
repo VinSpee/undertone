@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // OpenPocket — the web editor's own logic, without a browser or a pedal: the Control Change map and the learned
 // controls (docs/pxmidi.js) against docs/MIDI.md, and the model library and slot arithmetic (docs/pxlib.js) against
-// the engine's rule (engine/px_dsp.c px_nam_model / px_nam_knob). Run by tests/run_tests.sh.
+// the engine's rule (firmware/apps/gamut/engine/px_dsp.c px_nam_model / px_nam_knob). Run by tests/run_tests.sh.
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";

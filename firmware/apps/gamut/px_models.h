@@ -3,7 +3,7 @@
  *
  * 16 slots of 8 KiB at 0xC0000..0xE0000 (below the update loader's staging area, above the app area; the update
  * loader leaves this range alone: loader/ldr_core.c LDR_NAM_LO/HI). A slot: a 64-byte header, then the 1871 float
- * weights of an A2-Lite network in the .nam file's order (engine/px_nam.h), 7548 bytes in all:
+ * weights of an A2-Lite network in the .nam file's order (firmware/apps/gamut/engine/px_nam.h), 7548 bytes in all:
  *   magic "OPNM", version 1, 1871, name (11 chars + 0), level trim (0.01 dB), CRC16 of the weights.
  * The web editor sends a model in pieces (NAM_WRITE) into nm_stage, then NAM_COMMIT checks it (every weight finite,
  * the CRC) and writes the slot: two sectors erased, programmed, read back, with the audio held as for a preset save.
@@ -66,7 +66,7 @@ static void nm_scan(void)
     nm_gen++;
 }
 
-/* the engine's hook (engine/px_dsp.h): name and level from the cache, the weights from the flash (checked) */
+/* the engine's hook (firmware/apps/gamut/engine/px_dsp.h): name and level from the cache, the weights from the flash (checked) */
 int px_nam_user(int slot, char *name12, float *level_db, float *w)
 {
     if (slot < 0 || slot >= (int)PX_NAM_NUSER || !nm_cache[slot].ok) return 0;

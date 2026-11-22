@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: GPL-3.0-only
 # OpenPocket — an independent NumPy implementation of Neural Amp Modeler's A2 network (the 2026 "A2-Lite" / "A2-Full"
 # WaveNet), written from the published architecture. Used as the reference for the pedal's fixed-point engine
-# (engine/px_nam.c) and by the web editor's converter tests.
+# (firmware/apps/gamut/engine/px_nam.c) and by the web editor's converter tests.
 #
 # A2 (one layer array, 23 layers, LeakyReLU 0.01, no gating, no FiLM):
 #   x0 = rechannel(input)                                  1 -> C, no bias

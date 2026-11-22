@@ -47,8 +47,8 @@ A configuration that models a finding fails until the code is fixed. A mutation 
 | `FlashHold.tla` | While the SFC is off, CPU1 is in its RAM loop. | `st_audio_hold` (`firmware/apps/gamut/px_store.h`), `nm_commit` (`firmware/apps/gamut/px_models.h`), `ir_commit` (`firmware/apps/gamut/px_irs.h`), `a_block`, `a_send`, `a_collect`, and `lp_job` (`firmware/apps/gamut/px_audio.h`), `fl_enter` (`firmware/bsp/chip/fm1_flash.h`) |
 | `EditorWatch.tla` | Once nothing is in flight and no push is owed, the editor shows the pedal's sound. | `ed_service` and `ed_handle` (`firmware/apps/gamut/px_editor.h`), `Editor.request` and `Editor._onMessage` (`docs/pxedit.js`), `ping` (`docs/editor.js`), `sendParam` (`docs/edsound.js`) |
 | `PresetStore.tla` | After a power cut at any step, the next start loads the last confirmed save or a later one. | `st_commit` and `st_load` (`firmware/apps/gamut/px_store.h`) |
-| `KnobHandoff.tla` | `a_kp` and the engine's preset are never read by one side while the other writes them. | `audio_apply` and `a_commit` (`firmware/apps/gamut/px_audio.h`), `px_engine_knobs` (`engine/px_dsp.c`) |
-| `LayerSplit.tla` | Each ring of the NAM network belongs to one core at a time, and every layer runs every block once, in order. | `pxn_lp_a` and `pxn_lp_b` (`engine/px_nam.c`) |
+| `KnobHandoff.tla` | `a_kp` and the engine's preset are never read by one side while the other writes them. | `audio_apply` and `a_commit` (`firmware/apps/gamut/px_audio.h`), `px_engine_knobs` (`firmware/apps/gamut/engine/px_dsp.c`) |
+| `LayerSplit.tla` | Each ring of the NAM network belongs to one core at a time, and every layer runs every block once, in order. | `pxn_lp_a` and `pxn_lp_b` (`firmware/apps/gamut/engine/px_nam.c`) |
 
 In each `.tla` file, the comment on an action names the function the action stands for.
 

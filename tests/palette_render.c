@@ -12,7 +12,7 @@
  * two are left out of the levels (the effect fades in, its tail builds up).
  * The time is this process's CPU time, the least of N runs (default 9) of the whole signal, less the same engine with
  * every module off: the least, because another program on the same computer can only make a run slower.
- * Built with -DPL_REFERENCE -Iengine and engine/px_dsp.c it also times three blocks of OpenPocket's engine in the same
+ * Built with -DPL_REFERENCE -Ifirmware/apps/gamut/engine and firmware/apps/gamut/engine/px_dsp.c it also times three blocks of OpenPocket's engine in the same
  * run, whose loads on a pedal are known (an earlier task read them with `node tools/op.mjs dsp` on v40): what turns
  * this computer's time into a share of the pedal's block.
  */

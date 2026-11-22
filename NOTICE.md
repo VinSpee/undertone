@@ -14,13 +14,13 @@ OpenPocket is GPL-3.0-only (`LICENSE`), except the parts below, which keep their
 | `firmware/fonts.h` (bitmaps generated from Inter) | [Inter](https://rsms.me/inter/), Rasmus Andersson | SIL OFL 1.1 (`LICENSES/OFL-1.1-Inter.txt`) |
 | `assets/loops/*.wav` (guitar loops for the simulator), and `docs/assets/audio/riff.m4a` (`riff.wav` as AAC, which the site's home page plays) | cut from [Guitar-TECHS](https://zenodo.org/records/14963133), credits in `assets/loops/ATTRIBUTION.md` | CC BY 4.0 |
 
-The factory NAM models (`engine/px_nam_factory.h`, v37) are A2-Lite networks trained by OpenPocket from Neural Amp
+The factory NAM models (`firmware/apps/gamut/engine/px_nam_factory.h`, v37) are A2-Lite networks trained by OpenPocket from Neural Amp
 Modeler community captures ([pelennor2170/NAM_models](https://github.com/pelennor2170/NAM_models), GPL v3; authors
 in `docs/NAM.md`) played with DI guitar from [Alec-Wright/Automated-GuitarAmpModelling](https://github.com/Alec-Wright/Automated-GuitarAmpModelling)
-(GPL v3). The NAM A2 architecture is from Neural Amp Modeler (Steven Atkinson, MIT); `engine/px_nam.c`,
+(GPL v3). The NAM A2 architecture is from Neural Amp Modeler (Steven Atkinson, MIT); `firmware/apps/gamut/engine/px_nam.c`,
 `tools/nam_a2.py` and `tools/train_a2.py` are written for OpenPocket from the published architecture.
 
-The factory cabinet IR (`engine/px_ir_factory.h`, slot IR1's IR while the user has loaded none there) is
+The factory cabinet IR (`firmware/apps/gamut/engine/px_ir_factory.h`, slot IR1's IR while the user has loaded none there) is
 ["BEST IR IN THE WORLD"](https://www.facebook.com/watch/?ref=embed_video&v=1053603041469100), a free cabinet impulse response by ML Sound Lab. It is redistributed
 with the creator's permission, as stated by the project's owner; no other licence is given for it, and the GPL of this
 repository does not cover it. The firmware holds it converted (44.1 kHz, its first 1024 samples, `tools/mk_ir_factory.mjs`);

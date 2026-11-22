@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
-// OpenPocket — writes engine/px_ir_factory.h: slot IR1's factory cabinet IR, "BEST IR IN THE WORLD" by ML Sound Lab.
+// OpenPocket — writes firmware/apps/gamut/engine/px_ir_factory.h: slot IR1's factory cabinet IR, "BEST IR IN THE WORLD" by ML Sound Lab.
 //   node tools/mk_ir_factory.mjs "ML Sound Lab's BEST IR IN THE WORLD.wav"
 // The WAV is converted exactly as the web editor converts a user's (docs/pxir.js: onset, 44.1 kHz, 1024 samples, the
 // 64-sample fade, int16 with its scale), so the factory IR plays as the same file loaded into a slot would. The WAV
@@ -34,7 +34,7 @@ const out = [
   ` * by the project's owner; the creator's video: ${CREDIT}`,
   ` * From its WAV (SHA-256 ${sha.slice(0, 16)}..., ${w.sampleRate / 1000} kHz, ${w.bits}-bit, ${w.x.length} frames), converted as the`,
   ` * editor converts a user's (docs/pxir.js): ${ir.note}.`,
-  " * The engine plays it while slot IR1 holds no IR of the user's (engine/px_dsp.c ir_get).",
+  " * The engine plays it while slot IR1 holds no IR of the user's (firmware/apps/gamut/engine/px_dsp.c ir_get).",
   " * Sample k = PXI_FS[k] / 32767 * PXI_FSCALE.",
   " */",
   "#pragma once",
@@ -44,5 +44,5 @@ const out = [
   ...rows,
   "};",
 ];
-writeFileSync(join(ROOT, "engine", "px_ir_factory.h"), out.join("\n") + "\n");
-console.log(`engine/px_ir_factory.h: ${NAME}, ${ir.note}, scale ${scale}`);
+writeFileSync(join(ROOT, "firmware", "apps", "gamut", "engine", "px_ir_factory.h"), out.join("\n") + "\n");
+console.log(`firmware/apps/gamut/engine/px_ir_factory.h: ${NAME}, ${ir.note}, scale ${scale}`);

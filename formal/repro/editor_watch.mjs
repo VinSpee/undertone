@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // node formal/repro/editor_watch.mjs EDSIM: finding F2 (formal/FINDINGS.md) on the firmware's own editor code.
 // EDSIM is the simulated pedal of the editor tests (tests/edsim.c, which runs firmware/apps/gamut/px_editor.h on a PC):
-//   cc -O1 -o build/edsim tests/edsim.c engine/px_dsp.c firmware/px_math.c -lm
+//   cc -O1 -o build/edsim tests/edsim.c firmware/apps/gamut/engine/px_dsp.c firmware/px_math.c -lm
 // Two runs. In each a setting is changed on the pedal twice, the second time within 40 ms of the first change's push.
 // In the first run the editor's PING arrives in those 40 ms; in the second no request does.
 // Since the fix of F2 both runs end the same; tests/test_editor.mjs holds the case as a test.

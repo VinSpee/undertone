@@ -80,7 +80,7 @@ trained at 44.1 kHz and are not affected.
 
 ## How it runs
 
-- `engine/px_nam.c`: the network in fixed point (activations with 20 fraction bits, weights with 24, 64-bit sums),
+- `firmware/apps/gamut/engine/px_nam.c`: the network in fixed point (activations with 20 fraction bits, weights with 24, 64-bit sums),
   checked against a float reference (`tools/nam_a2.py`) for every factory model by `tests/test_nam.py`: about 99 dB
   signal to error.
 - Blocks of 32 frames, layer by layer. On the CPU, each output channel of a layer is computed for 4 frames at a time
@@ -182,7 +182,7 @@ trained at 44.1 kHz and are not affected.
 `train_a2.py --capture CAPTURE.nam --di DI.wav --val DI2.wav --out MODEL.nam --name NAME` trains an A2-Lite network
 (JAX) on a capture: the DI goes through the capture (resampled to its rate and back), the A2-Lite learns the result at
 44.1 kHz. Loss: pre-emphasised ESR plus a multi-resolution spectral term. `tools/mk_nam_factory.py` writes the
-factory models into `engine/px_nam_factory.h`, each with its level trim.
+factory models into `firmware/apps/gamut/engine/px_nam_factory.h`, each with its level trim.
 
 Credits: the captures are from the Neural Amp Modeler community collection
 [pelennor2170/NAM_models](https://github.com/pelennor2170/NAM_models) (GNU GPL v3), by the authors named in the

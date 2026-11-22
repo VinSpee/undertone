@@ -9,13 +9,13 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from calib_levels import lufs, ROOT, TARGET
 
 EXE = os.path.join(ROOT, "build", "lvl_preset")
-SRC = os.path.join(ROOT, "engine", "px_dsp.c")
+SRC = os.path.join(ROOT, "firmware", "apps", "gamut", "engine", "px_dsp.c")
 NFACT = 24                                           # the levelled ones (the USER slots stay at 50)
 
 
 def build():
-    subprocess.run(["cc", "-O2", "-I" + os.path.join(ROOT, "engine"), os.path.join(ROOT, "tests", "engine", "preset.c"),
-                    os.path.join(ROOT, "engine", "px_dsp.c"), os.path.join(ROOT, "firmware", "px_math.c"), "-lm", "-o", EXE], check=True)
+    subprocess.run(["cc", "-O2", "-I" + os.path.join(ROOT, "firmware", "apps", "gamut", "engine"), os.path.join(ROOT, "tests", "engine", "preset.c"),
+                    os.path.join(ROOT, "firmware", "apps", "gamut", "engine", "px_dsp.c"), os.path.join(ROOT, "firmware", "px_math.c"), "-lm", "-o", EXE], check=True)
 
 
 def measure(k, dis):

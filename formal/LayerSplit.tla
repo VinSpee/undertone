@@ -2,7 +2,7 @@
 \* SPDX-License-Identifier: GPL-3.0-only
 \* The NAM network split between the two cores by layers.
 \*
-\* CPU0 runs the input and layers 0..s of each 32-frame block and hands the block over (engine/px_nam.c
+\* CPU0 runs the input and layers 0..s of each 32-frame block and hands the block over (firmware/apps/gamut/engine/px_nam.c
 \* pxn_lp_a); CPU1 runs layers s+1.. and the head, up to PXN_LPQ blocks behind (pxn_lp_b). s may change from one
 \* block to the next (pxn_lp_split). A layer reads its own ring and writes the next layer's; layer s writes the
 \* block's hand-over instead, which CPU1 copies into layer s+1's ring. ld[i] counts the blocks layer i has done:

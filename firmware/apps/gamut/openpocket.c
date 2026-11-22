@@ -12,7 +12,7 @@
 #define OP_NAME "OPENPOCKET"            /* the name on the boot screen (base/boot_screens.h) */
 #define OP_RAM_CODE px_block_label      /* the engine's RAM code: a crash report gives its place (base/boot_screens.h) */
 #include "base/board.h"               /* the chip, the pins, the screen and its text (docs/BASE-FIRMWARE.md) */
-/* ---- preset: the v2 engine's struct (engine/px_dsp.h), edited directly by the UI ---- */
+/* ---- preset: the v2 engine's struct (firmware/apps/gamut/engine/px_dsp.h), edited directly by the UI ---- */
 #include "px_dsp.h"
 #include "px_nam.h"           /* v37: NAM A2-Lite (the engine includes px_nam.c) */
 #include "px_midi.h"                    /* MIDI map and settings (docs/MIDI.md) */

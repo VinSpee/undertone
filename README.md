@@ -155,9 +155,8 @@ proposed upstream.
 
 | | |
 | --- | --- |
-| `engine/` | the sound engine (`px_dsp.c`), portable C, float |
 | `firmware/` | the base every firmware is built on: board support (`bsp/`, felucca-bsp), controls, audio (I2S), USB, the build |
-| `firmware/apps/` | one folder per firmware: `gamut/` (OpenPocket: its main file, screens (`ui.h`), presets, editor, MIDI), `palette/`, `starter/` |
+| `firmware/apps/` | one folder per firmware: `gamut/` (OpenPocket: its main file, screens (`ui.h`), presets, editor, MIDI, and its sound engine `engine/px_dsp.c`, portable C, float), `palette/`, `starter/` |
 | `loader/` | the update loader (runs from RAM, writes the app area) |
 | `docs/` | the web installer (GitHub Pages) and documentation |
 | `tools/` | package builder, loader wrapper, font converter, flash image tools |

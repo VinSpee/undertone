@@ -53,7 +53,7 @@ firmware read in three passes), `docs/NAM.md` (the fixed-point network), `docs/B
   float code is not affected (a float operation is 4 bytes for 2 cycles), and the effect loops run no faster from the
   flash (tried: the same load, more jitter). The NAM network's hand loops are multiply-adds paired with loads, 6 bytes
   for 2 cycles: from RAM they wait for their own instructions. `rdm6`, `rdm15` and `post5` (6.6 KB) therefore lie in
-  the flash (`PXN_HOT`, `engine/px_nam.c`): the whole network takes 6 % less time, and editor traffic and knob turns
+  the flash (`PXN_HOT`, `firmware/apps/gamut/engine/px_nam.c`): the whole network takes 6 % less time, and editor traffic and knob turns
   over USB (flash code on CPU0, 100 requests a second) do not change a heavy chain's load or its peaks.
 - **The cycle costs, in a hardware loop** (measured, v40.4 and v40.5; a timer tick is 15 cycles): a load 2, a store 1.5,
   an ALU instruction 1, a 32x32 multiply or a 64-bit multiply-add 2, a float add or multiply 2 each, a float division
@@ -282,7 +282,7 @@ window (`SFCENC_CON`, `fm1_flash.h`, `ble_vm.h`), not through `0x02xxxxxx`.
 
 ## 8. DSP methods that worked on this chip
 
-Measured on the pedal or proven on the PC against a reference. The engine is `engine/px_dsp.c`, the network `engine/px_nam.c`.
+Measured on the pedal or proven on the PC against a reference. The engine is `firmware/apps/gamut/engine/px_dsp.c`, the network `firmware/apps/gamut/engine/px_nam.c`.
 
 1. **Fixed point for the heavy network:** NAM A2-Lite (23 dilated layers, 3 channels, 1 871 weights, ~1 730 MAC/sample).
    Activations Q20, weights Q24, 64-bit accumulators shifted by a constant: 83..100 dB SNR against float. Blocks of 32
@@ -417,7 +417,7 @@ Measured on the pedal or proven on the PC against a reference. The engine is `en
 - SDK libraries are often LLVM bitcode: compile them with `-x ir` instead of reimplementing them (I2S driver, BLE
   controller, DAC).
 - Avoid `uint64_t` division and modulo (no `__udivdi3`). Keep 64-bit for multiply-accumulate only.
-- Engine code is portable C: it builds for the PC (tests) and as WebAssembly (`engine/wasm.sh`, the simulator's sound)
+- Engine code is portable C: it builds for the PC (tests) and as WebAssembly (`firmware/apps/gamut/engine/wasm.sh`, the simulator's sound)
   from the same sources.
 
 ---

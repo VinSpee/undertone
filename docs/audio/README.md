@@ -41,7 +41,7 @@ comes before Character, so the echoes are fuzzed.
    input stage), and the two outputs come back with `POST /api/audio/MS`. MASTER is at 100. The sound is set with the
    app's own editor requests: an empty slot first, then the effect and the knobs of the table, or a factory preset.
 3. **The amplifier, after PALETTE,** as with a pedal in front of an amp. It is OpenPocket's own engine
-   (`engine/px_dsp.c`, GPL-3.0-only, this repository) running on the computer with only two blocks on: the amp TWIN
+   (`firmware/apps/gamut/engine/px_dsp.c`, GPL-3.0-only, this repository) running on the computer with only two blocks on: the amp TWIN
    (GAIN 40, BASS 50, MID 50, TREBLE 55, PRESENCE 50) and the cabinet 1x12 US OPEN (BODY 50, BRIGHT 50, MIC 50).
    Each side of PALETTE's stereo output has an amplifier of its own, so the stereo effects stay stereo. The engine's
    preset level is at its lowest, -15 dB, so its output limiter (which starts at 0.8 of full scale) is never

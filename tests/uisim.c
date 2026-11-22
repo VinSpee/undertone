@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-only
  * OpenPocket — the pedal's screen on the PC: firmware/apps/gamut/ui.h + ui_text.h + fonts.h drawn into a 240x240 RGB565
  * frame buffer, exactly as the pedal streams it (window + pixels). Writes PPM screenshots of a script of actions.
- *   cc -O1 -Iengine -Ifirmware -o build/uisim tests/uisim.c engine/px_dsp.c firmware/px_math.c -lm
+ *   cc -O1 -Ifirmware/apps/gamut/engine -Ifirmware -o build/uisim tests/uisim.c firmware/apps/gamut/engine/px_dsp.c firmware/px_math.c -lm
  *   build/uisim OUTDIR        -> OUTDIR/NN_name.ppm ; also checks that every pixel is drawn on each full page
  * The frame buffer starts (and is re-poisoned before each full page) in magenta: any pixel left magenta after a
  * full redraw is a gap in the page's layout. */
