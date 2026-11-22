@@ -25,7 +25,7 @@ writeFileSync(SHORT, tone(44100, 0.3, 0.5));
 const sim = await startSim({ port: 0, flash: join(TMP, "flash.bin") });
 const state = async () => (await fetch(sim.url + "/api/state")).json();
 const post = (path) => fetch(sim.url + "/api/" + path, { method: "POST" });
-const browser = await chromium.launch({ args: ["--use-fake-device-for-media-stream", "--use-fake-ui-for-media-stream", "--autoplay-policy=user-gesture-required"] });
+const browser = await chromium.launch({ args: ["--use-fake-device-for-media-stream", "--use-fake-ui-for-media-stream", "--autoplay-policy=user-gesture-required", "--disable-audio-output"] });
 const page = await (await browser.newContext({ viewport: { width: 1280, height: 1000 } })).newPage();
 page.on("pageerror", (e) => ok(false, `page error: ${e.message}`));
 await page.goto(sim.url + "/");

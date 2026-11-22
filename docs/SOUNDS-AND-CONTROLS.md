@@ -238,7 +238,7 @@ high-gain amps turned it into a constant hiss, even with nothing plugged in.
   over v24 (BYP guard at 85 %).
 
 ## USB update (v24)
-Over USB the pedal shows up as a MIDI device named "OpenPocket" (and, with the USB AUDIO setting on, a sound card: [USB-AUDIO.md](USB-AUDIO.md)). The installer page (`docs/index.html`, published
+Over USB the pedal shows up as a MIDI device named "OpenPocket" (and, with the USB AUDIO setting on, a sound card: [USB-AUDIO.md](USB-AUDIO.md)). The installer page (`docs/install.html`, published
 on GitHub Pages) recognises it, installs a new version or takes the pedal back to the official firmware. During an
 update the screen shows `UPDATE` and the current step; if it fails, `FAILED -N`, then the pedal restarts on the
 previous version (nothing is written before the pedal has checked the package).

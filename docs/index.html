@@ -1,574 +1,403 @@
 <!doctype html>
+<!-- SPDX-License-Identifier: GPL-3.0-only
+     The home page of undertone.vinspee.me: Gamut, the firmware, and Undertone, the kit it is built on; PALETTE, the
+     installer, the editor and the rescue kit. Its look is site.css (Full Volume, printed out of register); what is only
+     this page's is in the style below. The wordmark's letters follow the loudness of a real guitar recording,
+     assets/audio/riff.m4a (assets/loops/riff.wav as AAC, Guitar-TECHS, CC BY 4.0). Every picture is the project's own: the
+     pedal's screens and the editor against the simulator (tools/sim.mjs).
+     The installer was this page until the site got a home page: a link with ?app= or ?channel= (install.html,
+     docs/ALT-FIRMWARE.md) still opens the installer, through the first script below. -->
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>OpenPocket Installer</title>
-<meta name="description" content="Install OpenPocket on a Donner Pocket X or M-VAVE BlackBox from the browser, over USB.">
+<script>(function(){var q=new URLSearchParams(location.search);if(q.has("app")||q.has("channel"))location.replace("install.html"+location.search+location.hash)})()</script>
+<title>Gamut 1.0: open firmware for the Donner Pocket X and M-VAVE BlackBox</title>
+<meta name="description" content="Gamut is open firmware for two small guitar pedals: neural amp models, your own cabinet IRs, drives and effects, USB audio and MIDI, a browser editor and a rescue kit. Built on Undertone, the open kit for pedal firmware.">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Gamut 1.0: open firmware for the Donner Pocket X and M-VAVE BlackBox">
+<meta property="og:description" content="Open firmware for two small guitar pedals, installed from the browser. Built on Undertone.">
+<meta property="og:image" content="https://undertone.vinspee.me/share.jpg">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<meta name="theme-color" content="#0b0b0a">
+<link rel="canonical" href="https://undertone.vinspee.me/">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=JetBrains+Mono:wght@400;600&display=swap">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<!-- Anybody waits for its own file (display=block): its fallback sets the big headings wider, and swapping it in late moved the page -->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anybody:wdth,wght@50..150,300..900&display=block">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="site.css">
 <style>
-:root{--bg:#f4f1ec;--panel:#fffdf9;--ink:#1d1a16;--dim:#6d655b;--line:#e2dbd0;--acc:#e8590c;--acc-ink:#fff;--ok:#2f9e44;--err:#c92a2a;--warn:#b7791f;--bar:#ece5da;--code:#f0ebe3;color-scheme:light}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#121110;--panel:#1b1917;--ink:#ece7e0;--dim:#a39a8f;--line:#2e2a26;--acc:#ff7a29;--acc-ink:#1b1206;--ok:#5fcf74;--err:#ff6b6b;--warn:#e7b04b;--bar:#2a2622;--code:#24211e;color-scheme:dark}}
-:root[data-theme="dark"]{--bg:#121110;--panel:#1b1917;--ink:#ece7e0;--dim:#a39a8f;--line:#2e2a26;--acc:#ff7a29;--acc-ink:#1b1206;--ok:#5fcf74;--err:#ff6b6b;--warn:#e7b04b;--bar:#2a2622;--code:#24211e;color-scheme:dark}
-*{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.55 Inter,system-ui,-apple-system,"Segoe UI",sans-serif;
-  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:24px 48px}
-.wrap{max-width:760px;margin:0 auto;display:flex;flex-direction:column;gap:18px}
-header{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap}
-h1{margin:0;font-size:clamp(28px,6vw,40px);font-weight:800;letter-spacing:-.02em;line-height:1.05;text-wrap:balance}
-h1 span{color:var(--acc)}
-.tag{margin:6px 0 0;color:var(--dim);max-width:60ch}
-.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px 18px 20px;display:flex;flex-direction:column;gap:12px;min-width:0}
-.card h2{margin:0;font-size:13px;letter-spacing:.09em;text-transform:uppercase;color:var(--dim);display:flex;align-items:center;gap:10px}
-.card h2 b{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:50%;background:var(--ink);color:var(--panel);font-size:12px;letter-spacing:0}
-.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
-button.go,a.go{font:600 15px/1 Inter,sans-serif;padding:12px 18px;border-radius:10px;border:0;background:var(--acc);color:var(--acc-ink);cursor:pointer}
-a.go{text-decoration:none;line-height:1.3;overflow-wrap:anywhere}
-button.alt{font:600 14px/1 Inter,sans-serif;padding:11px 16px;border-radius:10px;border:1px solid var(--line);background:transparent;color:var(--ink);cursor:pointer}
-button:disabled{opacity:.45;cursor:default}
-.dev{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;font-size:14px}
-.dev dt{color:var(--dim)}
-.dev dd{margin:0;font-weight:600;min-width:0;overflow-wrap:anywhere}
-.pill{display:inline-block;font:600 12px/1 Inter,sans-serif;padding:6px 10px;border-radius:999px;border:1px solid var(--line);color:var(--dim)}
-.pill.ok{color:var(--ok);border-color:currentColor}.pill.err{color:var(--err);border-color:currentColor}.pill.warn{color:var(--warn);border-color:currentColor}
-.bar{height:10px;border-radius:6px;background:var(--bar);overflow:hidden}
-.bar i{display:block;height:100%;width:0;background:var(--acc);transition:width .2s}
-.steps{display:flex;flex-wrap:wrap;gap:6px;font-size:12px;color:var(--dim)}
-.steps span{padding:4px 8px;border-radius:6px;background:var(--bar)}
-.steps span.on{background:var(--acc);color:var(--acc-ink)}
-.steps span.done{background:transparent;color:var(--ok);outline:1px solid currentColor}
-.note{font-size:13.5px;color:var(--dim);margin:0;max-width:68ch}
-.note strong{color:var(--ink)}
-.warnbox{border-left:3px solid var(--warn);padding:2px 0 2px 12px}
-.fws{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));gap:12px}
-.fw{border:1px solid var(--line);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:8px;min-width:0}
-.fw.on{border-color:var(--ok)}
-.fw h3{margin:0;font-size:17px;font-weight:800;display:flex;flex-wrap:wrap;align-items:center;gap:8px;overflow-wrap:anywhere}
-.fw h3 small{font:600 13px/1 Inter,sans-serif;color:var(--dim)}
-.fw .what{flex:1}
-.fw button{align-self:flex-start;text-align:left;line-height:1.25}
-.msg{font-weight:600;min-height:1.5em;overflow-wrap:anywhere}
-.msg.ok{color:var(--ok)}.msg.err{color:var(--err)}
-input[type=file]{font:inherit;color:var(--dim);max-width:100%}
-label.chk{display:flex;gap:8px;align-items:flex-start;font-size:13.5px}
-details summary{cursor:pointer;color:var(--dim);font-size:13px}
-.guide{margin-top:10px;display:flex;flex-direction:column;gap:8px}
-.guide summary{color:var(--ink);font-weight:600;font-size:13.5px}
-.guide h3{margin:8px 0 0;font-size:13.5px;color:var(--ink)}
-.card h3.way{margin:8px 0 0;font-size:15px}
-.guide ol,.guide ul{padding-left:20px;display:flex;flex-direction:column;gap:4px}
-.guide code,#kitinfo code{overflow-wrap:anywhere}
-pre#log{margin:10px 0 0;background:var(--code);border-radius:10px;padding:12px;font:12px/1.5 "JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;max-height:260px;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere}
-code{font:12.5px "JetBrains Mono",ui-monospace,monospace;background:var(--code);padding:1px 5px;border-radius:5px}
-footer{color:var(--dim);font-size:12.5px;display:flex;flex-direction:column;gap:6px}
-footer a,.note a{color:inherit}
-[hidden]{display:none!important}
+section{position:relative;padding:clamp(72px,11vh,120px) var(--edge);overflow-x:clip}
+.wrap{width:100%;max-width:1400px;margin:0 auto}
+h1,h2,h3{font-family:var(--disp);margin:0;text-wrap:balance}
+h2{font-size:clamp(40px,6.4vw,104px);line-height:.88;font-weight:900;font-variation-settings:"wdth" 70;letter-spacing:-.01em;text-transform:uppercase}
+.lede{font-size:clamp(18px,1.6vw,22px);max-width:46ch;margin:22px 0 0;text-wrap:pretty}
+.row{display:flex;gap:14px;flex-wrap:wrap;margin-top:28px}
+.dark{background:var(--ink);color:var(--bone)}
+.lime{background:var(--lime)}
+
+/* the hero: the wordmark is a level meter */
+.hero{min-height:calc(100svh - 64px);display:flex;flex-direction:column;justify-content:flex-end;padding-top:clamp(40px,8vh,80px);padding-bottom:clamp(32px,6vh,64px)}
+/* sized by the width it fills (container units): at its widest, while the riff plays, the word still fits */
+.hero .wrap{container-type:inline-size}
+.word{--mx:5px;--my:4px;display:flex;justify-content:space-between;align-items:flex-end;margin:0 0 clamp(16px,3vh,32px);height:18cqi;
+  font:900 23cqi/.78 var(--disp);font-variation-settings:"wdth" 96;user-select:none;animation:reg-big 1.2s .15s var(--ease) both}
+@keyframes reg-big{from{--mx:34px;--my:-24px}}
+.word span{display:block;transform-origin:50% 100%;will-change:transform;animation:slam .6s cubic-bezier(.2,.9,.3,1.15) both;animation-delay:calc(var(--i)*70ms + 120ms)}
+@keyframes slam{from{transform:scaleY(.02)}}
+.hero__base{display:grid;grid-template-columns:minmax(0,7fr) minmax(0,5fr);gap:clamp(24px,4vw,64px);align-items:end;border-top:6px solid var(--ink);padding-top:clamp(18px,3vh,28px)}
+.hero h1{font-size:clamp(30px,3.6vw,56px);line-height:.95;font-weight:850;font-variation-settings:"wdth" 82;letter-spacing:-.01em;max-width:21ch;animation:up .6s .55s both}
+.hero h1 b{display:block;font-weight:900;font-variation-settings:"wdth" 120}
+.hero__side{animation:up .6s .7s both}
+.hero__side p{margin:0;max-width:44ch}
+.hero__side p+p{margin-top:12px;color:var(--grey);font-size:16px}
+@keyframes up{from{opacity:0;transform:translateY(16px)}}
+.listen{display:inline-flex;align-items:center;gap:10px;margin-top:10px;font:500 15px/1 var(--text);background:none;border:0;padding:12px 0;min-height:44px;cursor:pointer;color:var(--ink)}
+.listen i{width:28px;height:28px;border-radius:50%;background:var(--ink);display:grid;place-items:center;flex:none}
+.listen i::before{content:"";border-left:9px solid var(--lime);border-top:6px solid transparent;border-bottom:6px solid transparent;margin-left:3px}
+.listen[aria-pressed="true"] i::before{border:0;width:9px;height:9px;background:var(--lime);margin:0}
+.listen span{background:linear-gradient(currentColor,currentColor) left bottom/100% 2px no-repeat;padding-bottom:3px}
+.listen[aria-busy="true"] i{animation:pulse 1s ease-in-out infinite alternate}
+@keyframes pulse{to{opacity:.35}}
+.riffnote{margin:4px 0 0;font-size:15px;color:var(--grey)}
+.riffnote:empty{display:none}
+
+/* numbers */
+.nums{list-style:none;margin:28px 0 0;padding:0;border-top:6px solid var(--ink)}
+.nums li{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);align-items:center;gap:24px;border-bottom:2px solid var(--ink);padding:6px 0}
+.nums b{--mx:4px;--my:3px;font:900 clamp(64px,9.6vw,150px)/.85 var(--disp);font-variation-settings:"wdth" 140;letter-spacing:-.03em;white-space:nowrap}
+.nums b small{font-size:clamp(26px,4vw,63px);font-variation-settings:"wdth" 100;margin-left:.08em}
+.nums span{font-size:clamp(18px,1.7vw,24px);max-width:32ch}
+
+/* the twelve amps, each with its error drawn as a bar */
+.amps{margin-top:36px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 clamp(24px,4vw,64px)}
+.amp{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 16px;padding:14px 0;border-top:2px solid var(--ink);align-items:baseline}
+.amp b{font:850 clamp(22px,2vw,28px)/1.05 var(--disp);font-variation-settings:"wdth" 88;text-transform:uppercase}
+.amp>span{grid-column:1;font-size:16px;color:var(--soft)}
+.amp>.esr{grid-column:2;grid-row:1/3;align-self:center;display:flex;flex-direction:column;gap:6px;font:500 13px/1 var(--mono)}
+.esr i{display:block;width:120px;height:14px;border:2px solid var(--ink);background:linear-gradient(var(--ink),var(--ink)) left/var(--e) 100% no-repeat}
+.amps-note{font-size:16px;max-width:62ch;margin:24px 0 0;color:var(--grey)}
+.drives{margin-top:40px;display:flex;flex-wrap:wrap;align-items:baseline;gap:10px 18px;border-top:6px solid var(--ink);padding-top:18px}
+.drives h3{font:900 clamp(28px,3vw,44px)/.9 var(--disp);font-variation-settings:"wdth" 80;text-transform:uppercase;margin-right:8px}
+.drives span{font:600 15px/1 var(--mono);padding:10px 12px;border:2px solid currentColor}
+
+/* the choice: two firmwares, the one under the pointer takes the room */
+.choice{display:flex;background:var(--ink);color:var(--bone);padding:0;min-height:100svh}
+.choice__label{position:absolute;top:clamp(24px,5vh,48px);left:var(--edge);z-index:2;margin:0;font:700 15px/1 var(--text);background:var(--ink);color:var(--bone);padding:8px 10px}
+.half{flex:1;display:flex;flex-direction:column;justify-content:flex-end;gap:18px;padding:clamp(96px,14vh,140px) var(--edge) clamp(40px,7vh,72px);min-width:0;position:relative}
+@media (hover:hover){.half:hover .art{transform:translateY(-8px) rotate(-2deg)}}
+.half:focus-within .art{transform:translateY(-8px) rotate(-2deg)}
+.half--gamut{background:var(--lime);color:var(--ink)}
+.half h2{--mx:4px;--my:3px;font-size:clamp(64px,10.5vw,196px);font-variation-settings:"wdth" 60;line-height:.8}
+.half h2 small{display:block;font:500 clamp(16px,1.3vw,19px)/1.3 var(--text);text-transform:none;letter-spacing:0;margin-top:14px;text-shadow:none}
+.half p{margin:0;max-width:42ch}
+.half .aside{font-size:16px;opacity:.85}
+.half .warn{font-size:16px;border-left:6px solid var(--lime);padding-left:12px;font-weight:600}
+.half .chip{display:flex;flex-wrap:wrap;gap:8px;margin:0;padding:0;list-style:none}
+.half .chip li{font:600 14px/1 var(--mono);padding:9px 10px;border:2px solid currentColor}
+.half .row{margin-top:4px;align-items:center}
+.half--palette .btn{background:var(--bone);border-color:var(--bone)}
+.half--palette a:not(.btn){color:var(--bone)}
+.art{position:absolute;top:clamp(80px,12vh,120px);right:var(--edge);transition:transform .5s var(--ease)}
+/* the pedal, drawn: a Pocket X from above, its screen a real capture */
+.pedal{width:clamp(170px,16vw,240px);padding:14px 14px 18px;background:var(--ink);border-radius:14px;box-shadow:6px 6px 0 var(--teal)}
+.pedal img{display:block;width:100%;height:auto;border-radius:3px;image-rendering:pixelated}
+.pedal__knobs{display:flex;justify-content:space-between;margin:12px 4px 0}
+.pedal__knobs i{width:22px;height:22px;border-radius:50%;background:#2b2a27;border:2px solid #4a4843}
+.pedal__fs{display:flex;justify-content:space-between;margin:14px 10px 0}
+.pedal__fs i{width:38px;height:38px;border-radius:50%;background:radial-gradient(circle at 50% 50%,#8d8a82 0 40%,#5d5b55 41% 100%);border:3px solid #2b2a27}
+.screen{display:block;width:clamp(150px,15vw,220px);height:auto;border:4px solid var(--bone);image-rendering:pixelated}
+
+/* the editor */
+.split{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);gap:clamp(28px,5vw,80px);align-items:center}
+.shot{margin:0;border:3px solid var(--ink);box-shadow:10px 10px 0 var(--ink);background:var(--ink)}
+.shot img{display:block;width:100%;height:auto}
+.does{list-style:none;margin:24px 0 0;padding:0}
+.does li{padding:12px 0;border-top:2px solid var(--ink);font-size:17px}
+.does b{font:850 20px/1 var(--disp);font-variation-settings:"wdth" 90;text-transform:uppercase;margin-right:8px}
+
+/* rescue: on lime, as loud as the install, and never off register below its heading */
+.rescue__grid{display:grid;grid-template-columns:minmax(0,6fr) minmax(0,5fr);gap:clamp(28px,5vw,80px);align-items:end;margin-top:28px}
+.steps{margin:0;padding:0;list-style:none;counter-reset:s}
+.steps li{counter-increment:s;display:grid;grid-template-columns:64px minmax(0,1fr);gap:14px;padding:16px 0;border-top:3px solid var(--ink)}
+.steps li::before{content:counter(s);font:900 52px/.85 var(--disp);font-variation-settings:"wdth" 120}
+.steps li b{display:block;font:800 22px/1.15 var(--disp);font-variation-settings:"wdth" 90}
+.steps li code{display:block;margin-top:8px;font:500 15px/1.45 var(--mono);background:var(--ink);color:var(--lime);padding:8px 10px;white-space:pre-wrap;overflow-wrap:normal;word-break:normal}
+.small{font-size:16px;max-width:54ch;margin:14px 0 0}
+.steps li code .t{white-space:nowrap}
+.steps-h{font:850 24px/1.1 var(--disp);font-variation-settings:"wdth" 90;margin:0 0 10px}
+.note-box{font-size:16px;max-width:54ch;margin:18px 0 0;padding:12px 14px;background:var(--bone);border-left:6px solid var(--ink);font-weight:600}
+
+/* the kit */
+.cmd{display:block;margin:30px 0 0;font:700 clamp(28px,5.6vw,96px)/1 var(--mono);letter-spacing:-.04em;color:var(--lime);overflow-wrap:anywhere}
+.kit3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:28px;margin-top:40px;border-top:2px solid var(--grey);padding-top:24px}
+.kit3 h3{margin:0 0 8px;font:800 24px/1.1 var(--disp);font-variation-settings:"wdth" 90}
+.kit3 p{margin:0;color:var(--soft);font-size:17px}
+.kit3 code{color:var(--lime);font-size:14px}
+.kit3 a{color:var(--bone)}
+.bt{margin:32px 0 0;color:var(--soft);font-size:16px;max-width:62ch}
+
+/* questions */
+.qa{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 clamp(24px,4vw,64px);margin-top:36px}
+.qa div{padding:16px 0;border-top:2px solid var(--ink)}
+.qa h3{font:850 22px/1.15 var(--disp);font-variation-settings:"wdth" 90}
+.qa p{margin:6px 0 0;font-size:17px;max-width:52ch}
+
+/* the manifesto */
+.big{--mx:4px;--my:3px;font:850 clamp(48px,9.6vw,170px)/.86 var(--disp);font-variation-settings:"wdth" 64;text-transform:uppercase;margin:0}
+.big em{font-style:normal;background:var(--lime);padding:0 .08em;text-shadow:none}
+.cols{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:28px;margin-top:40px;max-width:980px}
+.cols p{margin:0;font-size:clamp(18px,1.5vw,21px)}
+.close h2{font-size:clamp(48px,8vw,140px)}
+.close .lede{color:var(--soft)}
+
+@media (max-width:980px){
+  .hero__base,.rescue__grid,.split{grid-template-columns:minmax(0,1fr)}
+  .choice{flex-direction:column}
+  .half{min-height:auto;padding-top:clamp(72px,10vh,96px)}
+  .art{position:static;order:-1}
+  .nums li{grid-template-columns:minmax(0,1fr);gap:4px;padding:14px 0}
+  .amps,.kit3,.cols,.qa{grid-template-columns:minmax(0,1fr)}
+}
+@media (max-width:560px){
+  h2,.big,.nums b{--mx:2px;--my:2px}
+  .hero{min-height:auto;padding-top:48px}
+  .btn{width:100%}
+  .listen{width:auto}
+  .steps li{grid-template-columns:44px minmax(0,1fr)}
+  .steps li::before{font-size:40px}
+  .esr i{width:84px}
+}
 </style>
 </head>
 <body>
-<div class="wrap">
-  <header>
-    <div>
-      <h1>Open<span>Pocket</span></h1>
-      <p class="tag" data-t="tag"></p>
-    </div>
-    <a class="alt" id="toeditor" href="editor.html" data-t="toeditor" style="text-decoration:none;align-self:center;font:600 14px/1 Inter,sans-serif;padding:11px 16px;border-radius:10px;border:1px solid var(--line);color:var(--ink)"></a>
-  </header>
+<a class="skip" href="#main">Skip to content</a>
+<header class="site-nav">
+  <a class="site-nav__mark reg on-ink" href="./" aria-label="Undertone, home">UNDERTONE</a>
+  <nav class="site-nav__links" aria-label="Main">
+    <a class="wide" href="#firmwares">Gamut and PALETTE</a>
+    <a href="editor.html">Editor</a>
+    <a href="#rescue">Rescue</a>
+    <a class="wide" href="#kit">Kit</a>
+  </nav>
+  <a class="btn" href="install.html">Install</a>
+</header>
 
-  <section class="card" id="nomidi" hidden>
-    <p class="msg err" data-t="nomidi"></p>
-  </section>
-
-  <section class="card">
-    <h2><b>1</b><span data-t="s1"></span></h2>
-    <p class="note" data-t="s1note"></p>
-    <div class="row">
-      <button class="go" id="connect" data-t="connect"></button>
-      <span class="pill" id="state" data-t="idle"></span>
-    </div>
-    <dl class="dev" id="devinfo" hidden>
-      <dt data-t="pedal"></dt><dd id="d-model"></dd>
-      <dt data-t="firmware"></dt><dd id="d-fw"></dd>
-      <dt data-t="port"></dt><dd id="d-port"></dd>
-    </dl>
-  </section>
-
-  <section class="card" id="installCard">
-    <h2><b>2</b><span data-t="s2"></span></h2>
-    <p class="note" data-t="s2note"></p>
-    <p class="note warnbox" data-t="s2warn"></p>
-    <p class="note warnbox" id="bbwarn" hidden data-t="bbwarn"></p>
-    <p class="note warnbox" id="testchan" hidden data-t="testchan"></p>
-    <div id="newerconfirm" hidden>
-      <p class="note warnbox" id="newerwarn"></p>
-      <label class="chk"><input type="checkbox" id="newerok"><span data-t="newerok"></span></label>
-    </div>
-    <div class="fws" id="fws"></div>
-    <p class="note" id="nofw" hidden data-t="nofw"></p>
-    <div class="row"><button class="alt" id="resume" hidden data-t="resume"></button></div>
-    <div class="bar"><i id="bar"></i></div>
-    <div class="steps" id="steps"></div>
-    <p class="msg" id="msg"></p>
-    <p class="note" id="next" hidden><a href="editor.html" data-t="nexteditor"></a> · <a id="notes" data-t="nextnotes"></a></p>
-  </section>
-
-  <section class="card">
-    <h2><b>3</b><span data-t="s3"></span></h2>
-    <p class="note" data-t="s3note"></p>
-    <input type="file" id="offfile" accept=".fwsc">
-    <p class="msg" id="offmsg"></p>
-    <label class="chk" id="offconfirm" hidden><input type="checkbox" id="offok"><span data-t="unknownok"></span></label>
-    <div class="row"><button class="alt" id="backoff" disabled data-t="backoff"></button></div>
-    <div class="note warnbox" id="v21-factory" hidden>
-      <strong>BlackBox V21 factory sounds</strong>
-      <p>The V21 firmware file contains no amps, cabinets, or presets. After it boots, verify the factory sounds here. If verification fails, start the Terminal tool in the <a href="RESCUE.md#blackbox-v21-factory-sounds">macOS recovery steps</a> before pressing the USB recovery button.</p>
-      <div class="row">
-        <button class="alt" id="verify-factory" disabled>Verify factory sounds</button>
-        <button class="alt" id="factory-uboot" disabled>Enter BlackBox USB recovery</button>
+<main id="main">
+<section class="hero" id="top" aria-labelledby="h-top">
+  <div class="wrap">
+    <p class="word reg" id="word" aria-hidden="true"><span style="--i:0">G</span><span style="--i:1">A</span><span style="--i:2">M</span><span style="--i:3">U</span><span style="--i:4">T</span></p>
+    <div class="hero__base">
+      <h1 id="h-top"><b>Gamut 1.0</b>Open firmware for the Donner Pocket X and <span style="white-space:nowrap">M-VAVE</span> BlackBox</h1>
+      <div class="hero__side">
+        <p>Neural amp models, your own cabinet IRs, drives and effects in a chain you put in any order, with USB audio and MIDI, a tuner and a preset editor in the browser. Installed from Chrome or Edge in about two minutes.</p>
+        <p>Built on Undertone, the open kit for pedal firmware.</p>
+        <div class="row" style="margin-top:20px">
+          <a class="btn btn--ink" href="install.html">Install Gamut</a>
+        </div>
+        <button class="listen" type="button" id="listen" aria-pressed="false"><i aria-hidden="true"></i><span>Play the riff that moves the letters</span></button>
+        <p class="riffnote" id="riffnote" role="status"></p>
+        <audio id="riff" preload="none"><source src="assets/audio/riff.m4a" type="audio/mp4"></audio>
       </div>
     </div>
-  </section>
+  </div>
+</section>
 
-  <section class="card" id="rescueCard">
-    <h2><b>!</b><span data-t="rescue"></span></h2>
-    <p class="note" data-t="rescueintro"></p>
-    <h3 class="way" data-t="r1"></h3>
-    <label class="chk"><input type="checkbox" id="rescueOn"><span data-t="rescueon"></span></label>
-    <h3 class="way" data-t="r2"></h3>
-    <p class="note" data-t="rescuenote"></p>
-    <h3 class="way" data-t="r3"></h3>
-    <p class="note" data-t="rescueusb"></p>
-    <div class="row"><a class="go" id="kit" hidden></a></div>
-    <p class="note" id="kitinfo" hidden><span id="kitfw"></span> SHA-256: <code id="kitsha"></code></p>
-    <p class="note" id="kitnone" hidden><span data-t="kitnone"></span> <a href="RESCUE.md#the-rescue-kit">RESCUE.md</a></p>
-    <p class="note warnbox" data-t="rescuev22"></p>
-    <details class="guide" id="rescueguide">
-      <summary>How to run the rescue on your computer</summary>
-      <p class="note">Unzip the kit. It makes one folder, <code>OpenPocket-rescue-kit</code>. The tool writes M-VAVE's official firmware back, and the firmware file must match the firmware the pedal had. The first run only checks the pedal and saves a backup. Nothing is written until the second run.</p>
-      <ul class="note" id="rescue-paths">
-        <li><strong>Path A.</strong> The pedal had M-VAVE V16, V17 or V20, and never V22 or V23. File: <code>BlackBox_020.fwsc</code>.</li>
-        <li><strong>Path B.</strong> The pedal had M-VAVE V22 or V23 at any time, or you are not sure. File: <code>BlackBox_023.fwsc</code>.</li>
-        <li><strong>Path C.</strong> Both files are refused. Stop, keep the backup, and do not try other files.</li>
+<section id="numbers" aria-labelledby="h-numbers">
+  <div class="wrap">
+    <h2 class="reg" id="h-numbers">Gamut in five numbers</h2>
+    <ul class="nums">
+      <li><b class="reg">12</b><span>neural amp models trained for the pedal's own chip</span></li>
+      <li><b class="reg">16</b><span>slots for your own NAM captures, from TONE3000 or anywhere else, and 8 for cabinet IRs</span></li>
+      <li><b class="reg">52</b><span>preset slots you can overwrite, kept across updates</span></li>
+      <li><b class="reg">2.9<small>ms</small></b><span>a block of audio: 128 samples at 44.1 kHz</span></li>
+      <li><b class="reg">−23</b><span>LUFS for every preset, measured on real guitar, so switching keeps the volume</span></li>
+    </ul>
+  </div>
+</section>
+
+<section class="dark on-ink" id="amps" aria-labelledby="h-amps">
+  <div class="wrap">
+    <h2 class="reg" id="h-amps">Twelve amps, learnt from real captures</h2>
+    <p class="lede">Each model is a small network trained for the pedal to sound like a community capture of a real amp. The bar is its error on 20 seconds of guitar it never heard: below about 0.05 the two are hard to tell apart.</p>
+    <div class="amps" style="--ink:var(--bone)">
+      <div class="amp"><b>Fender Twin Reverb</b><span>Normal, bright. Capture by Tim R</span><span class="esr"><i aria-hidden="true" style="--e:5%"></i>error 0.006</span></div>
+      <div class="amp"><b>Vox AC15 Top Boost</b><span>Capture by Phillipe P</span><span class="esr"><i aria-hidden="true" style="--e:36%"></i>error 0.045</span></div>
+      <div class="amp"><b>Magnatone Super 59 Mk II</b><span>Capture by Tim R</span><span class="esr"><i aria-hidden="true" style="--e:7%"></i>error 0.009</span></div>
+      <div class="amp"><b>Friedman Dirty Shirley Mini</b><span>Clean. Capture by Sascha S</span><span class="esr"><i aria-hidden="true" style="--e:11%"></i>error 0.014</span></div>
+      <div class="amp"><b>Marshall JCM900</b><span>50 W Dual Verb. Capture by Tim R</span><span class="esr"><i aria-hidden="true" style="--e:9%"></i>error 0.011</span></div>
+      <div class="amp"><b>Friedman Dirty Shirley Mini</b><span>Crunch. Capture by Sascha S</span><span class="esr"><i aria-hidden="true" style="--e:26%"></i>error 0.033</span></div>
+      <div class="amp"><b>Marshall JCM2000 DSL</b><span>Lead. Capture by Tim R</span><span class="esr"><i aria-hidden="true" style="--e:34%"></i>error 0.042</span></div>
+      <div class="amp"><b>Mesa Boogie Mark IV</b><span>Capture by Roman A</span><span class="esr"><i aria-hidden="true" style="--e:33%"></i>error 0.041</span></div>
+      <div class="amp"><b>Marshall JVM</b><span>OD2. Capture by Phillipe P</span><span class="esr"><i aria-hidden="true" style="--e:45%"></i>error 0.056</span></div>
+      <div class="amp"><b>Splawn Pro Mod</b><span>Second gear. Capture by Tim R</span><span class="esr"><i aria-hidden="true" style="--e:42%"></i>error 0.052</span></div>
+      <div class="amp"><b>Peavey 5150</b><span>Block letter, boosted. Capture by Helga B</span><span class="esr"><i aria-hidden="true" style="--e:52%"></i>error 0.064</span></div>
+      <div class="amp"><b>Peavey 6505+</b><span>Red channel, MXR drive. Capture by Helga B</span><span class="esr"><i aria-hidden="true" style="--e:100%"></i>error 0.124</span></div>
+    </div>
+    <p class="amps-note" style="color:var(--soft)">High-gain captures are harder for a network this small, so their error is higher. The models are amps without a cabinet: the CAB block after them plays a cabinet IR you load. Load a capture of your own into one of the 16 slots from the editor. The list and the training: <a href="https://github.com/VinSpee/undertone/blob/main/docs/NAM.md">NAM.md</a>. Product names belong to their owners and only describe the sound.</p>
+    <div class="drives">
+      <h3>Four drives</h3><span>TS9</span><span>Klon</span><span>MXR M77</span><span>HM-2</span>
+    </div>
+  </div>
+</section>
+
+<section class="choice" id="firmwares" aria-labelledby="h-choice">
+  <h2 class="sr" id="h-choice">Two firmwares to choose from</h2>
+  <p class="choice__label">Pick one. Each keeps its own presets.</p>
+  <article class="half half--gamut on-lime" aria-labelledby="h-gamut">
+    <div class="art" aria-hidden="true">
+      <div class="pedal"><img src="assets/img/gamut-play.png" width="248" height="249" alt="" loading="lazy" decoding="async"><div class="pedal__knobs"><i></i><i></i><i></i></div><div class="pedal__fs"><i></i><i></i></div></div>
+    </div>
+    <h2 class="reg reg-in" id="h-gamut">Gamut<small>1.0, the firmware for playing</small></h2>
+    <p>NAM amps, your own cabinet IRs, drives and effects in a chain of blocks in any order, with a preset editor in the browser and the pedal as a USB sound card.</p>
+    <ul class="chip"><li>12 NAM models</li><li>16 NAM slots</li><li>8 IR slots</li><li>52 presets</li><li>USB audio</li><li>Tuner</li></ul>
+    <p class="aside">Gamut is the new name of the OpenPocket firmware. Until the rename reaches the firmware, the pedal and the installer still call it OpenPocket.</p>
+    <div class="row"><a class="btn btn--ink" href="install.html">Install Gamut</a></div>
+  </article>
+  <article class="half half--palette on-ink" aria-labelledby="h-palette">
+    <div class="art"><img class="screen" src="assets/img/pal-01-home.png" width="480" height="480" alt="PALETTE's home screen: the Clean Room preset with its four modules" loading="lazy"></div>
+    <h2 class="reg reg-in" id="h-palette">PALETTE<small>v01, a four-module stereo instrument</small></h2>
+    <p>Twenty stereo effects in four modules you can put in any order, with tap tempo and MIDI clock.</p>
+    <p class="warn">It has passed its tests on a simulated pedal only. It has not run on a real pedal yet.</p>
+    <div class="row"><a class="btn" href="install.html">Install PALETTE</a><a href="palette-guide.html">Read the PALETTE guide</a></div>
+  </article>
+</section>
+
+<section id="editor" aria-labelledby="h-editor">
+  <div class="wrap split">
+    <div>
+      <h2 class="reg" id="h-editor">The editor, in your browser</h2>
+      <p class="lede">Plug the pedal in over USB and change everything it holds from Chrome or Edge. Nothing to install.</p>
+      <ul class="does">
+        <li><b>Presets</b>Search, load, rename, copy, move and back up all 52.</li>
+        <li><b>Sound</b>Every block of the chain, Compare with the saved preset, and the chip's load.</li>
+        <li><b>Models</b>The 16 NAM slots and the 8 cabinet IR slots, filled from your files or TONE3000's catalogue.</li>
+        <li><b>MIDI</b>The pedal's Control Change numbers, and controls learned from yours.</li>
       </ul>
-      <p class="note">The file goes in the kit's <code>firmware</code> folder. If that folder holds no <code>.fwsc</code> file, its <code>README.txt</code> says where to get the official file and what to call it. The lines below are for path B. On path A, type <code>BlackBox_020.fwsc</code> in place of <code>BlackBox_023.fwsc</code>.</p>
-      <h3 id="rescue-mac">On a Mac</h3>
-      <ol class="note">
-        <li>Once: install Homebrew from <a href="https://brew.sh">brew.sh</a> and follow the "Next steps" it prints. Then, in Terminal, type <code>brew install libusb</code> and press Enter.</li>
-        <li>Unplug the pedal.</li>
-        <li>In Terminal, type <code>cd </code> (with a space), drag the <code>OpenPocket-rescue-kit</code> folder onto the Terminal window, and press Enter.</li>
-        <li>Type <code>sudo python3 tools/uboot_rescue.py --package firmware/BlackBox_023.fwsc</code> and press Enter. Type your Mac password (nothing shows while you type).</li>
-        <li>When it says it is waiting for the pedal, plug the pedal straight into the Mac (no hub).</li>
-        <li>The check passed if you see <code>head [0, 0x4000) matches the image</code> and then a line that starts with <code>Read-only run finished, nothing was written</code>. Keep the backup it saved in the <code>OpenPocket-rescue</code> folder in your home folder.</li>
-        <li>To restore the pedal, unplug it, type <code>sudo python3 tools/uboot_rescue.py --write --package firmware/BlackBox_023.fwsc</code>, press Enter, and plug the pedal in when it is waiting.</li>
-        <li>When it says <code>Done</code>, unplug the cable, switch the pedal off, wait 5 seconds and switch it on.</li>
-      </ol>
-      <h3 id="rescue-windows">On Windows</h3>
-      <p class="note warnbox">The Windows rescue has not been tested on a real pedal yet. Please report on GitHub whether it works for you.</p>
-      <ol class="note">
-        <li>Once: install Python 3 from <a href="https://www.python.org/downloads/">python.org</a> and tick "Add python.exe to PATH" on its first screen. No driver is needed.</li>
-        <li>Open the <code>OpenPocket-rescue-kit</code> folder until you see <code>RESCUE.bat</code>. Click the address bar at the top of the window and copy the location (Ctrl+C).</li>
-        <li>Press the Windows key, type <code>cmd</code>, right-click "Command Prompt" and choose "Run as administrator". Use Command Prompt, not PowerShell.</li>
-        <li>Type <code>cd /d "</code>, paste the location (right-click), type <code>"</code> and press Enter.</li>
-        <li>Unplug the pedal. Type <code>RESCUE.bat --package firmware\BlackBox_023.fwsc</code> and press Enter.</li>
-        <li>When it says it is waiting for the pedal, plug the pedal straight into the PC (no hub). If Windows offers to format a drive, click Cancel. Never click Format.</li>
-        <li>The check passed if you see <code>head [0, 0x4000) matches the image</code> and then a line that starts with <code>Read-only run finished, nothing was written</code>. Keep the backup it saved in the <code>OpenPocket-rescue</code> folder in your user folder.</li>
-        <li>To restore the pedal, unplug it, type <code>RESCUE.bat --write --package firmware\BlackBox_023.fwsc</code>, press Enter, and plug the pedal in when it is waiting.</li>
-        <li>When it says <code>Done</code>, unplug the cable, switch the pedal off, wait 5 seconds and switch it on.</li>
-      </ol>
-      <h3>If it does not work</h3>
-      <ul class="note">
-        <li><code>REFUSED</code>: the file is for another firmware than the pedal had. Nothing was written. Unplug the pedal and run the check with the other path's file. If both files are refused, you are on path C: stop.</li>
-        <li><code>ERROR</code> about the file: it is damaged or it is not a BlackBox firmware file. Nothing was sent to the pedal.</li>
-        <li>It stops in the middle or says it gave up: run the same line again. It continues where it stopped.</li>
-        <li>The pedal still does not start: <a href="https://github.com/VinSpee/undertone/issues">open an issue on GitHub</a> with the text from the window, and keep the backup file.</li>
-      </ul>
-      <p class="note">The full guide, with every safety check: <a href="RESCUE.md#quick-start-rescue-a-blackbox-that-will-not-boot">RESCUE.md</a>.</p>
-    </details>
-  </section>
+      <div class="row"><a class="btn btn--ink" href="editor.html">Open the editor</a></div>
+    </div>
+    <figure class="shot"><img src="assets/img/editor-sound.webp" srcset="assets/img/editor-sound-800.webp 800w, assets/img/editor-sound.webp 1760w" sizes="(max-width: 980px) 100vw, 58vw" width="1760" height="1100" alt="The editor's Sound section: preset 01 Twin Clean, its blocks in a row and the NAM amp's settings" loading="lazy"></figure>
+  </div>
+</section>
 
-  <section class="card">
-    <details>
-      <summary data-t="advanced"></summary>
-      <p class="note" data-t="ubootnote"></p>
-      <p class="note" data-t="rescuedocs"></p>
-      <div class="row"><button class="alt" id="uboot" disabled data-t="uboot"></button></div>
-    </details>
-    <details>
-      <summary data-t="logt"></summary>
-      <pre id="log"></pre>
-    </details>
-  </section>
+<section class="lime on-lime" id="rescue" aria-labelledby="h-rescue">
+  <div class="wrap">
+    <h2 class="reg" id="h-rescue">Rescue kit for a pedal that will not start</h2>
+    <div class="rescue__grid">
+      <div>
+        <p class="lede" style="margin-top:0">A BlackBox with a black screen goes back to M-VAVE's firmware over USB, from a Mac or a Windows PC. You need no extra hardware.</p>
+        <p class="small">A pedal that restarts in a loop, or stays in update mode, needs only the installer's rescue section.</p>
+        <p class="note-box">The installer does not work on a BlackBox that ever ran M-VAVE V22 or V23. The Windows rescue has not been tested on a real pedal yet.</p>
+        <div class="row">
+          <a class="btn btn--ink" href="install.html#rescueCard">Get the rescue kit</a>
+          <a class="btn btn--ghost" href="https://github.com/VinSpee/undertone/blob/main/docs/RESCUE.md">Read the rescue guide</a>
+        </div>
+      </div>
+      <div>
+        <h3 class="steps-h">What the rescue does</h3>
+        <ol class="steps">
+          <li><div><b>The first run only reads</b>It checks the pedal, saves a backup of the whole flash and writes nothing.<code><span class="t">uboot_rescue.py</span> <span class="t">--package</span> <span class="t">…</span></code></div></li>
+          <li><div><b>The second run restores</b>Only after the check has passed, with the official file that matches the firmware the pedal had: V22 or V23 at any time, or not sure, takes one file; V16, V17 or V20 the other.<code><span class="t">uboot_rescue.py</span> <span class="t">--write</span> <span class="t">--package</span> <span class="t">…</span></code></div></li>
+        </ol>
+        <p class="small"><a href="install.html#rescueCard">The full steps for a Mac or Windows PC, with the exact commands</a></p>
+      </div>
+    </div>
+  </div>
+</section>
 
-  <footer>
-    <span data-t="foot1"></span>
-    <span data-t="foot2"></span>
-  </footer>
-</div>
+<section class="dark on-ink" id="kit" aria-labelledby="h-kit">
+  <div class="wrap">
+    <h2 class="reg" id="h-kit">Undertone, the kit Gamut is built on</h2>
+    <p class="lede" style="color:var(--soft)">Gamut and PALETTE share one base. Build your own firmware on it, and try it on the pedal on your screen before it goes near the real one.</p>
+    <code class="cmd">node tools/op.mjs sim</code>
+    <div class="kit3">
+      <div><h3>The pedal on your screen</h3><p>The simulator runs the firmware's own screen, presets and sound in a browser, with guitar loops to play through it.</p></div>
+      <div><h3>A base to start from</h3><p>Audio, controls, screen, USB and updates are done. Your app brings its engine: <code>firmware/apps/starter</code>, in <a href="https://github.com/VinSpee/undertone/blob/main/docs/ALT-FIRMWARE.md">ALT-FIRMWARE.md</a>.</p></div>
+      <div><h3>The chip, measured</h3><p>The <a href="https://github.com/VinSpee/undertone/blob/main/docs/HARDWARE-HANDBOOK.md">hardware handbook</a> covers the AC791N's CPU, memory, flash, second core and audio.</p></div>
+    </div>
+    <p class="bt">Bluetooth: the release has none. Bluetooth MIDI exists only in a separate test image, <a href="https://github.com/VinSpee/undertone/blob/main/docs/BLE-TEST.md">BLE-TEST.md</a>, which is not installed from this site.</p>
+  </div>
+</section>
 
-<script type="module">
-import { Updater, IS_OTA, IS_OPENPOCKET, IS_ALT, OPENPOCKET, OUR_LOADER, MODELS, newerOfficialWarning } from "./pxota.js";
-import { verifyPackage, checkOfficial } from "./pxpkg.js";
-import { BLACKBOX_V21, verifyFactorySounds } from "./pxfactory.js";
+<section id="questions" aria-labelledby="h-questions">
+  <div class="wrap">
+    <h2 class="reg" id="h-questions">Before you install</h2>
+    <div class="qa">
+      <div><h3>Can I go back to the official firmware?</h3><p>Yes. Pick the official .fwsc file from Donner or M-VAVE in the installer's step 3. Your browser checks it first.</p></div>
+      <div><h3>Does an update keep my presets?</h3><p>Yes. Each firmware also keeps its own presets while the pedal runs the other one.</p></div>
+      <div><h3>Does the installer work on every BlackBox?</h3><p>Not on one that ever ran M-VAVE V22 or V23: the installer would write over the end of that boot loader.</p></div>
+      <div><h3>Is PALETTE ready for a real pedal?</h3><p>It passes its tests on a simulated pedal and has not run on a real one yet.</p></div>
+      <div><h3>What do I need to build my own firmware?</h3><p>Docker and Node 18 or newer. <code>node tools/op.mjs all</code> builds and tests every firmware in a pinned container.</p></div>
+      <div><h3>Is this made by Donner or M-VAVE?</h3><p>No. Undertone is an independent GPL-3.0 project. You install it at your own risk.</p></div>
+    </div>
+  </div>
+</section>
 
-const T = {
-  en: {
-    tag: "Install OpenPocket, the open-source guitar firmware, on a Donner Pocket X or an M-VAVE BlackBox — from the browser, over the USB cable.",
-    nomidi: "This browser has no Web MIDI. Use Chrome or Edge on a computer (Windows, macOS, Linux, ChromeOS).",
-    s1: "Connect the pedal", s1note: "Turn the pedal on, plug it in over USB (a data cable) and close any other app using it. The browser asks for MIDI access: allow it.",
-    connect: "Connect", idle: "waiting", searching: "searching…", found: "pedal found", none: "no pedal", busy: "working…",
-    pedal: "Pedal", firmware: "Firmware", port: "MIDI port",
-    official: "official", opfw: "OpenPocket", loader: "update mode (loader)",
-    s2: "Choose a firmware",
-    s2note: "Each firmware below is a whole firmware for the pedal. The pedal runs one at a time: installing one replaces the one it runs, and this page puts the other back the same way. What each firmware saved on the pedal stays there while the pedal runs another one.",
-    s2warn: "During the install (about 1 to 2 minutes): do not unplug or switch the pedal off, keep this tab open. Nothing is sent before this page has checked the package against its SHA-256 and the firmware the pedal runs, and nothing is written before the pedal has checked it too. If the install stops, do not switch the pedal off: reconnect the cable and press Resume. First install over the official firmware: keep your backup (SD card / fm1buddy) at hand.",
-    install: "Install ", again: "Install again: ", back: "Back to ", onpedal: "on the pedal", resume: "Resume the update",
-    nofw: "No firmware package on this site.", unlisted: "Offered by this link only: it is not on this site's list.",
-    nosuch: "No firmware by this name on this site: ",
-    st_start: "start", st_verify: "check", st_loader: "loader", st_write: "write", st_reboot: "restart", st_done: "done",
-    done: "Done: the pedal now runs ", nexteditor: "Open the preset editor", nextnotes: "What is new in this version",
-    s3: "Back to the official firmware", s3note: "Pick your pedal's official file (.fwsc), downloaded from Donner / M-VAVE. It is checked here, in your browser, and sent to no server.",
-    backoff: "Return to the official firmware", offknown: "Official file verified: ", offunknown: "Well-formed official file, unknown to this page: ",
-    newerok: "I understand: install anyway, over this official firmware.",
-    unknownok: "I understand: this file has not been tested with this page. Install it anyway.",
-    rescue: "Rescue", rescueintro: "Three ways back, by what the pedal does.",
-    r1: "The pedal restarts in a loop", r2: "The pedal stays in update mode", r3: "The pedal shows a black screen, or this page cannot reach it",
-    rescuenote: "Do not switch the pedal off. Unplug the cable, plug it back in and press Connect: the Resume button appears in step 2 and finishes the update.",
-    rescueusb: "A BlackBox in this state can be restored over USB with no extra hardware, from a Mac or a Windows PC, with the rescue kit. A browser cannot do it: the pedal is then a USB mass-storage device, which browsers keep from web pages on every system. The kit's first run is a read-only check: it saves a full backup of the pedal's flash and writes nothing. The restore runs only once the check has passed.",
-    kitget: "Download the rescue kit", kitwith: "The kit holds the rescue tool and M-VAVE's official V20, V22 and V23 firmware.",
-    kitwithout: "The kit holds the rescue tool. It does not hold M-VAVE's firmware: its firmware folder says where to get the official file.",
-    kitnone: "The rescue kit is not on this copy of the page. How to get or build it:",
-    rescuev22: "After the rescue of a pedal that ran M-VAVE V22 or V23, do not install OpenPocket on it. This installer writes over the end of the V22/V23 boot loader, and the pedal goes dark again. Wait for an installer that supports V22 and V23.",
-    advanced: "Advanced options",
-    ubootnote: "The button below puts a pedal running OpenPocket into the chip's UBOOT mode, the state the rescue kit and the SD-card recovery (fm1buddy) work in.",
-    rescuedocs: "The SD-card route (fm1buddy, flash/) is the second choice.",
-    uboot: "Enter UBOOT mode", logt: "Log",
-    foot1: "OpenPocket is an independent project, not affiliated with Donner or M-VAVE. Install at your own risk. Source code: GPL-3.0.",
-    foot2: "Update protocol and loader from Felucca and felucca-bsp (Hügelton Instruments, GPL-3.0 / MPL-2.0). JieLi AC79 SDK files: Apache-2.0. Inter typeface: SIL OFL 1.1.",
-    e_notfound: "Pedal not found. Check the cable (data), close other MIDI apps (on Windows only one program at a time can use the pedal: M-EFCS, M-UPGRADE, a DAW, another tab with this page), then try again.",
-    testchan: "TEST CHANNEL: this installs a test build, not the release. It is for people who agreed to try it, and it is not the version the normal installer page offers. To go back, open this page without ?channel=… and press Install.",
-    bbwarn: "M-VAVE BlackBox: v31 is the fix for issue #1 (OpenPocket restarted every 4 s after the pedal was switched off and on), still being tested on the BlackBox. Please report how it goes on GitHub. If your BlackBox restarts in a loop, use the rescue mode below.",
-toeditor: "Preset editor →",
-        rescueon: "Rescue mode, for a pedal that restarts in a loop: tick this, press Connect, then plug the pedal in (or let it restart). The install starts by itself as soon as the pedal answers; it stops the pedal's sound processing at once, so the restarts stop. It installs the official file chosen in step 3 if there is one for this pedal, otherwise the first firmware of step 2. If the pedal never answers here, use the rescue kit below.",
-    e_model: "This package is not for this pedal: ", e_lost: "The pedal was disconnected. Do not switch it off: plug the cable back in, then press Resume if the page shows update mode, else Install again.",
-    e_stopped: "The pedal stopped answering before the update was finished. Do not switch it off: unplug the cable, plug it back in, then press Resume if the page shows update mode, else Install again.", e_noloader: "The update loader did not appear. Do not switch the pedal off: replug the cable, then press Resume.",
-    e_noreturn: "The update was written and checked, but the pedal did not come back. Switching it off and on is safe now. If it then shows a black screen or restarts in a loop, use the rescue kit (Rescue, below).", e_mismatch: "Written, but the pedal reports: ",
-    e_foreign: "The pedal is in the update mode of another firmware: ", e_pkg: "Firmware package missing on this site: ",
-  },
-};
-const lang = "en";
-const stored = (k, d) => { try { return localStorage.getItem(k) || d; } catch (_) { return d; } };
-const t = (k) => (T[lang] && T[lang][k]) || T.en[k] || k;
-function applyLang() {
-  document.documentElement.lang = lang;
-  document.querySelectorAll("[data-t]").forEach((el) => { el.textContent = t(el.dataset.t); });
-  drawSteps();
-}
+<section class="manifesto" aria-labelledby="h-manifesto">
+  <div class="wrap">
+    <h2 class="sr" id="h-manifesto">Why Undertone exists</h2>
+    <p class="big reg">Your pedal. <em>Your firmware.</em></p>
+    <div class="cols">
+      <p>Gamut replaces the firmware of the Donner Pocket X and the M-VAVE BlackBox with one you can read, build and change. The code is GPL-3.0, written from scratch for the pedal's own chip.</p>
+      <p>Changed your mind? The installer puts the official firmware back. A BlackBox that went dark comes back with the rescue kit. Neither company makes Undertone or supports it.</p>
+    </div>
+  </div>
+</section>
 
-const $ = (id) => document.getElementById(id);
-const logEl = $("log");
-const log = (m) => { logEl.textContent += `[${new Date().toLocaleTimeString()}] ${m}\n`; logEl.scrollTop = logEl.scrollHeight; };
-const STEPS = ["start", "verify", "loader", "write", "reboot", "done"];
-let stepAt = -1;
-function drawSteps() {
-  $("steps").innerHTML = STEPS.map((s, i) => `<span class="${i < stepAt ? "done" : i === stepAt ? "on" : ""}">${t("st_" + s)}</span>`).join("");
-}
-function setState(text, cls = "") { const p = $("state"); p.textContent = text; p.className = "pill " + cls; }
-function setMsg(el, text, cls = "") { el.textContent = text; el.className = "msg " + cls; }
-const errText = (e) => (e && e.code && T.en["e_" + e.code] ? t("e_" + e.code) + (e.detail || "") : (e && e.message) || String(e));
+<section class="close dark on-ink" aria-labelledby="h-close">
+  <div class="wrap">
+    <h2 class="reg" id="h-close">Install takes about two minutes</h2>
+    <p class="lede">Chrome or Edge, a USB data cable and the pedal. The page checks each package before it sends a byte.</p>
+    <div class="row"><a class="btn" href="install.html">Install a firmware</a></div>
+  </div>
+</section>
+</main>
 
-/* a test channel (?channel=midi-test): packages from firmware/<channel>/, never offered without the link */
-const CHANNEL = (new URLSearchParams(location.search).get("channel") || "").replace(/[^a-z0-9-]/g, "");
-const FW = "firmware/" + (CHANNEL ? CHANNEL + "/" : "");
-/* a firmware that is not on the site's list (?app=NAME: an app on the base firmware, docs/ALT-FIRMWARE.md): its
- * packages from firmware/apps/<name>/, in a card of its own after the listed ones, never offered without the link */
-const APP = (new URLSearchParams(location.search).get("app") || "").replace(/[^a-z0-9-]/g, "");
-const APPFW = "firmware/apps/" + APP + "/";
-/* offers: the firmwares this page can install, one card each, in the catalog's order. An offer is
- * { id, name, version, what, note, dir, packages, listed }: id is the product a pedal says it runs (pxota.js parseInfo),
- * packages are manifest entries whose files are relative to dir. The first offer is the one a rescue and a resume
- * without a known package install. */
-let access = null, up = null, offers = [], lastDev = null, busy = false, official = null;
-let started = null;                            // the package of the last install begun here, for a resume
-let sawV21 = false;
+<footer class="site-foot">
+  <div>
+    <span>Undertone, GPL-3.0. Not affiliated with Donner or M-VAVE.</span>
+    <a href="https://github.com/VinSpee/undertone">Source on GitHub</a>
+    <span>The riff: Guitar-TECHS dataset, CC BY 4.0</span>
+  </div>
+</footer>
 
-if (!navigator.requestMIDIAccess) { $("nomidi").hidden = false; $("connect").disabled = true; }
-$("testchan").hidden = !CHANNEL;
-
-async function getJson(url) {
-  const r = await fetch(url, { cache: "no-store" });
-  if (!r.ok) throw new Error(`${url}: HTTP ${r.status}`);
-  return r.json();
-}
-const fromCatalog = (f) => ({ id: f.id, name: f.name, version: f.version, what: f.what, note: f.note, dir: FW, packages: f.packages, listed: true });
-const fromManifest = (m, dir, listed) => ({ id: m.app ? m.app.id : OPENPOCKET, name: m.app ? m.app.name : t("opfw"),
-  version: m.app ? m.app.version : "v" + m.version, what: "", dir, packages: m.packages, listed });
-
-// the site's catalog (release.json, tools/catalog.py); without one (a test channel, a site with one firmware) the
-// firmware of the folder's manifest; then the firmware of ?app=, when the catalog does not list it
-async function loadOffers() {
-  let list = [];
-  try { list = (await getJson(FW + "release.json")).firmwares.map(fromCatalog); }
-  catch (e) {
-    log("catalog: " + e.message);
-    try { list = [fromManifest(await getJson(FW + "manifest.json"), FW, true)]; } catch (e2) { log("manifest: " + e2.message); }
+<script>
+(function(){
+  // the RMS of assets/loops/riff.wav in 40 ms windows: one loudness a window, 0 to 1
+  var ENV=[0.728,0.691,0.637,0.589,0.553,0.26,0.766,0.86,0.775,0.747,0.713,0.65,0.593,0.6,0.52,0.475,0.34,0.035,0.025,0.476,0.803,0.674,0.598,0.561,0.562,0.523,0.484,0.456,0.328,0.132,0.728,0.771,0.696,0.655,0.893,0.821,0.746,0.698,0.618,0.441,0.845,0.973,0.838,0.946,1.0,0.907,0.83,0.771,0.728,0.458,0.402,0.821,0.712,0.668,0.712,0.649,0.607,0.563,0.541,0.519,0.326,0.159,0.848,0.774,0.691,0.643,0.594,0.546,0.511,0.628,0.624,0.552,0.282,0.022,0.043,0.675,0.717,0.562,0.533,0.499,0.487,0.466,0.43,0.41,0.382,0.124,0.73,0.713,0.649,0.605,0.597,0.57,0.523,0.495,0.439,0.159,0.556,0.773,0.696,0.695,0.704,0.649,0.593,0.556,0.521,0.226,0.516,0.836,0.738,0.685];
+  var letters=[].slice.call(document.querySelectorAll('#word span'));
+  var reduce=matchMedia('(prefers-reduced-motion: reduce)');
+  var audio=document.getElementById('riff'),btn=document.getElementById('listen'),raf=0;
+  // each letter follows the loudness a little after the one before it, so the riff runs through the word
+  function frame(t){
+    var k=t/0.04;
+    letters.forEach(function(el,i){
+      var j=Math.floor(k)-i*2, v=j<0?1:ENV[j%ENV.length];
+      // a transform only: the letter grows and thins with the loudness without moving its neighbours
+      el.style.transform='scale('+(0.8+0.28*v).toFixed(3)+','+(0.22+0.78*v).toFixed(3)+')';
+      el.style.setProperty('--mx',(2+v*16).toFixed(1)+'px');el.style.setProperty('--my',(1+v*10).toFixed(1)+'px');
+    });
   }
-  if (APP && !list.some((o) => o.id === APP)) {
-    try {
-      const m = await getJson(APPFW + "manifest.json");
-      if (!m.app || m.app.id !== APP) throw new Error("not this firmware's manifest");
-      list.push(fromManifest(m, APPFW, false));
-    } catch (e) { setMsg($("msg"), t("nosuch") + APP, "err"); log("?app=" + APP + ": " + e.message); }
-  }
-  offers = list;
-  drawOffers();
-}
-
-function drawOffers() {
-  const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text) e.textContent = text; return e; };
-  $("nofw").hidden = offers.length > 0;
-  $("fws").replaceChildren(...offers.map((o) => {
-    const card = el("article", "fw");
-    card.dataset.fw = o.id;
-    const h = el("h3", "", o.name + " ");
-    h.append(el("small", "", o.version + (CHANNEL && o.dir === FW ? ` (${CHANNEL})` : "")), el("span", "pill ok", t("onpedal")));
-    const b = el("button", "go");
-    b.disabled = true;
-    b.onclick = () => install(o);
-    const warn = [o.note, !o.listed && t("unlisted")].filter(Boolean).map((w) => el("p", "note warnbox", w));
-    card.append(h, el("p", "note what", o.what), ...warn, b);
-    return card;
-  }));
-}
-const cardOf = (o) => $("fws").children[offers.indexOf(o)];
-
-// the rescue kit this site holds (rescue/manifest.json, written by rescue/build_kit.py): its file, size and SHA-256
-async function loadKit() {
-  try {
-    const r = await fetch("rescue/manifest.json", { cache: "no-store" });
-    if (!r.ok) throw new Error("HTTP " + r.status);
-    const k = await r.json();
-    if (!/^[\w.-]+\.zip$/.test(k.file) || !/^[0-9a-f]{64}$/.test(k.sha256)) throw new Error("not a kit's manifest");
-    const a = $("kit");
-    a.href = "rescue/" + k.file; a.download = k.file;
-    a.textContent = `${t("kitget")} (${k.file}, ${Math.ceil(k.size / 1024)} KB)`;
-    $("kitfw").textContent = t(k.firmware ? "kitwith" : "kitwithout");
-    $("kitsha").textContent = k.sha256;
-    a.hidden = false; $("kitinfo").hidden = false;
-  } catch (e) { $("kitnone").hidden = false; log("rescue kit: " + e.message); }
-}
-
-function showDev(d) {
-  lastDev = d;
-  $("devinfo").hidden = !d;
-  const onV21 = d?.id.text === BLACKBOX_V21;
-  if (d) sawV21 = onV21;
-  $("v21-factory").hidden = !sawV21 && official?.product !== BLACKBOX_V21;
-  $("verify-factory").disabled = busy || !onV21;
-  $("factory-uboot").disabled = busy || !onV21;
-  $("resume").hidden = !d || !IS_OTA(d.id);
-  const newer = d && newerOfficialWarning(d.id);
-  $("newerconfirm").hidden = !newer;
-  if (newer) $("newerwarn").textContent = newer; else if (d) $("newerok").checked = false;
-  const unconfirmed = Boolean(newer) && !$("newerok").checked;
-  $("uboot").disabled = busy || !d || !IS_OPENPOCKET(d.id);
-  const alt = d && IS_ALT(d.product) ? d.product : null;           /* a firmware on the base that says which it is */
-  // which offer the pedal runs: the product it says, or (a firmware on the base too old to say) the first one's
-  const runs = d && IS_OPENPOCKET(d.id) ? (d.product ? d.product.app : OPENPOCKET) : null;
-  for (const o of offers) {
-    const card = cardOf(o), b = card.querySelector("button"), on = runs === o.id;
-    const same = on && o.packages.some((p) => p.product === d.id.text);
-    card.classList.toggle("on", on);
-    card.querySelector(".pill").hidden = !on;
-    b.disabled = busy || !d || IS_OTA(d.id) || unconfirmed;
-    b.textContent = t(same ? "again" : runs && !on ? "back" : "install") + `${o.name} ${o.version}`;
-  }
-  $("backoff").disabled = busy || !d || IS_OTA(d.id) || !official || official.model !== d.id.model ||
-    (!official.known && !$("offok").checked);
-  $("backoff").textContent = official?.product === BLACKBOX_V21 ? "Install V21 firmware" : t("backoff");
-  if (!d) return;
-  const id = d.id;
-  const ota = IS_OTA(id);
-  $("d-model").textContent = ota ? "—" : (id.model === "PocketX" ? "Donner Pocket X" : "M-VAVE BlackBox");
-  $("d-fw").textContent = ota ? `${t("loader")} (${id.text})` : alt ? `${alt.name} ${alt.version} (${id.text})`
-    : IS_OPENPOCKET(id) ? `${t("opfw")} v${id.version - 900} (${id.text})` : `${t("official")} ${String(id.version).padStart(3, "0")} (${id.text})`;
-  $("d-port").textContent = d.name;
-  const bb = id.model === "BlackBox";               /* not supported yet: boot loop (issue #1) */
-  $("bbwarn").hidden = !bb;
-}
-
-async function connect() {
-  try {
-    if (!access) {
-      access = await navigator.requestMIDIAccess({ sysex: true });
-      up = new Updater(access, log);
-      access.onstatechange = () => { if (busy || scanning) return; if (rescueArmed()) rescueTry(); else scan(); };
-    }
-    await scan();
-  } catch (e) { setState(t("none"), "err"); log("MIDI: " + e.message); }
-}
-let scanning = false;
-async function scan() {
-  if (scanning || !up) return;
-  scanning = true;
-  setState(t("searching"));
-  try {
-    const d = await up.identify({ product: !rescueArmed() });   // (armed: no second question, the install starts at once)
-    if (d) { setState(t("found"), "ok"); log(`found ${d.id.text}${d.product ? ` (${d.product.name} ${d.product.version})` : ""} on "${d.name}"`); }
-    else { setState(t("none"), "warn"); log("no pedal" + up.seen()); }
-    showDev(d);
-  } finally { scanning = false; }
-  if (rescueArmed() && lastDev && MODELS.includes(lastDev.id.model)) setTimeout(rescueTry, 0);   // seen by a scan
-}
-
-function progress(kind, n) {
-  const k = STEPS.indexOf(kind);
-  if (k >= 0 && k !== stepAt) { stepAt = k; drawSteps(); }
-  const est = kind === "verify" ? 40 : kind === "write" ? 2700 : 0;   // requests: step 1 ~30, step 2 ~2 x 1300
-  const base = { start: 0, verify: 2, loader: 8, write: 12, reboot: 96, done: 100 }[kind] ?? 0;
-  const span = kind === "verify" ? 6 : kind === "write" ? 84 : 0;
-  const pct = base + (est && typeof n === "number" ? Math.min(1, n / est) * span : 0);
-  $("bar").style.width = pct.toFixed(1) + "%";
-}
-
-// an offer's package for a model. app: the product the pedal must say it runs afterwards
-async function packageFor(model, offer = offers[0]) {
-  const p = offer && offer.packages.find((x) => x.model === model);
-  if (!p) throw Object.assign(new Error(model), { code: "pkg", detail: model });
-  const r = await fetch(offer.dir + p.file, { cache: "no-store" });
-  if (!r.ok) throw Object.assign(new Error(p.file), { code: "pkg", detail: p.file });
-  // the catalog pins every byte (size, SHA-256), then the identity and every CRC: nothing else reaches the pedal
-  const { image } = await verifyPackage(new Uint8Array(await r.arrayBuffer()), p);
-  return { product: p.product, image, app: offer.id, offer };
-}
-
-// job's result: the identity the pedal reports, or { offer, id } when one of the offers was installed
-async function run(job, resultMessage) {
-  if (busy) return;
-  busy = true; stepAt = resultMessage ? -1 : 0; drawSteps(); $("bar").style.width = "0";
-  setState(t("busy"), "warn");
-  ["backoff", "uboot", "connect", "verify-factory", "factory-uboot"].forEach((id) => $(id).disabled = true);
-  $("fws").querySelectorAll("button").forEach((b) => { b.disabled = true; });
-  setMsg($("msg"), ""); $("next").hidden = true;
-  try {
-    const res = await job();
-    if (!resultMessage) { stepAt = STEPS.length; drawSteps(); }   // every stage done, none still lit
-    const o = !resultMessage && res && res.offer;
-    const firmwareOnly = !resultMessage && res === BLACKBOX_V21;
-    const message = resultMessage || (firmwareOnly
-      ? "V21 firmware booted. Verify or restore the factory sounds in step 3."
-      : t("done") + (o ? `${o.name} ${o.version} (${res.id})` : res));
-    setMsg($("msg"), message, firmwareOnly ? "" : "ok");
-    if (o && o.id === OPENPOCKET) { $("notes").href = `WHATS-NEW-${o.version}.md`; $("next").hidden = false; }   // (the editor is this firmware's)
-    log(message);
-  } catch (e) {
-    setMsg($("msg"), errText(e), "err");
-    log(`error ${e.code || ""}: ${e.message}`);
-  } finally {
-    busy = false;
-    $("connect").disabled = false;
-    await scan();
-  }
-}
-
-$("connect").onclick = connect;
-
-// rescue mode (issue #1): the packages are fetched beforehand, the install fires the moment a pedal answers
-let pre = null;
-let rescueTries = 0;                                  // a few attempts, then the mode turns itself off
-const rescueArmed = () => $("rescueOn").checked && pre !== null && up !== null && rescueTries < 10;
-async function prefetch() {
-  pre = null;
-  const got = {};
-  for (const m of MODELS) { try { got[m] = await packageFor(m); } catch (e) { log("rescue: " + errText(e)); } }   // (the first offer's: the rescue installs no other)
-  if ($("rescueOn").checked) { pre = got; log("rescue mode armed: waiting for the pedal"); setState(t("searching"), "warn"); }
-}
-let picked = null;                                    // what the rescue chose for the pedal that answered
-function pick(model) {
-  picked = official && official.model === model && (official.known || $("offok").checked) ? { image: official.image, product: official.product } : pre && pre[model];
-  return picked;
-}
-function rescueTry() {
-  if (busy || scanning || !rescueArmed()) return;
-  rescueTries++;
-  return run(async () => {
-    let r;
-    try {
-      r = await up.rescue(pick, (s, n) => { progress(s, n); if (s !== "verify" && s !== "write") log("rescue step " + s + (n !== undefined ? " " + n : "")); }, { acceptNewer: $("newerok").checked });
-    } catch (e) {
-      if (e.code === "untested") { $("newerwarn").textContent = e.message; $("newerconfirm").hidden = false; }   // tick the box, then arm the rescue again
-      if (e.code === "untested" || e.code === "pkg") { $("rescueOn").checked = false; pre = null; }   // refused: trying again changes nothing
-      throw e;
-    }
-    if (!r) throw Object.assign(new Error("no pedal yet"), { code: "notfound", detail: up.seen() });
-    $("rescueOn").checked = false; pre = null;
-    return picked.offer ? { offer: picked.offer, id: r } : r;
+  function rest(){letters.forEach(function(el){el.style.transform='';el.style.removeProperty('--mx');el.style.removeProperty('--my');});}
+  function run(getT,dur){cancelAnimationFrame(raf);var t0=performance.now();
+    (function loop(now){var t=getT?getT():(now-t0)/1000; if(t>=dur){rest();return;} frame(t); raf=requestAnimationFrame(loop);})(t0);}
+  if(!reduce.matches) setTimeout(function(){run(null,4.42);},1100);
+  var label=btn.querySelector('span'),note=document.getElementById('riffnote');
+  var idle=reduce.matches?'Play the riff':label.textContent;   // under reduced motion the letters stay still
+  label.textContent=idle;
+  function stopped(){btn.setAttribute('aria-pressed','false');btn.removeAttribute('aria-busy');label.textContent=idle;cancelAnimationFrame(raf);rest();}
+  btn.addEventListener('click',function(){
+    if(!audio.paused){audio.pause();audio.currentTime=0;stopped();return;}
+    // the file loads on the first press: say so while it does, and say it if it cannot play
+    btn.setAttribute('aria-busy','true');label.textContent='Loading the riff…';note.textContent='';
+    audio.play().then(function(){btn.removeAttribute('aria-busy');btn.setAttribute('aria-pressed','true');label.textContent='Stop the riff';
+      if(!reduce.matches) run(function(){return audio.currentTime;},4.4);})
+      .catch(function(err){stopped();if(err&&err.name==='AbortError')return;note.textContent='The riff could not play in this browser.';});
   });
-}
-$("rescueOn").onchange = async () => {
-  if (!$("rescueOn").checked) { pre = null; log("rescue mode off"); return; }
-  rescueTries = 0;
-  await prefetch();
-  if (rescueArmed() && lastDev) rescueTry();
-};
-const stepLog = (s, n) => { progress(s, n); if (s !== "verify" && s !== "write") log("step " + s + (n !== undefined ? " " + n : "")); };
-const install = (offer) => run(async () => {
-  const d = lastDev;
-  const pkg = await packageFor(d.id.model, offer);
-  started = pkg;
-  log(`install ${pkg.product} (${offer.name} ${offer.version}) over ${d.id.text}`);
-  const id = await up.install(pkg.image, pkg.product, stepLog, { app: pkg.app, acceptNewer: $("newerok").checked });
-  return { offer, id };
-});
-$("resume").onclick = () => run(async () => {
-  const d = lastDev;
-  // our loader: finish the install begun on this page; else the first offer's package of the model picked by the
-  // official file or the last model seen (a loader does not say its model)
-  if (OUR_LOADER(d.id)) {
-    const model = (official && official.model) || stored("op-model", "PocketX");
-    const pkg = started && !started.official ? started : await packageFor(model);
-    await up.resume(pkg.image, pkg.product, (s, n) => progress(s, n), { app: pkg.app });
-    return { offer: pkg.offer, id: pkg.product };
-  }
-  if (!official) throw Object.assign(new Error(d.id.text), { code: "foreign", detail: d.id.text });
-  await up.resume(official.image, official.product, (s, n) => progress(s, n), { official: true });
-  return official.product;
-});
-$("backoff").onclick = () => run(async () => {
-  started = { official: true };
-  log(`return to ${official.product}`);
-  return up.install(official.image, official.product, (s, n) => progress(s, n));
-});
-$("uboot").onclick = async () => { try { await up.uboot(); log("UBOOT soft key sent"); } catch (e) { log(e.message); } };
-$("factory-uboot").onclick = () => run(
-  () => up.uboot((id) => id.text === BLACKBOX_V21),
-  "USB recovery requested. The Terminal recovery tool can now read the pedal."
-);
-$("verify-factory").onclick = () => run(
-  () => verifyFactorySounds(up, (p) => { $("bar").style.width = (p * 100).toFixed(1) + "%"; }),
-  "Factory sounds verified: 20 amps, 20 cabinets, and 80 presets."
-);
-$("offfile").onchange = async (ev) => {
-  official = null; $("offconfirm").hidden = true; $("offok").checked = false;
-  const f = ev.target.files[0];
-  if (!f) { showDev(lastDev); return; }
-  try {
-    official = await checkOfficial(new Uint8Array(await f.arrayBuffer()));
-    setMsg($("offmsg"), (official.known ? t("offknown") : t("offunknown")) + official.product, official.known ? "ok" : "");
-    $("offconfirm").hidden = official.known;
-    log(`official file ${f.name}: ${official.product}, sha256 ${official.sha256.slice(0, 16)}…, known ${official.known}`);
-  } catch (e) { setMsg($("offmsg"), e.message, "err"); }
-  showDev(lastDev);
-};
-$("offok").onchange = () => showDev(lastDev);
-$("newerok").onchange = () => showDev(lastDev);
-window.addEventListener("beforeunload", (e) => { if (busy) { e.preventDefault(); e.returnValue = ""; } });
-// remember the model, for a resume after a disconnect
-setInterval(() => { if (lastDev && MODELS.includes(lastDev.id.model)) try { localStorage.setItem("op-model", lastDev.id.model); } catch (_) {} }, 2000);
-
-applyLang();
-loadKit();
-loadOffers().then(() => showDev(lastDev));
+  audio.addEventListener('ended',stopped);
+})();
 </script>
 </body>
 </html>

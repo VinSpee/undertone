@@ -237,7 +237,7 @@ function render(kind) {
   if (!has(kind)) {
     el.textContent = "";
     if (app.conn === "ready") el.append(h("div", { class: "card-head" }, h("h2", { text: BANKS[kind].title })),
-      h("p", { class: "dim" }, `This pedal's firmware (${app.info.version}) has no ${KINDS[kind].things} yet. `, h("a", { href: "./", text: "Update it from the installer" }), "."));
+      h("p", { class: "dim" }, `This pedal's firmware (${app.info.version}) has no ${KINDS[kind].things} yet. `, h("a", { href: "install.html", text: "Update it from the installer" }), "."));
     return;
   }
   const B = BANKS[kind], K = KINDS[kind], slots = B.slots(), held = app.held[kind], use = usedBy(kind);

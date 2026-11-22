@@ -77,7 +77,7 @@ The TUNER line on the panel holds: both footswitches together open the tuner, as
 pitch and the state.
 
 The installer and the editor pages work against the simulated pedal without a change and without a driver:
-`/site/index.html` and `/site/editor.html` serve `docs/` with the virtual Web MIDI (`/sim/webmidi-shim.js`) injected.
+`/site/install.html` and `/site/editor.html` serve `docs/` with the virtual Web MIDI (`/sim/webmidi-shim.js`) injected.
 The shim replaces `navigator.requestMIDIAccess` with one input and one output port, "OpenPocket", and works in any
 browser (also those without Web MIDI). For another copy of the pages, run once in the page's console:
 
@@ -214,7 +214,7 @@ The installer needs the update code, which is a different program, so `--update 
 pedal: `tests/devsim.c` answers the handshake and runs the update of `ota.c` and `ldr_core.c` on a copy of the image in
 memory (the file is never written; the result goes to `build/sim/update-dump.bin` when the simulator stops). The
 port renames itself as the real pedal's does ("OpenPocket" -> "OpenPocket Update" -> "OpenPocket"); the shim reports each
-change as a Web MIDI `statechange`. Open `/site/index.html`. `GET info` shows the program's `log` (the steps it took).
+change as a Web MIDI `statechange`. Open `/site/install.html`. `GET info` shows the program's `log` (the steps it took).
 Controls, screen and state answer 409 in this mode. `tests/fixtures.py DIR` builds a flash image (`flash_old.bin`) and
 fake packages for a try.
 
@@ -253,7 +253,7 @@ time with `/api/audio` and plays the parts in order. A control is therefore hear
 used. The loop goes in at the level a guitar has at the pedal's converter, and the page plays the result four times
 louder.
 
-`/site/index.html?app=NAME` is the installer page with the app offered, and it names the simulated pedal's product.
+`/site/install.html?app=NAME` is the installer page with the app offered, and it names the simulated pedal's product.
 `tests/test_app_sim.mjs` drives the simulator for STARTER, and `tests/test_palette_sim.mjs` for PALETTE
 ([PALETTE.md](PALETTE.md)).
 

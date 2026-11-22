@@ -2,14 +2,14 @@
 # SPDX-License-Identifier: GPL-3.0-only
 """OpenPocket offline installer: serves docs/ (installer, editor, packages) on this computer only, at
 http://localhost:8765/ (Web MIDI works on localhost). Chrome or Edge. Ctrl+C stops it.
-  tools/serve.py [index.html|editor.html] [firmware-dir]
+  tools/serve.py [install.html|editor.html] [firmware-dir]
 firmware-dir (for example build/ble) replaces docs/firmware as the place the installer reads the packages from.
 The packages of an alternative firmware (an app on the base firmware, docs/ALT-FIRMWARE.md) are read from where the
 build puts them: firmware/apps/NAME/ is build/apps/NAME/. The page offers the ones of its catalog
-(docs/firmware/release.json, tools/catalog.py) and any other one with index.html?app=NAME."""
+(docs/firmware/release.json, tools/catalog.py) and any other one with install.html?app=NAME."""
 import functools, http.server, os, sys, webbrowser
 
-page = sys.argv[1] if len(sys.argv) > 1 else "index.html"
+page = sys.argv[1] if len(sys.argv) > 1 else "install.html"
 here = os.path.dirname(os.path.abspath(__file__))
 root = os.path.abspath(os.path.join(here, "..", "docs"))
 fwdir = os.path.abspath(os.path.join(here, "..", sys.argv[2])) if len(sys.argv) > 2 else None

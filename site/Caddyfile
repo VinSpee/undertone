@@ -12,5 +12,7 @@
 	header Cache-Control no-cache
 	@package path *.fwsc
 	header @package Content-Type application/octet-stream
+	@audio path *.m4a
+	header @audio Content-Type audio/mp4
 	file_server
 }

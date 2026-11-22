@@ -686,7 +686,7 @@ const free = (kind, slot) => page.locator(`#${kind}list .free [data-slot="${slot
   startSim(compile("app", "starter"), []);
   await page.waitForSelector('body[data-conn="other"]', { timeout: 20000 });
   ok(/This pedal runs STARTER v01/.test(await text("#gate h1")) && /not OpenPocket/.test(await text("#othernote")), `an alternative firmware answers: "${await text("#gate h1")}", and that it is not OpenPocket`);
-  ok(await page.isVisible('#gate a[href="./"]') && /Back to OpenPocket/.test(await text("#gate")) && await page.isHidden("#tabs"), "the way back is given (the installer, Back to OpenPocket); none of OpenPocket's screens is shown");
+  ok(await page.isVisible('#gate a[href="install.html"]') && /Back to OpenPocket/.test(await text("#gate")) && await page.isHidden("#tabs"), "the way back is given (the installer, Back to OpenPocket); none of OpenPocket's screens is shown");
   await shot("editor_11_other_firmware.png");
   sim.stdin.end();
   await page.evaluate(() => window.__simGone());

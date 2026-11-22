@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: GPL-3.0-only
 """The catalog of the firmwares a site offers: release.json, which the installer page reads to show one card per
-firmware (docs/index.html). firmware/catalog.json names the firmwares of a release, in the order of their cards, with
+firmware (docs/install.html). firmware/catalog.json names the firmwares of a release, in the order of their cards, with
 one line on what each is and, when there is one, a warning to show with it ("note"). Everything else is read from
 what the build made: a firmware's name and version from its manifest, and each package's size and SHA-256 from the
 package itself, which must be the manifest's.

@@ -110,7 +110,7 @@ const GATE = {
       h("li", {}, h("b", { text: "Press Connect. " }), "The browser asks to use MIDI devices: allow it."),
       h("li", {}, h("b", { text: "Play. " }), "Every change here sounds at once, and what you change on the pedal shows here.")),
     connectBtn("Connect"),
-    h("p", { class: "dim" }, "The pedal needs OpenPocket v32 or newer. ", h("a", { href: "./", text: "Install or update it" }), " first if it runs something older."),
+    h("p", { class: "dim" }, "The pedal needs OpenPocket v32 or newer. ", h("a", { href: "install.html", text: "Install or update it" }), " first if it runs something older."),
     h("ul", { class: "what" },
       h("li", {}, h("b", { text: "Presets" }), "Browse, rename, reorder, copy and back up the 52 presets."),
       h("li", {}, h("b", { text: "Sound" }), "The signal chain and every block's settings, live."),
@@ -120,7 +120,7 @@ const GATE = {
   unsupported: () => [
     h("h1", { text: "This browser cannot reach the pedal" }),
     h("p", {}, "The editor talks to the pedal over Web MIDI, which this browser does not have. Open this page in ", h("b", { text: "Chrome or Edge" }), " on a computer or an Android phone."),
-    h("p", { class: "dim" }, "Safari and browsers on iPhone and iPad have no Web MIDI. ", h("a", { href: "./", text: "Back to the installer" })),
+    h("p", { class: "dim" }, "Safari and browsers on iPhone and iPad have no Web MIDI. ", h("a", { href: "install.html", text: "Back to the installer" })),
   ],
   denied: () => [
     h("h1", { text: "MIDI access was refused" }),
@@ -140,7 +140,7 @@ const GATE = {
       h("ul", { class: "check" },
         h("li", { text: "Is the pedal switched on and past its start screen?" }),
         h("li", { text: "Does the cable carry data? Many USB-C cables only charge." }),
-        h("li", {}, "Does it run OpenPocket v32 or newer? ", h("a", { href: "./", text: "Install or update it" }), "."),
+        h("li", {}, "Does it run OpenPocket v32 or newer? ", h("a", { href: "install.html", text: "Install or update it" }), "."),
         h("li", { text: "Is another tab or program using it (the installer, a DAW)? Close that first." })),
       connectBtn("Try again"),
       h("p", { class: "dim", text: "The editor also tries again by itself as soon as a device is plugged in." }),
@@ -151,7 +151,7 @@ const GATE = {
     return [
       h("h1", { text: `This pedal runs ${name}` }),
       h("p", { id: "othernote", text: `${o.name} is an alternative firmware built on OpenPocket's base. It is not OpenPocket, and this editor edits OpenPocket's presets and blocks, which ${o.name} does not have.` }),
-      h("p", {}, "To use this editor, put OpenPocket back: ", h("a", { href: "./", text: "open the installer" }), " and press ", h("b", { text: "Back to OpenPocket" }),
+      h("p", {}, "To use this editor, put OpenPocket back: ", h("a", { href: "install.html", text: "open the installer" }), " and press ", h("b", { text: "Back to OpenPocket" }),
         ". Your OpenPocket presets, NAM models and cabinet IRs are still on the pedal."),
       connectBtn("Try again"),
       h("p", { class: "dim", text: "The editor also tries again by itself as soon as a device is plugged in." }),
@@ -224,7 +224,7 @@ function renderConnPop() {
     h("h3", { text: "Keys" }),
     h("dl", { class: "keys" }, h("dt", { text: "/" }), h("dd", { text: "search the presets" }), h("dt", { text: "[  ]" }), h("dd", { text: "previous, next preset" }),
       h("dt", { text: "Ctrl or ⌘ + S" }), h("dd", { text: "save" }), h("dt", { text: "F2" }), h("dd", { text: "rename the preset chosen in the list" })),
-    h("a", { class: "btn small", href: "./", text: "Installer and updates" }));
+    h("a", { class: "btn small", href: "install.html", text: "Installer and updates" }));
 }
 
 // ---- start ----
