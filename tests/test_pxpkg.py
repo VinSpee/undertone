@@ -7,6 +7,8 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "tools"))
 import pxpkg, pocketx_fw as fw
 
+SLOT_016 = 0x9D740                       # PocketX_016's app.bin slot (pxpkg's own is smaller, to fit both flash heads)
+
 def logical(fwsc):
     out = bytearray()
     for i in range(20): out += fwsc[i * 0x30:i * 0x30 + 0x2F]
@@ -30,16 +32,19 @@ def ufw_files(lg):
 off = Path(sys.argv[1]).read_bytes()
 fl = ufw_files(logical(off))["flash.bin"]
 dec = fw.flash_decrypt(fl + b"\xFF" * (0x100000 - len(fl)))
-app = dec[0x4000 + 0x120:0x4000 + 0x120 + pxpkg.APP_SLOT]
-cfg_tool = dec[0x4000 + 0x9D860:0x4000 + 0x9D860 + 0x17F]
-blk = 0x120 + pxpkg.APP_SLOT + 0x17F
+app = dec[0x4000 + 0x120:0x4000 + 0x120 + SLOT_016]
+cfg_tool = dec[0x4000 + 0x120 + SLOT_016:0x4000 + 0x120 + SLOT_016 + 0x17F]
+blk = 0x120 + SLOT_016 + 0x17F
 eq_len = struct.unpack_from("<I", dec, 0x4000 + blk + 0x20 + 8)[0]
 eq = dec[0x4000 + blk + 0x40:0x4000 + blk + 0x40 + eq_len]
-area = pxpkg.app_area(app, cfg_tool, eq)
+area = pxpkg.app_area(app, cfg_tool, eq, slot=SLOT_016)
 same = fl[0x4000:0x4000 + len(area)] == area
 print(f"official app area rebuilt: {len(area)} B, identical: {same}")
 assert same
-# a full package from that app: parses, every CRC right, identity markers
+# a full package from that app (cut to pxpkg's slot, with the repository's EQ file, which its room is sized for): parses,
+# every CRC right, identity markers
+app = app[:pxpkg.APP_SLOT]
+eq = pxpkg.sdk_files(None, Path(__file__).resolve().parents[1] / "firmware" / "sdk" / "packager")["cfg/eq_cfg_hw.bin"]
 sdk = {"uboot.boot": dec[0xA0:0xA0 + 0x3830], "cfg_tool.bin": cfg_tool, "cfg/eq_cfg_hw.bin": eq}
 pkg = pxpkg.ufw(pxpkg.flash_image(app, sdk), b"OTA" * 100, "PocketX_924")
 assert pxpkg.product_of(pkg) == "PocketX_924"

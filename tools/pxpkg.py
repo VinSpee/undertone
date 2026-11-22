@@ -11,7 +11,7 @@
 #       -> OUTDIR/starter-PocketX_901.fwsc, OUTDIR/starter-BlackBox_901.fwsc, and a manifest.json that says which
 #          product they are ("app": its id, name, version and what it can do, read from the image itself)
 #
-# Package = JieLi UFW image: flash.bin (the whole [0, 0xA3000) image the update loader writes from 0x4000 up) and
+# Package = JieLi UFW image: flash.bin (the image [0, 0x4000 + AREA_LEN) the update loader writes from 0x4000 up) and
 # ota.bin (the update loader, loader/). The flash head [0, 0x4000) is the JieLi SDK default (flash header, SDK SPL
 # uboot.boot, an isd_config blob that decodes to the chip key): the OpenPocket loader never writes it.
 # The app area: app_area_head, app.bin, cfg_tool.bin, the Pocket X region descriptors (VM, PRCT, BTIF, USR) and the
@@ -30,18 +30,21 @@ import struct
 from pathlib import Path
 
 KEY = 0x980F                      # chip key of the Pocket X / BlackBox (and FM-1): isd_config.ini in the flash head
-AREA_END = 0xA3000                # end of the app area (PRCT) in PocketX_016; the loader writes [0x4000, AREA_END)
-APP_SLOT = 0x9D740                # app.bin slot in PocketX_016 (the XIP window the SPL maps at 0x02000120)
+AREA_LEN = 0x99000                # the app area's room on both flash heads: [0x4000, 0x9D000) on the old one,
+                                  # [0x6000, 0x9F000) on BlackBox V22 and later, whose stock settings begin at 0x9F000.
+                                  # The area's bytes do not depend on its address, so one package serves both heads
+APP_SLOT = 0x98820                # app.bin slot: the largest that keeps the area within AREA_LEN (PocketX_016: 0x9D740)
 FLASH_HDR = bytes.fromhex("20022f104cc900f00f001010a4ff4e5d0b41e0cd781dc856417fb367cf9f")   # = PocketX_016's
 UFW_CHIP = b"AC791N"
 PRODUCT_MARK = b"OP-PRODUCT:"     # firmware: const char OP_PRODUCT[32] = "OP-PRODUCT:" + identity
 APP_MARK = b"OP-APP:\0"            # firmware: const op_app_t OP_APP = {"OP-APP:", id, name, version, caps, editor}
 APP_CAPS = ("stereo", "usb-audio", "midi", "store")      # op_app_t.caps, bit 0 first (OP_CAP_*)
 MODELS = ("PocketX", "BlackBox")
-# region descriptors exactly as PocketX_016 has them (16-byte name fields include the SDK packer's trailing bytes)
+# region descriptors exactly as PocketX_016 has them (16-byte name fields include the SDK packer's trailing bytes); the
+# JieLi SDK's own firmware reads them, OpenPocket's does not
 REGIONS = [
     (0xA3000, 0x1B000, 0x12, 0x81, 0, bytes.fromhex("564d00ffffffffffffffffff00800000")),   # VM
-    (0x00000, AREA_END, 0x92, 0x82, 0, bytes.fromhex("5052435400ffffffffffffff434f4445")),  # PRCT "CODE"
+    (0x00000, 0xA3000, 0x92, 0x82, 0, bytes.fromhex("5052435400ffffffffffffff434f4445")),   # PRCT "CODE"
     (0xBE000, 0x01000, 0x92, 0x81, 0, bytes.fromhex("4254494600ffffffffffffff4155544f")),  # BTIF "AUTO"
     (0xBF000, 0x40000, 0x92, 0x81, 1, b"USR"),
 ]
@@ -118,17 +121,17 @@ def sdk_files(sdk, flat=None):
     return out
 
 
-def app_area(app, cfg_tool, eq, key=KEY):
-    """the app area [0x4000, ...) as the SPL reads it, SFC-encrypted (relative offsets from 0x4000)"""
-    if len(app) > APP_SLOT:
-        raise SystemExit(f"pxpkg: app is {len(app)} B, the slot is {APP_SLOT} B")
-    app = app + b"\xFF" * (APP_SLOT - len(app))
-    blk = 0x120 + APP_SLOT + len(cfg_tool)
+def app_area(app, cfg_tool, eq, key=KEY, slot=APP_SLOT):
+    """the app area as the SPL reads it, SFC-encrypted (offsets relative to its start: 0x4000 or 0x6000)"""
+    if len(app) > slot:
+        raise SystemExit(f"pxpkg: app is {len(app)} B, the slot is {slot} B")
+    app = app + b"\xFF" * (slot - len(app))
+    blk = 0x120 + slot + len(cfg_tool)
     area = bytearray(b"\xFF" * blk)
-    area[0x120:0x120 + APP_SLOT] = app
-    area[0x120 + APP_SLOT:blk] = cfg_tool
-    ents = [entry(crc16(app), 0x120, APP_SLOT, 0x82, 0xFF, 0, "app.bin"),
-            entry(crc16(cfg_tool), 0x120 + APP_SLOT, len(cfg_tool), 0x82, 0xFF, 0, "cfg_tool.bin")]
+    area[0x120:0x120 + slot] = app
+    area[0x120 + slot:blk] = cfg_tool
+    ents = [entry(crc16(app), 0x120, slot, 0x82, 0xFF, 0, "app.bin"),
+            entry(crc16(cfg_tool), 0x120 + slot, len(cfg_tool), 0x82, 0xFF, 0, "cfg_tool.bin")]
     ents += [entry(0xFFFF, a, n, fl, rs, ix, nm) for a, n, fl, rs, ix, nm in REGIONS]
     area[32:32 + 32 * len(ents)] = b"".join(ents)
     area[0:32] = entry(crc16(area[32:blk]), 0x02000120, blk, 0x83, 0xFF, 0, "app_area_head")
@@ -137,15 +140,13 @@ def app_area(app, cfg_tool, eq, key=KEY):
     cfg = entry(crc16(cfg_body), 0x20, 0x20 + len(cfg_body), 0x83, 0xFF, 1, "cfg") + cfg_body
     region = bytearray(area + cfg)
     sfc(region, 0, len(region), 0, key)
-    if 0x4000 + len(region) > AREA_END:
-        raise SystemExit(f"pxpkg: app area ends at 0x{0x4000 + len(region):x}, past 0x{AREA_END:x}")
     return bytes(region)
 
 
 def flash_image(app, sdk, key=KEY):
     spl, cfg_tool, eq = sdk["uboot.boot"], sdk["cfg_tool.bin"], sdk["cfg/eq_cfg_hw.bin"]
     isd = key_blob(key) + b"[OPENPOCKET]\r\n"
-    f = bytearray(b"\xFF" * AREA_END)
+    f = bytearray(b"\xFF" * (0x4000 + AREA_LEN))
     spl_off = 0xA0
     isd_off = spl_off + len(spl)
     assert isd_off + len(isd) <= 0x4000
@@ -160,6 +161,8 @@ def flash_image(app, sdk, key=KEY):
         enc(head, o, 32)
     f[0:len(head)] = head
     region = app_area(app, cfg_tool, eq, key)
+    if len(region) > AREA_LEN:
+        raise SystemExit(f"pxpkg: the app area is 0x{len(region):x} B, past its room of 0x{AREA_LEN:x} B")
     f[0x4000:0x4000 + len(region)] = region
     return bytes(f)
 

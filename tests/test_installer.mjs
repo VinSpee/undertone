@@ -60,6 +60,7 @@ ok(productOf(px) === "PocketX_924" && productOf(bb) === "BlackBox_924", "package
   ok(sim.log.some((l) => /step2 rc=0/.test(l)), "step 2: the loader wrote the app area");
   const after = flashOf(dump), before = flashOf(join(TMP, "flash_old.bin"));
   ok(after.subarray(0, 0x4000).equals(before.subarray(0, 0x4000)), "flash head [0, 0x4000) untouched");
+  ok(after.subarray(0x9D000, 0xA3000).equals(before.subarray(0x9D000, 0xA3000)), "only the package's app area [0x4000, 0x9D000) written");
   ok(after.subarray(0xC0000, 0xC0010).toString() === "STOCK USER DATA!", "user data above the app area untouched");
   ok(after.subarray(0xE0000, 0xE5000).every((b) => b === 0xFF), "staging area erased afterwards");
   ok(py(appOf, dump, join(ROOT, "tools")) === "PocketX_924 CRC-OK", "flash now holds app PocketX_924, every CRC right");
@@ -202,6 +203,19 @@ ok(productOf(px) === "PocketX_924" && productOf(bb) === "BlackBox_924", "package
   ok(err && sim.log.some((l) => /step2 rc=-12/.test(l)), "damaged flash.bin: the loader stops (CRC, rc -12)");
   ok(flashOf(dump).subarray(0x4000, 0xA3000).equals(flashOf(join(TMP, "flash_old.bin")).subarray(0x4000, 0xA3000)),
      "damaged package: nothing in the app area erased");
+}
+
+// 5b. a package whose app area runs past the slot the pedal's head leaves (0xA3000): refused before anything is erased
+{
+  const dump = join(TMP, "too_long.bin");
+  const sim = simAccess([join(TMP, "flash_old.bin"), "--dump", dump]);
+  await sim.ready;
+  let err = null;
+  try { await new Updater(sim.access, null, { ...FAST, step2Idle: 1500 }).install(logicalImage(pkg("too_long.fwsc")), "PocketX_924", () => {}); } catch (e) { err = e; }
+  const code = await sim.end();
+  ok(err && sim.log.some((l) => /step2 rc=-14/.test(l)), "a package longer than the head's slot: the loader stops (rc -14)");
+  ok(code === 0 && flashOf(dump).subarray(0x4000, 0xA3000).equals(flashOf(join(TMP, "flash_old.bin")).subarray(0x4000, 0xA3000)),
+     "a package longer than the head's slot: nothing in the app area erased");
 }
 
 // 6a. rescue mode (issue #1): the first pedal that answers gets the package of its model at once
