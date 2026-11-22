@@ -71,10 +71,10 @@ commands in the same framing, which that product documents. An editor written fo
 
 ### NAM models (protocol 2)
 
-The AMP block's ninth type, `NAM`, plays a neural amp model (NAM A2, its 3-channel "Lite" size, 1871 weights:
+The AMP block's type `NAM` (type 8 up to store format 6, type 0 and the only one since) plays a neural amp model (NAM A2, its 3-channel "Lite" size, 1871 weights:
 `engine/px_nam.h`). Its first parameter, MODEL, picks one of 28 models: 0..11 the factory ones (in the firmware),
 12..27 the 16 user slots in the pedal's flash (`firmware/px_models.h`, 0xC0000..0xE0000, kept by firmware updates).
-`TEXTS` of AMP type 8, parameter 0 gives each value's model name; the editor asks for it again after a change of
+`TEXTS` of the `NAM` type, parameter 0 gives each value's model name; the editor asks for it again after a change of
 the user slots.
 
 A user model is 7548 bytes, little endian: a 64-byte header, then the 1871 weights as float32 in the `.nam`
@@ -128,10 +128,10 @@ The Bluetooth test image has no USB audio: it answers `0, 1, 0, 0`.
 
 ### Cabinet IRs (protocol 3)
 
-The CAB block's eighth type, `USER IR`, plays a cabinet impulse response (`engine/px_dsp.c`: uniform partitioned FFT
+The CAB block's type `USER IR` (type 7 up to store format 6, type 0 and the only one since) plays a cabinet impulse response (`engine/px_dsp.c`: uniform partitioned FFT
 convolution, 1024 taps at 44.1 kHz). Its settings: IR (the slot, 0..7), LOW CUT (20..400 Hz), HIGH CUT (20 kHz..2 kHz).
-The 8 slots are in the pedal's flash (`firmware/px_irs.h`, 0xF4000..0xFC000, kept by firmware updates). `TEXTS` of CAB
-type 7, parameter 0 gives each value's IR name.
+The 8 slots are in the pedal's flash (`firmware/px_irs.h`, 0xF4000..0xFC000, kept by firmware updates). `TEXTS` of the
+`USER IR` type, parameter 0 gives each value's IR name.
 
 An IR is 2112 bytes, little endian: a 64-byte header, then 1024 samples as int16 (sample k = s[k] / 32767 x scale).
 
@@ -148,7 +148,7 @@ An IR is 2112 bytes, little endian: a 64-byte header, then 1024 samples as int16
 The editor (`docs/pxir.js`) reads a WAV file (PCM 8 / 16 / 24 / 32-bit or float, any rate, mono or stereo: the first
 channel), drops the silence before its onset, resamples it to 44.1 kHz (windowed sinc), keeps 1024 samples (a 64-sample
 fade at the end when the response is longer), then sends 19 `IR_WRITE` and one `IR_COMMIT`. The pedal sets the level
-itself: every IR plays at the energy of the modelled cabinets.
+itself: every IR is scaled to the same energy.
 
 Writing the flash (`SLOT_PUT` with bit 1, `COMMIT`, `SAVE`, `NAM_COMMIT`, `NAM_ERASE`, `IR_COMMIT`, `IR_ERASE`) mutes
 the sound for a moment, as

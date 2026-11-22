@@ -1,5 +1,5 @@
 #!/bin/sh
-# OpenPocket: is this tree's engine bit-identical to commit REF's? (tests/engine/equiv.c: 852 runs hashed)
+# OpenPocket: is this tree's engine bit-identical to commit REF's? (tests/engine/equiv.c: 702 runs hashed)
 #   tests/equiv.sh REF        e.g. tests/equiv.sh origin/openpocket-v40-ram-dsp
 # Both engines are built as the pedal builds them: -fno-builtin (the pedal has no square-root instruction: px_math.c's
 # sqrtf) and -ffp-contract=off (it does not fuse a multiply with an add), with firmware/px_math.c as the libm. A PC

@@ -396,9 +396,8 @@ static void audio_apply(void)                          /* the preset to the engi
         /* trails: a preset loaded whose delay or reverb is to ring out goes the full way, where the trails are made
          * (a knob turned never does: it glides) */
         if (ch == PX_CH_KNOBS && !(a_pload && px_trail_due(&g_eng, &pp))) {
-            px_engine_prepare(&g_eng, &pp);            /* the cabinet's heavy part, here, while the audio plays */
             a_kp = pp;
-            __asm__ volatile("" ::: "memory");          /* (a_kp and the cabinet store written before the flag) */
+            __asm__ volatile("" ::: "memory");          /* (a_kp written before the flag) */
             a_kpend = 1;
             return;
         }

@@ -33,7 +33,7 @@ EXPORT(px_apply) void px_apply(void)                  /* v38: as the pedal: knob
     static char name[sizeof preset.name];
     const int load = memcmp(preset.name, name, sizeof name) != 0;
     memcpy(name, preset.name, sizeof name);
-    if (ch == PX_CH_KNOBS && !(load && px_trail_due(&g_eng, &preset))) { px_engine_prepare(&g_eng, &preset); px_engine_knobs(&g_eng, &preset); }
+    if (ch == PX_CH_KNOBS && !(load && px_trail_due(&g_eng, &preset))) px_engine_knobs(&g_eng, &preset);
     else if (ch != PX_CH_NONE) px_engine_switch(&g_eng, &preset);
 }
 EXPORT(px_reset) void px_reset(void) { px_engine_init(&g_eng, 44100.0f); px_engine_set(&g_eng, &preset); a_nan = 0; }

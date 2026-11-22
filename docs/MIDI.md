@@ -69,8 +69,8 @@ block with its on/off number.
 
 CC **7** (volume) sets the MASTER volume, 0 to 127 to 0 to 100, like the MASTER knob (turning the knob takes over again).
 
-What the "setting" numbers mean depends on the model (the screen shows the names): for the AMP they are GAIN, BASS, MID,
-TREBLE, PRESENCE; setting 3 of GATE is the preset LEVEL (50 = 0 dB); setting 1 of DELAY is TIME. Only the settings the model
+What the "setting" numbers mean depends on the model (the screen shows the names): for the AMP they are MODEL, GAIN,
+BASS, MID, TREBLE (the AMP and the CAB have one model each, NAM and USER IR, so their Model CC changes nothing); setting 3 of GATE is the preset LEVEL (50 = 0 dB); setting 1 of DELAY is TIME. Only the settings the model
 has do anything; the others are stored and ignored. See [SOUNDS-AND-CONTROLS.md](SOUNDS-AND-CONTROLS.md) and
 [EDITOR-PROTOCOL.md](EDITOR-PROTOCOL.md).
 
@@ -87,7 +87,7 @@ number is unique, reserved ones are free, and a value sent by one pedal is appli
 The editor's **MIDI** section ([`docs/editor.html`](editor.html), `docs/edmidi.js`, `docs/pxmidi.js`) does three things:
 
 - **The map, named for the current preset.** The table above with each setting's name in the preset on the pedal
-  (setting 1 of the AMP is GAIN for a fitted amp and MODEL for NAM), and the settings a type does not have marked.
+  (setting 1 of the AMP is MODEL), and the settings a type does not have marked.
 - **Learned controls.** For a controller plugged into the computer, not into the pedal: click a control in the table,
   then move a knob or press a switch on the controller. From then on the page passes that Control Change on to the
   pedal as an editor command (`SET`, `SELECT`), scaled as the pedal scales its own. A switch can flip on each press or

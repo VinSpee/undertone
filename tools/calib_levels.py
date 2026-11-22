@@ -2,9 +2,10 @@
 # SPDX-License-Identifier: GPL-3.0-only
 # OpenPocket — level calibration (v36) -> engine/px_trim.h. Loudness = ITU-R BS.1770 (K-weighted, gated) of real DI
 # guitar at the pedal's level (x 0.15: hard playing peaks about -17 dBFS at the converter).
-#  - amps: amp + 1x12 US OPEN, tone at noon, GAIN 0..100: noon at TARGET LUFS for every amp, +-3 dB over the knob
-#  - cabinets: each one at the level of the 1x12 (TWIN at noon in front)
-#  - every other type (knobs at noon, in front of / after TWIN at noon): switching it on keeps the loudness
+#  - every type of the effect blocks (knobs at noon, in front of / after the NAM model TWIN at noon): switching it on
+#    keeps the loudness
+# The numbers in px_trim.h were measured in v36 round the built-in TWIN amp and 1x12 cabinet, which store format 6
+# removed; a new run measures them round the NAM model, so it changes them.
 #   python3 tools/calib_levels.py DI.wav [DI2.wav ...]
 import os, re, subprocess, sys
 import numpy as np
@@ -13,11 +14,11 @@ from scipy import signal
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SR = 44100
 TARGET = -23.0                      # LUFS at noon (EBU R128; engine output, before the master volume): headroom for cleans
-RISE = 6.0                          # dB from GAIN 0 to GAIN 100
 EXE = os.path.join(ROOT, "build", "lvl_chain")
 TRIM = os.path.join(ROOT, "engine", "px_trim.h")
 B = dict(GT=0, CMP=1, PIT=2, SFX=3, DRV=4, AMP=5, CAB=6, EQ=7, MOD=8, DLY=9, REV=10, SYN=11)
-NT = dict(CMP=4, PIT=5, SFX=7, DRV=4, CAB=7, MOD=11, DLY=8, REV=8, SYN=11)
+NT = dict(CMP=4, PIT=5, SFX=7, DRV=4, MOD=11, DLY=8, REV=8, SYN=11)
+TWIN = 1                            # the AMP block's MODEL knob for the first factory NAM model, TWIN (px_nam_knob(0))
 
 
 def kweight(x):
@@ -60,49 +61,33 @@ def loud(dis, blocks):
 def write(t):
     f = lambda v: "{" + ", ".join("%.2ff" % x for x in v) + "}"
     s = open(TRIM).read()
-    s = re.sub(r"(AMP_LVL\[PX_AMP_COUNT\]\[11\] = )\{.*?\};", lambda m: m.group(1) + "{\n    " + ",\n    ".join(f(r) for r in t["AMP"]) + "};", s, flags=re.S)
     for k in NT:
-        s = re.sub(r"(%s_DB\[PX_%s_COUNT\] = )\{[^}]*\};" % (k, {"CMP": "CMP", "PIT": "PIT", "SFX": "SFX", "DRV": "DRV", "CAB": "CAB", "MOD": "MOD", "DLY": "DLY", "REV": "REV", "SYN": "SYN"}[k]),
-                   lambda m: m.group(1) + f(t[k]) + ";", s)
+        s = re.sub(r"(%s_DB\[PX_%s_COUNT\] = )\{[^}]*\};" % (k, k), lambda m: m.group(1) + f(t[k]) + ";", s)
     open(TRIM, "w").write(s)
 
 
 def main():
     dis = sys.argv[1:]
     if not dis: sys.exit(__doc__ or "usage: calib_levels.py DI.wav [...]")
-    t = {"AMP": [[0.0] * 11 for _ in range(8)]}
-    t.update({k: [0.0] * n for k, n in NT.items()})
+    t = {k: [0.0] * n for k, n in NT.items()}
     write(t); build()
     noon = [50] * 5
-    cab0 = (B["CAB"], 0, noon)
-    # 1. amps over the GAIN knob
-    for a in range(8):
-        for i, g in enumerate(range(0, 101, 10)):
-            l = loud(dis, [(B["AMP"], a, [g, 50, 50, 50, 50]), cab0])
-            t["AMP"][a][i] = round(TARGET + RISE * (g / 100.0 - 0.5) - l, 2)
-        print("amp %d:" % a, " ".join("%+.1f" % v for v in t["AMP"][a]), flush=True)
-    write(t); build()
-    amp = (B["AMP"], 0, noon)
-    ref = loud(dis, [amp, cab0])
-    print("TWIN at noon + 1x12: %.2f LUFS" % ref)
-    # 2. cabinets
-    for c in range(NT["CAB"]):
-        t["CAB"][c] = round(ref - loud(dis, [amp, (B["CAB"], c, noon)]), 2)
-    print("cabs:", t["CAB"]); write(t); build()
-    # 3. the other blocks, twice (blocks in front of the amp see its slight curve)
+    amp = (B["AMP"], 0, [TWIN, 50, 50, 50, 50])
+    ref = loud(dis, [amp])
+    print("NAM TWIN at noon: %.2f LUFS" % ref)
+    # every block's types, twice (blocks in front of the amp see its slight curve)
     for it in range(2):
-        for k in ("CMP", "PIT", "SFX", "SYN", "DRV", "MOD", "DLY", "REV"):
+        for k in NT:
             for ty in range(NT[k]):
-                l = loud(dis, [amp, cab0, (B[k], ty, noon)])
+                l = loud(dis, [amp, (B[k], ty, noon)])
                 t[k][ty] = round(float(np.clip(t[k][ty] + ref - l, -15, 15)), 2)
             print(it, k, t[k], flush=True)
         write(t); build()
     # check
     worst = 0.0
-    for k in ("CMP", "PIT", "SFX", "SYN", "DRV", "MOD", "DLY", "REV", "CAB"):
+    for k in NT:
         for ty in range(NT[k]):
-            ch = [amp, (B[k], ty, noon)] if k == "CAB" else [amp, cab0, (B[k], ty, noon)]
-            worst = max(worst, abs(loud(dis, ch) - ref))
+            worst = max(worst, abs(loud(dis, [amp, (B[k], ty, noon)]) - ref))
     print("largest remaining difference: %.2f dB" % worst)
 
 

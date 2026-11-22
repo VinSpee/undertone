@@ -225,9 +225,9 @@ Driver setup: `iis_open` IIS_PORTA, channel_in = BIT(1), channel_out = BIT(0), m
 
 ## v34: amps, drives and the V30 cab fitted to captures
 - The 29 amps / 27 drives / 15 cabinets voiced by ear make way for 8 amps, 4 drives and 7 cabinets whose numbers are
-  fitted by computer to Neural Amp Modeler captures of the real units, on real DI guitar
-  ([FITTED-MODELS.md](FITTED-MODELS.md)). Same engine, same CPU (+3 % on average, the heaviest preset a little
-  lighter), only the tables change.
+  fitted by computer to Neural Amp Modeler captures of the real units, on real DI guitar (the fitting tools and their
+  notes were removed with the built-in amps and cabinets: store format 6, at the end). Same engine, same CPU (+3 % on
+  average, the heaviest preset a little lighter), only the tables change.
 - Presets saved before v34 are converted at boot to the nearest new type (store format 3, `px_type_v34`); the other
   blocks are untouched. Six factory presets are renamed (their old amp no longer exists).
 
@@ -349,3 +349,26 @@ Driver setup: `iis_open` IIS_PORTA, channel_in = BIT(1), channel_out = BIT(0), m
   preset (within one step of the 16-bit delay memory, wherever the write index is), the lanes, the two-core pipeline,
   the ends, the cases without room, and changes at random with the stretches checked (never overlapping, free ticks
   zero) under the address sanitizer.
+
+## Store format 6 (after v42): the built-in amps and cabinets removed
+- The AMP block plays NAM only and the CAB block USER IR only: the 8 built-in amps (tube stages, tone stack, power
+  amp, sag), the 6 built-in cabinets with DI (NO CAB), and the tools and notes that fitted them to captures are gone.
+  The 4 drives keep their numbers and their code (oversampled x4, x2 before a NAM amp). Gone with them: the
+  oversampling set that a drive used when a built-in amp oversampled on its own, the integer filters that only the
+  cabinet used (`px_fx_int`, the hand loop `px_fq_asm`), and `px_engine_prepare()`, which made the cabinet's
+  normalisation outside the audio interrupt (`formal/KnobHandoff.tla` lost that step).
+- A chain of NAM, USER IR, drives and the other effects sounds as before, bit for bit: 240 runs of random presets
+  (types, settings, order, blocks on or off, knob changes while playing, the two-core pipeline and the wet lanes)
+  hash the same with this engine and the one before, the types renumbered (AMP NAM 8 -> 0, CAB USER IR 7 -> 0).
+- Saved presets (store format 1..5) are converted at boot by `px_preset_v34_set()`: a built-in amp becomes the
+  factory NAM model trained on the same amp's capture (TWIN, AC15, JCM900, JCM2000, MARK IV, SHIRLEY, PRO MOD, 5150),
+  its GAIN, BASS, MID and TREBLE kept; a built-in cabinet becomes USER IR in slot IR1 with its cuts off, on or off as
+  it was; DI on becomes the CAB block off and the preset LEVEL +9 steps (2.7 dB, DI's +2.6 dB trim). The editor does
+  the same with a preset file that names a removed type (`docs/pxedit.js`, `V34_AMPS`, `V34_CABS`).
+- The factory presets' CAB block is USER IR in IR1. While the slot is empty it passes the sound, which measured 0 to
+  6.1 dB quieter than with the built-in cabinet (`docs/nam_di.wav`, the most on DOOM and the V30 presets): each
+  preset's LEVEL is raised by that much, so out of the box every preset plays within 0.15 dB of its earlier loudness.
+  Without a cabinet the peaks are higher: on that clip KLON CRUNCH reaches +1.4 dBFS and SWEDE DEATH +0.7 dBFS (before:
+  -0.9 and -3.5), which the soft limiter allows (it rounds off towards 1.2).
+- Image: 368,608 -> 355,636 bytes. RAM code 77,564 -> 72,104 bytes (17,952 free in its window), RAM 19,944 -> 21,244
+  bytes free, the pool tail 2,048 -> 1,024 bytes. The engine's struct: 165,644 -> 164,288 bytes on the PC.

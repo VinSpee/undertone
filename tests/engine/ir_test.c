@@ -98,7 +98,8 @@ int main(void)
         for (int i = 0; i < 64; i++) x[i] = 0.1f;
         for (int b = 0; b < 20; b++) px_engine_process(&E, x, y, 64);
         CHECK(fabsf(y[63]) > 0.0f && fabsf(y[63]) < 1.0f, "an empty slot passes");
-        printf("CAB types: %d, the last \"%s\" with %d settings: %s, %s, %s\n", px_ntypes(PX_B_CAB), px_type_name(PX_B_CAB, PX_CAB_IR),
+        CHECK(px_ntypes(PX_B_CAB) == 1 && px_ntypes(PX_B_AMP) == 1, "the CAB block plays USER IR only, the AMP block NAM only");
+        printf("CAB types: %d, \"%s\" with %d settings: %s, %s, %s\n", px_ntypes(PX_B_CAB), px_type_name(PX_B_CAB, PX_CAB_IR),
                px_nparams(PX_B_CAB, PX_CAB_IR), px_param_name(PX_B_CAB, PX_CAB_IR, 0), px_param_name(PX_B_CAB, PX_CAB_IR, 1),
                px_param_name(PX_B_CAB, PX_CAB_IR, 2));
     }

@@ -468,7 +468,7 @@ int main(void)
                         if (b == PX_B_AMP) continue;
                         if (RND(4)) p.p[b][k] = (uint8_t)v; else p.on[b] ^= 1;
                         const int ch = px_engine_change(&E, &p);
-                        if (ch == PX_CH_KNOBS) { px_engine_prepare(&E, &p); px_engine_knobs(&E, &p); }
+                        if (ch == PX_CH_KNOBS) px_engine_knobs(&E, &p);
                         else if (ch == PX_CH_FULL) px_engine_switch(&E, &p);
                     }
                     invariants("after a change");

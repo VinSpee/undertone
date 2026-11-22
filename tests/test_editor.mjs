@@ -61,10 +61,25 @@ ok(info && info.nblk === 12 && info.npar === 5 && info.nslot === 52 && info.name
 const t0 = Date.now();
 const cat = await ed.catalog();
 const ntypes = cat.blocks.reduce((n, b) => n + b.types.length, 0);
-ok(cat.blocks.length === 12 && cat.blocks[5].label === "AMP" && cat.blocks[5].types.length === 9 && cat.blocks[5].types[8].name === "NAM", `catalogue: 12 blocks, ${ntypes} types (${Date.now() - t0} ms)`);
+ok(cat.blocks.length === 12 && cat.blocks[5].label === "AMP" && cat.blocks[5].types.length === 1 && cat.blocks[5].types[0].name === "NAM" &&
+   cat.blocks[6].label === "CAB" && cat.blocks[6].types.length === 1 && cat.blocks[6].types[0].name === "USER IR", `catalogue: 12 blocks, ${ntypes} types (${Date.now() - t0} ms)`);
 ok(cat.blocks[11].label === "SYN" && cat.blocks[11].color === "#ff1494", `catalogue: the SYN block and its tile colour (${cat.blocks[11].color})`);
 const withTexts = cat.blocks.flatMap((b) => b.types.flatMap((t) => t.params.filter((p) => p.texts))).length;
 ok(withTexts > 0 && cat.blocks[9].types[0].params.some((p) => p.texts && p.texts.some((x) => /ms|\d/.test(x))), `catalogue: value texts for ${withTexts} parameters (delay time...)`);
+{ // a cached catalogue is used only when the pedal's blocks match it (store format 6 changed AMP and CAB under v42)
+  const store = new Map(), key = `openpocket-cat-${info.identity}-${info.version}`;
+  const stale = JSON.parse(JSON.stringify(cat));
+  stale.blocks[5].types = Array.from({ length: 9 }, (_, i) => ({ name: i === 8 ? "NAM" : `AMP ${i}`, params: [{ name: "GAIN", texts: null }] }));
+  globalThis.localStorage = { getItem: (k) => store.get(k) ?? null, setItem: (k, v) => store.set(k, v) };
+  store.set(key, JSON.stringify(stale));
+  const fresh = await ed.catalog();
+  const same = JSON.parse(store.get(key)); same.blocks[0].name = "FROM CACHE"; store.set(key, JSON.stringify(same));
+  const again = await ed.catalog();
+  ok(fresh.blocks[5].types.length === 1 && fresh.blocks[5].types[0].name === "NAM" && again.blocks[0].name === "FROM CACHE",
+     "catalogue: a cached one with other blocks is read again from the pedal; one that matches is used");
+  globalThis.localStorage = { getItem: () => null, setItem: () => {} };
+  await ed.catalog();
+}
 let st = await ed.state();
 ok(st.slot === 0 && !st.dirty && st.preset.name.length > 0, `STATE: slot 1 "${st.preset.name}", not changed`);
 
@@ -74,7 +89,7 @@ const v1 = await ed.setParam(amp, 0, 77);
 st = await ed.state();
 ok(v1 === 77 && st.preset.p[amp][0] === 77 && st.dirty, "SET: AMP's 1st knob = 77, the sound is now changed (*)");
 ok(await ed.setParam(amp, 1, 120) === 100, "SET: a value above 100 is clamped to 100");
-ok(await ed.setType(amp, 99) === 8, "SET: a type out of range is clamped to the last one (NAM)");
+ok(await ed.setType(amp, 99) === 0, "SET: a type out of range is clamped to the last one (NAM, the AMP block's only one)");
 await ed.setOn(9, 1);
 ok((await ed.state()).preset.on[9] === 1, "SET: the delay switched on");
 ok(await ed.name("my toneé longer than thirteen") === "my tone? long", "NAME: 13 characters at most, other characters become ?");
@@ -139,9 +154,20 @@ ok(r.warn.length === 0 && JSON.stringify(r.preset) === JSON.stringify(q), "file:
 const odd = presetFromJSON({ name: "X", blocks: [{ block: "AMP", on: true, type: "NO SUCH AMP", params: [1, 2, 3] }, { block: "FOO" }] }, cat, q);
 ok(odd.warn.length === 2 && odd.preset.p[amp][0] === 1, "file: unknown type and block are reported, the rest comes through");
 const v33 = presetFromJSON({ name: "OLD", blocks: [{ block: "AMP", on: true, type: "RECTIFIED" }, { block: "DRV", on: true, type: "MUFF PI" }, { block: "CAB", on: true, type: "4x12 H30" }] }, cat, q);
-const tn = (b, t) => cat.blocks[b].types[t].name;
-ok(v33.warn.length === 3 && tn(amp, v33.preset.type[amp]) === "5150" && tn(4, v33.preset.type[4]) === "M77 OD" && tn(6, v33.preset.type[6]) === "4x12 V30",
-   "file: a v33 preset file -> the nearest v34 amp / drive / cab, each one reported");
+const tn = (b, t) => cat.blocks[b].types[t].name, model = (q) => cat.blocks[amp].types[0].params[0].texts[q.p[amp][0]];
+const ir1 = (q) => cat.blocks[6].types[0].params[0].texts[q.p[6][0]] === cat.blocks[6].types[0].params[0].texts[0];
+ok(v33.warn.length === 5 && tn(amp, v33.preset.type[amp]) === "NAM" && model(v33.preset) === "5150" && tn(4, v33.preset.type[4]) === "M77 OD" &&
+   tn(6, v33.preset.type[6]) === "USER IR" && ir1(v33.preset) && v33.preset.on[6] === 1,
+   "file: a v33 preset file -> the v34 amp / drive / cab -> NAM 5150, M77 OD, USER IR in IR1, each step reported");
+// store format 6: a file of v34..v42 naming a built-in amp or cabinet
+const v36 = presetFromJSON({ name: "OLD 36", v: 36, blocks: [{ block: "GT", on: true, type: "NOISE GATE", params: [40, 20, 50, 0, 0] },
+  { block: "AMP", on: true, type: "JCM900", params: [60, 40, 55, 70, 80] }, { block: "CAB", on: true, type: "DI (NO CAB)", params: [50, 50, 50, 0, 0] }] }, cat, q);
+ok(v36.warn.length === 2 && tn(amp, v36.preset.type[amp]) === "NAM" && model(v36.preset) === "JCM900" && v36.preset.p[amp].slice(1).join() === "60,40,55,70" &&
+   tn(6, v36.preset.type[6]) === "USER IR" && v36.preset.on[6] === 0 && v36.preset.p[0][2] === 59,
+   "file: a built-in amp -> its NAM model (GAIN, BASS, MID, TREBLE kept); DI -> the CAB block off, LEVEL +2.7 dB");
+const v42 = presetFromJSON({ name: "OLD 42", v: 36, blocks: [{ block: "CAB", on: false, type: "4x12 V30", params: [60, 40, 40, 0, 0] }] }, cat, q);
+ok(v42.warn.length === 1 && tn(6, v42.preset.type[6]) === "USER IR" && ir1(v42.preset) && v42.preset.on[6] === 0 && v42.preset.p[6].slice(1, 3).join() === "0,0",
+   "file: a built-in cabinet -> USER IR in IR1, its cuts off, on or off as it was");
 const dl = cat.blocks.findIndex((b) => b.label === "DLY");
 const oldDly = presetFromJSON({ name: "ECHO", blocks: [{ block: "DLY", on: true, type: "TAPE EP-3", params: [50, 30, 20, 50, 50] }] }, cat, q);
 const newDly = presetFromJSON(presetToJSON(oldDly.preset, cat), cat, q);
@@ -200,7 +226,7 @@ list = await ed.list();
   await ed.namTexts();
   const texts = ed.cat.blocks[amp].types[nt].params[0].texts;
   const kv = texts.indexOf("MY TEST ");
-  ok(nt === 8 && kv >= 0, `NAM: the AMP block's NAM type offers it as a MODEL (knob ${kv})`);
+  ok(nt === 0 && kv >= 0, `NAM: the AMP block's NAM type offers it as a MODEL (knob ${kv})`);
   await ed.setType(amp, nt);
   ok(await ed.setParam(amp, 0, kv) === kv && (await ed.state()).preset.type[amp] === nt, "NAM: a sound uses it");
   const bad = packModel(m.name, m.weights, lv); bad[64 + 100] ^= 0x55;           // a weight changed: the CRC no longer matches
@@ -249,7 +275,7 @@ list = await ed.list();
   const cabB = cat.blocks.findIndex((b) => b.label === "CAB"), it = cat.blocks[cabB].types.findIndex((t) => t.name === "USER IR");
   await ed.irTexts();
   const texts = ed.cat.blocks[cabB].types[it].params[0].texts, kv = texts.indexOf("MESA 4X1");
-  ok(it === 7 && kv >= 0 && ed.cat.blocks[cabB].types[it].params.map((p) => p.name).join() === "IR,LOW CUT,HIGH CUT",
+  ok(it === 0 && kv >= 0 && ed.cat.blocks[cabB].types[it].params.map((p) => p.name).join() === "IR,LOW CUT,HIGH CUT",
      `IR: the CAB block's USER IR type offers it (knob ${kv})`);
   await ed.setType(cabB, it);
   ok(await ed.setParam(cabB, 0, kv) === kv && (await ed.state()).preset.type[cabB] === it, "IR: a sound uses it");
