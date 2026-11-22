@@ -1,8 +1,8 @@
 # Build and packages
 
 ## Sub-features
-- `firmware/openpocket.bin` (the app), the update loader (`build/loader/ota.bin`), `PocketX_9NN.fwsc` and `BlackBox_9NN.fwsc`, `manifest.json`.
-- Deterministic output: `build/SHA256SUMS`.
+- In `build/apps/gamut/`: `openpocket.bin` (the app), the update loader (`build/loader/ota.bin`), `PocketX_9NN.fwsc` and `BlackBox_9NN.fwsc`, `manifest.json`.
+- Deterministic output: `build/apps/gamut/SHA256SUMS`.
 
 ## How to get to it (user POV)
 A maintainer runs `build.bat` / `make package`; a user downloads the packages and the installer page uses them.
@@ -12,5 +12,5 @@ A maintainer runs `build.bat` / `make package`; a user downloads the packages an
 
 ## Gotchas
 - Needs Docker and the pinned image; first run downloads the toolchain.
-- Outputs are gitignored; `docs/firmware/` holds only a README in git.
+- Outputs are gitignored (`build/`); `docs/firmware/` holds only a README in git.
 - A test package must never become the default in `manifest.json`.

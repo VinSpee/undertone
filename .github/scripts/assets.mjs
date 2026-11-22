@@ -7,7 +7,8 @@
 //     one line per file of the catalog, its SHA-256, its path on the site and its asset name. The kit is not on it,
 //     because the site builds its own kit from the same sources;
 //   - SHA256SUMS, the SHA-256 of every other file, for `sha256sum -c`.
-//   node .github/scripts/assets.mjs OUT_DIR [--site docs/firmware] [--apps build/apps] [--kit docs/rescue]
+//   node .github/scripts/assets.mjs OUT_DIR [--site build/apps/gamut] [--apps build/apps] [--kit docs/rescue]
+// (--site: the files the site serves at the top of its firmware/ folder, OpenPocket's and the catalog)
 // OUT_DIR must be empty or missing. A release's assets have no folders, so an app's files are named after the app:
 // apps/palette/manifest.json is the asset palette-manifest.json. It fails when a file is not the bytes the catalog or the
 // kit's manifest names, and when two files would get the same asset name.
@@ -25,7 +26,7 @@ const option = (name, fallback) => {
   const i = args.indexOf(name);
   return resolve(root, i < 0 ? fallback : args.splice(i, 2)[1] ?? fail(`${name} needs a folder`));
 };
-const site = option("--site", "docs/firmware"), apps = option("--apps", "build/apps"), kit = option("--kit", "docs/rescue");
+const site = option("--site", "build/apps/gamut"), apps = option("--apps", "build/apps"), kit = option("--kit", "docs/rescue");
 if (args.length !== 1) fail("usage: node .github/scripts/assets.mjs OUT_DIR [--site DIR] [--apps DIR] [--kit DIR]");
 const out = resolve(args[0]);
 if (existsSync(out) && readdirSync(out).length) fail(`${out} is not empty`);

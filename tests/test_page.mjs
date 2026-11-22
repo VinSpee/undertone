@@ -25,7 +25,7 @@ const FW = SITE_URL ? process.env.SITE_FIRMWARE : join(SITE, "firmware");
 const FIX = mkdtempSync(join(tmpdir(), "opfix-"));
 execFileSync("python3", [join(ROOT, "tests", "fixtures.py"), join(FIX, "firmware")], { stdio: "inherit" });
 if (!SITE_URL) cpSync(join(ROOT, "docs"), SITE, { recursive: true });
-if (!SITE_URL) rmSync(FW, { recursive: true, force: true });   // (not what a build left in docs/firmware: its catalog)
+if (!SITE_URL) rmSync(FW, { recursive: true, force: true });   // (not what an older build left in docs/firmware: its catalog)
 cpSync(join(FIX, "firmware"), FW, { recursive: true });
 if (!SITE_URL) execFileSync("python3", [join(ROOT, "rescue", "build_kit.py"), join(SITE, "rescue")], { stdio: "inherit" });
 

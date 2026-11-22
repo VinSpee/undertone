@@ -85,7 +85,7 @@ plain words: [Quick start: rescue a BlackBox that will not boot](docs/RESCUE.md#
 `tools/serve_offline.ps1`) or run `make serve` (macOS, Linux; `tools/serve.py`, needs Python 3). It serves the installer
 and the packages from this folder on this computer only (`http://localhost:8765`) and opens them in Chrome or Edge. Same
 page, same steps; keep it running while you install. `INSTALL-OFFLINE.bat editor` opens the web editor the same way. It
-builds the packages first when `docs\firmware` has none (`INSTALL-OFFLINE.bat build` rebuilds them).
+builds the packages first when `build\apps\gamut` has none (`INSTALL-OFFLINE.bat build` rebuilds them).
 
 ## Preset editor
 
@@ -112,8 +112,8 @@ The same on macOS, Linux and Windows, in one container (Docker and Node 18+): **
 toolchain installed there once (`wsl sh firmware/setup.sh`). Details, pinned versions, the toolchain's licence and troubleshooting:
 [`docs/BUILDING.md`](docs/BUILDING.md). The build makes:
 
-- `firmware/openpocket.bin`, the app;
-- `docs/firmware/PocketX_9NN.fwsc`, `BlackBox_9NN.fwsc`, `manifest.json`, the installer's packages
+- `build/apps/gamut/openpocket.bin`, the app;
+- `build/apps/gamut/PocketX_9NN.fwsc`, `BlackBox_9NN.fwsc`, `manifest.json`, the installer's packages
   (`tools/pxpkg.py`, with the update loader built from `loader/`);
 - `fm1-300.bin` with `make appimage DUMP=fm1-1.bin` (or `makeimage.bat`), from your factory backup (SD-card recovery image).
 

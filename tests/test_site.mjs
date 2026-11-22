@@ -105,7 +105,7 @@ try {
   const kitZip = await fetch(live + "rescue/" + kitFile);
   ok(kitManifest.file === kitFile && kitManifest.sha256 === kitSum && kitZip.status === 200 && sha256(Buffer.from(await kitZip.arrayBuffer())) === kitSum,
     `the site serves the rescue kit its build made, ${kitFile}, and it is the pinned kit (rescue/kit.sha256)`);
-  if (servedTag === "none") ok((await fetch(live + "firmware/manifest.json")).status === 404, "no release is served: the site serves no package, also none a local build left in docs/firmware");
+  if (servedTag === "none") ok((await fetch(live + "firmware/manifest.json")).status === 404, "no release is served: the site serves no package, also none an older local build left in docs/firmware");
 
   // 2. the release step against the stand-in GitHub
   const sum = (asset) => sha256(readFileSync(join(FIX, assets[asset])));

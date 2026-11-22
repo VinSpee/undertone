@@ -21,7 +21,7 @@ The firmware is never built here. The toolchain runs on x86-64 only, and the ser
 | File | What it is |
 | --- | --- |
 | `Dockerfile` | The build: the pages and the rescue kit, then the release's files, then the file server. The build context is the top of the repository |
-| `Dockerfile.dockerignore` | Keeps everything but `docs/`, `site/` and the kit's sources out of the build, and `docs/firmware/` and `docs/rescue/` too, where a local build leaves its packages and its kit |
+| `Dockerfile.dockerignore` | Keeps everything but `docs/`, `site/` and the kit's sources out of the build, and `docs/firmware/` and `docs/rescue/` too, where an older local build left its packages and a local build leaves its kit |
 | `Caddyfile` | The file server, on port 80 without HTTPS. The proxy in front of the container provides HTTPS |
 | `RELEASE` | One line: `latest`, the tag of a pinned release, or `none` |
 | `release.sha256` | For a pinned release, one line per file: its SHA-256, its path on the site, the name of its release asset |

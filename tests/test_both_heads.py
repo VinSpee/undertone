@@ -7,7 +7,7 @@ key, the CRC of each file, the entry address 0x02000120.
   python3 tests/test_both_heads.py [--built] [OFFICIAL.fwsc ...]
 The heads are synthetic ones built to the two layouts (tests/fw_layouts.py), and the official packages' own heads when
 their files are given (they are not in this repository). The packages: one built here whose app fills the whole slot,
-and with --built every package the build made (docs/firmware, build/apps/*)."""
+and with --built every package the build made (build/apps/*: OpenPocket's in build/apps/gamut, each app's)."""
 import sys
 import tempfile
 from pathlib import Path
@@ -71,7 +71,7 @@ with tempfile.TemporaryDirectory() as t:
     pxpkg.build(app, b"OTA" * 100, Path(t), 99, None, ROOT / "firmware" / "sdk" / "packager")
     packages = sorted(Path(t).glob("*.fwsc"))
     if "--built" in sys.argv:
-        built = sorted((ROOT / "docs" / "firmware").glob("*.fwsc")) + sorted((ROOT / "build" / "apps").glob("*/*.fwsc"))
+        built = sorted((ROOT / "build" / "apps").glob("*/*.fwsc"))
         ok(len(built) >= 4, f"--built: {len(built)} packages the build made")
         packages += built
 

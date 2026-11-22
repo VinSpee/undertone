@@ -27,8 +27,9 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const IMAGE = "openpocket-build";
 const native = Boolean(process.env.NATIVE || process.env.OP_IN_CONTAINER);
 const python = process.platform === "win32" ? ["py", "-3"] : ["python3"];
-const OUTS = "firmware/openpocket.bin docs/firmware/*.fwsc docs/firmware/manifest.json";
-const TEST = "firmware/openpocket-midi-test.bin docs/firmware/midi-test/*.fwsc docs/firmware/midi-test/manifest.json";
+const OUT = "build/apps/gamut";   // OpenPocket's outputs, as each app's are in build/apps/<name>
+const OUTS = `${OUT}/openpocket.bin ${OUT}/*.fwsc ${OUT}/manifest.json`;
+const TEST = `${OUT}/openpocket-midi-test.bin ${OUT}/midi-test/*.fwsc ${OUT}/midi-test/manifest.json`;
 
 function fail(message) {
   console.error(`\nERROR: ${message}`);
@@ -112,9 +113,9 @@ const commands = {
     return rc || commands.test(["--built"]);
   },
   // (the release pin, tests/release_pin.sh: OpenPocket's outputs must be the pinned release's bytes, or this fails)
-  package: () => inContainer(["sh", "-c", `sh firmware/build.sh && mkdir -p build && sha256sum ${OUTS} > build/SHA256SUMS && sh tests/release_pin.sh gamut`]),
-  "package-test": () => inContainer(["sh", "-c", `OP_CHANNEL=midi-test sh firmware/build.sh && mkdir -p build && sha256sum ${TEST} > build/SHA256SUMS-midi-test && cat build/SHA256SUMS-midi-test`]),
-  clean() {
+  package: () => inContainer(["sh", "-c", `sh firmware/build.sh && sha256sum ${OUTS} > ${OUT}/SHA256SUMS && sh tests/release_pin.sh gamut`]),
+  "package-test": () => inContainer(["sh", "-c", `OP_CHANNEL=midi-test sh firmware/build.sh && sha256sum ${TEST} > ${OUT}/SHA256SUMS-midi-test && cat ${OUT}/SHA256SUMS-midi-test`]),
+  clean() {                                    // (build holds every output; the other paths are where older trees built OpenPocket)
     for (const p of ["build", "firmware/build", "firmware/build-ble", "firmware/openpocket.bin", "firmware/openpocket-ble.bin", "firmware/openpocket-midi-test.bin", "docs/firmware/midi-test", "docs/firmware/manifest.json", "docs/firmware/release.json", "docs/rescue", "firmware/apps/gamut/engine/px_render"]) {
       rmSync(resolve(root, p), { recursive: true, force: true });
     }
@@ -133,10 +134,10 @@ const commands = {
     return (await import("./dsp.mjs")).main(args);
   },
   serve([arg, name]) {
-    const ble = arg === "ble";                 // the Bluetooth test packages (build/ble) instead of docs/firmware
+    const ble = arg === "ble";                 // the Bluetooth test packages (build/ble) instead of OpenPocket's (build/apps/gamut)
     const alt = arg === "app";                 // an alternative firmware offered beside OpenPocket (its packages: build/apps/NAME)
     if (alt && (!/^[a-z0-9-]+$/.test(name || "") || !existsSync(resolve(root, "firmware/apps", name, "app.sh")))) fail("usage: serve app NAME   (a folder of firmware/apps, such as starter). See docs/ALT-FIRMWARE.md.");
-    if (ble ? !existsSync(resolve(root, "build/ble/manifest.json")) : arg === "build" || !existsSync(resolve(root, "docs/firmware/manifest.json"))) {
+    if (ble ? !existsSync(resolve(root, "build/ble/manifest.json")) : arg === "build" || !existsSync(resolve(root, OUT, "manifest.json"))) {
       const built = ble ? commands.ble() : commands.build();
       if (built !== 0) return built;
     }
@@ -179,8 +180,8 @@ const commands = {
   appimage([dump]) {
     const rel = inside(dump || "fm1-1.bin");
     if (!existsSync(resolve(root, rel))) fail(`${rel} not found. Put your factory backup (the fm1-1.bin dump) there, or pass its path.`);
-    if (!existsSync(resolve(root, "firmware/openpocket.bin"))) fail("firmware/openpocket.bin not found. Build first: node tools/op.mjs build (make build, build.bat).");
-    return inContainer(["python3", "tools/pocketx_appimage.py", rel, "firmware/openpocket.bin", "fm1-300.bin"]);
+    if (!existsSync(resolve(root, OUT, "openpocket.bin"))) fail(`${OUT}/openpocket.bin not found. Build first: node tools/op.mjs build (make build, build.bat).`);
+    return inContainer(["python3", "tools/pocketx_appimage.py", rel, `${OUT}/openpocket.bin`, "fm1-300.bin"]);
   },
 };
 

@@ -25,7 +25,7 @@ const USAGE = `usage: node tools/op.mjs flash --dry-run [--package FILE] [--mani
                    sound processing the moment it does, and install. Only a pedal whose firmware answers the MIDI
                    identity query for a moment is caught; the chip's own boot loader (WL80UBOOT) is not reachable.
   --timeout SECONDS  how long --rescue waits for the pedal (default 180); an install that has started is never cut short
-  --manifest FILE  the manifest that lists the package and its SHA-256 (default: docs/firmware/manifest.json)
+  --manifest FILE  the manifest that lists the package and its SHA-256 (default: build/apps/gamut/manifest.json)
   --accept-newer-official  install over an official firmware newer than this installer has been checked with. Without it
                    the flash stops (exit 2) before anything is sent; the version check is a precaution. It never
                    lifts the refusal of a BlackBox on M-VAVE's V22 or later, whose boot loader the install would overwrite
@@ -60,7 +60,7 @@ function parse(argv) {
       if (!/^[a-z0-9-]+$/.test(a.app || "")) throw refuse("--app needs the name of an alternative firmware (a folder of firmware/apps)");
     } else throw refuse(`unknown argument ${v}`);
   }
-  a.manifest ??= resolve(ROOT, a.app ? `build/apps/${a.app}/manifest.json` : "docs/firmware/manifest.json");
+  a.manifest ??= resolve(ROOT, `build/apps/${a.app || "gamut"}/manifest.json`);
   return a;
 }
 

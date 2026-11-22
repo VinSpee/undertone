@@ -27,14 +27,14 @@ Apple silicon and other ARM machines Docker emulates it (Rosetta or QEMU); you c
 | Command | What it does |
 | --- | --- |
 | `make doctor` | check Node, Docker and the image, one line each (exit 1 when the build cannot work) |
-| `make build` | `firmware/build.sh` in the container: `firmware/openpocket.bin`, the update loader, `docs/firmware/PocketX_9NN.fwsc`, `BlackBox_9NN.fwsc`, `manifest.json`, and `release.json`, the catalog of the firmwares that are built, which the installer page reads (`tools/catalog.py`) |
+| `make build` | `firmware/build.sh` in the container: the update loader and, in `build/apps/gamut/`, `openpocket.bin`, `PocketX_9NN.fwsc`, `BlackBox_9NN.fwsc`, `manifest.json`, and `release.json`, the catalog of the firmwares that are built, which the installer page reads (`tools/catalog.py`) |
 | `make ble` | the Bluetooth MIDI test image (`OP_BLE=1 firmware/build.sh`): `firmware/openpocket-ble.bin`, `build/ble/*.fwsc`. Own target, own output folders; [BLE-TEST.md](BLE-TEST.md) |
 | `make app APP=starter` | another app on the base firmware, an alternative firmware (`OP_APP=starter firmware/build.sh`): `build/apps/starter/starter.bin`, its packages, its manifest and `SHA256SUMS`. The release files are not touched, and the catalog is written again; [ALT-FIRMWARE.md](ALT-FIRMWARE.md), [BASE-FIRMWARE.md](BASE-FIRMWARE.md) |
 | `make all` | every product from this tree: `package`, each app of `firmware/apps`, then `tests/run_tests.sh` with the packages just built (`node tools/op.mjs test --built`) |
 | `make serve-app APP=starter` | `make serve` with that alternative firmware offered too (`install.html?app=starter`); builds it first if missing. A firmware of `firmware/catalog.json` is offered without it |
 | `make serve-ble` | `make serve` with `build/ble/` as the installer's package folder, to flash the test image |
-| `make package` | `build`, then `build/SHA256SUMS`, then the release pin: it fails when OpenPocket's image or packages are not the bytes of `firmware/apps/gamut/release.sha256` ([BASE-FIRMWARE.md](BASE-FIRMWARE.md), section 9) |
-| `make package-test` | the MIDI test channel (`OP_CHANNEL=midi-test`): `firmware/openpocket-midi-test.bin` and `docs/firmware/midi-test/` (v37 MIDI TEST, its own `manifest.json`), with `build/SHA256SUMS-midi-test`. The release files are not touched and the installer offers it only with `?channel=midi-test` |
+| `make package` | `build`, then `build/apps/gamut/SHA256SUMS`, then the release pin: it fails when OpenPocket's image or packages are not the bytes of `firmware/apps/gamut/release.sha256` ([BASE-FIRMWARE.md](BASE-FIRMWARE.md), section 9) |
+| `make package-test` | the MIDI test channel (`OP_CHANNEL=midi-test`): `build/apps/gamut/openpocket-midi-test.bin` and `build/apps/gamut/midi-test/` (v37 MIDI TEST, its own `manifest.json`), with `build/apps/gamut/SHA256SUMS-midi-test`. The release files are not touched and the installer offers it only with `?channel=midi-test` |
 | `make test` | `tests/run_tests.sh` (engine, preset store, screen, simulated pedal, installer, editor; the browser page tests also run when Playwright is installed) |
 | `make clean` | remove every build output (on the host; needs neither Docker nor the image) |
 | `make shell` | a shell in the container (as your user) |
@@ -78,7 +78,7 @@ The `.bat` files `makeimage.bat` and `render.bat` only check that Node is instal
 - The JieLi toolchain `jieli-linux-toolchains-20260730.1.tar.xz`, by URL and SHA-256 (`firmware/setup.sh`). The build fails if
   the checksum differs.
 
-To update either pin, change it in one commit, run `make clean package test`, and compare the new `build/SHA256SUMS` with the
+To update either pin, change it in one commit, run `make clean package test`, and compare the new `build/apps/gamut/SHA256SUMS` with the
 old one.
 
 ## Licence of the toolchain
@@ -93,7 +93,7 @@ redirects to). If you publish a container image, do not include the toolchain la
 The build is deterministic: two clean builds in the container give byte-identical `openpocket.bin`, `.fwsc` and
 `manifest.json` (checked on Apple silicon under emulation, SHA-256 equal). No build output is committed to the repository
 (`.gitignore`), so there is no committed binary to compare with; release packages are published as GitHub release assets,
-and `build/SHA256SUMS` of a given commit is the reference. CI (`.github/workflows/build.yml`) builds and tests every pull
+and `build/apps/gamut/SHA256SUMS` of a given commit is the reference. CI (`.github/workflows/build.yml`) builds and tests every pull
 request on a native x86-64 runner and uploads the packages with their checksums. A second job, `pages`, runs the page tests in
 headless Chromium.
 

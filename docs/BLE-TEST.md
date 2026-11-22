@@ -4,7 +4,7 @@ An optional build of OpenPocket that turns the pedal's Bluetooth radio on and ma
 **`OpenPocket`**. A Mac, a phone or a Chocolate Plus connects to it, and Program Change and Control Change then do what they do over
 USB ([MIDI.md](MIDI.md)). USB MIDI is not changed.
 
-The normal firmware and the installer's packages in `docs/firmware/` are built exactly as before: `make build` gives the
+The normal firmware and the installer's packages in `build/apps/gamut/` are built exactly as before: `make build` gives the
 same bytes with or without this feature in the tree. The test image is its own build target, `make ble`.
 
 > **Status: runs on a real BlackBox.** A Mac connected, found the service, and a Control Change switched a block and a Program Change

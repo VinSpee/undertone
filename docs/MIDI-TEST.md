@@ -16,7 +16,7 @@ tested (issue #1: a restart loop after power cycles in some versions, rescue mod
       Bome MIDI Translator; Linux: `aseqdump -l` then `aseqdump -p "OpenPocket"`.
 - [ ] A DAW or a MIDI controller that can send Program Change and Control Change (Ableton, Logic, Reaper, GarageBand with a
       MIDI app, or a free web tool such as the Web MIDI Monitor and sender pages).
-- [ ] The package: a build of the pull request gives `docs/firmware/midi-test/` (`node tools/op.mjs package-test`), or the CI
+- [ ] The package: a build of the pull request gives `build/apps/gamut/midi-test/` (`node tools/op.mjs package-test`), or the CI
       artifact. Serve it with `node tools/op.mjs serve` (offline) and open `http://localhost:8765/install.html?channel=midi-test`,
       or use the page you were given.
 

@@ -5,7 +5,7 @@
 // being installed for OpenPocket, the way back (also for a pedal that restarts in a loop), what the flash keeps through
 // both installs (OpenPocket's presets, models and IRs; the alternative firmware's own data), and what it does not.
 //   cc -O1 -o build/devsim tests/devsim.c && node tests/test_products.mjs [--built]
-// --built: also with the packages the build made (build/apps/NAME for each app of firmware/apps, docs/firmware); they must exist
+// --built: also with the packages the build made (build/apps/NAME for each app of firmware/apps, build/apps/gamut for OpenPocket); they must exist
 // (`node tools/op.mjs all` runs it so). Without it only the made-up packages of tests/fixtures.py are used.
 import { execFileSync } from "node:child_process";
 import { existsSync, mkdtempSync, readFileSync, writeFileSync, readdirSync } from "node:fs";
@@ -163,7 +163,7 @@ ok(r.code === 0 && /PocketX_942 \(OpenPocket v42\) -> PocketX_942 \(STARTER v01,
 const APPS = readdirSync(join(ROOT, "firmware/apps")).filter((n) => existsSync(join(ROOT, "firmware/apps", n, "app.sh"))).sort();
 if (process.argv.includes("--built")) {
   for (const name of APPS) {
-    const app = join(ROOT, "build/apps", name), rel = join(ROOT, "docs/firmware");
+    const app = join(ROOT, "build/apps", name), rel = join(ROOT, "build/apps/gamut");
     const relMan = JSON.parse(readFileSync(join(rel, "manifest.json"), "utf8")), appMan = JSON.parse(readFileSync(join(app, "manifest.json"), "utf8"));
     const relId = relMan.packages.find((p) => p.model === "PocketX").product, appId = appMan.packages.find((p) => p.model === "PocketX").product;
     ok(!relMan.app && appMan.app && appMan.app.id === name && appMan.packages.every((p) => p.file.startsWith(`${name}-`)),
@@ -180,8 +180,8 @@ if (process.argv.includes("--built")) {
     r = await flasher(built, ["--confirm-flash"]);
     const a2 = join(TMP, `${name}2.bin`), w2 = join(TMP, `${name}-want2.bin`);
     ok(r.code === 0 && appIn(r.dump, a2) === `${relId} openpocket CRC-OK`, `built: OpenPocket's release package installs back over ${name} (node tools/op.mjs flash)${r.code ? "\n" + r.out : ""}`);
-    patched(join(ROOT, "firmware/openpocket.bin"), relId, w2);
-    ok(same(a2, w2) && kept(r.dump).length === 0, "built: the flash holds firmware/openpocket.bin byte for byte; OpenPocket's data and the app's own are still as they were");
+    patched(join(rel, "openpocket.bin"), relId, w2);
+    ok(same(a2, w2) && kept(r.dump).length === 0, "built: the flash holds build/apps/gamut/openpocket.bin byte for byte; OpenPocket's data and the app's own are still as they were");
   }
 } else if (!APPS.every((n) => existsSync(join(ROOT, "build/apps", n, "manifest.json")))) console.log("(the build's own packages: not built, not checked here; `node tools/op.mjs all` checks them)");
 
