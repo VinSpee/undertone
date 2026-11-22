@@ -27,8 +27,8 @@ factory models have no cabinet: keep a CAB after the AMP and load an IR into it.
 ### CAB — USER IR (v38; IR, LOW CUT, HIGH CUT)
 The CAB block plays a cabinet impulse response loaded from the web editor (8 slots, a `.wav` file each): its first
 23 ms (1024 samples at 44.1 kHz), convolved exactly (partitioned FFT), every IR at the same energy. IR picks the slot
-(its name shows on the PLAY page), LOW CUT 20..400 Hz, HIGH CUT 20 kHz..2 kHz. An empty slot passes the sound as it
-is: the amp alone, as a DI.
+(its name shows on the PLAY page), LOW CUT 20..400 Hz, HIGH CUT 20 kHz..2 kHz. An empty slot (any but IR1, which
+always plays something) passes the sound as it is: the amp alone, as a DI.
 
 Slot IR1 comes with a factory IR, **ML BEST IR**: ["BEST IR IN THE WORLD"](https://www.facebook.com/watch/?ref=embed_video&v=1053603041469100), a free cabinet IR by ML Sound Lab,
 redistributed with the creator's permission as stated by the project's owner. It is in the firmware, not in the IR
