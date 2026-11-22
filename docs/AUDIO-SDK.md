@@ -223,13 +223,10 @@ Driver setup: `iis_open` IIS_PORTA, channel_in = BIT(1), channel_out = BIT(0), m
   long-press reset off), Megal's BlackBox with `PINR 09` (bit 0 set: on). Bit 0 is the enable in the SDK's
   `long_press_reset_enable` (cpu.a power_wakeup.c: P33 0x94 bit 0, and 0x95 bit 0).
 
-## v34: amps, drives and the V30 cab fitted to captures
-- The 29 amps / 27 drives / 15 cabinets voiced by ear make way for 8 amps, 4 drives and 7 cabinets whose numbers are
-  fitted by computer to Neural Amp Modeler captures of the real units, on real DI guitar (the fitting tools and their
-  notes were removed with the built-in amps and cabinets: store format 6, at the end). Same engine, same CPU (+3 % on
-  average, the heaviest preset a little lighter), only the tables change.
-- Presets saved before v34 are converted at boot to the nearest new type (store format 3, `px_type_v34`); the other
-  blocks are untouched. Six factory presets are renamed (their old amp no longer exists).
+## v34: amps, drives and cabinets fitted to captures (history)
+- v34 replaced the hand-voiced amps, drives and cabinets with 8 amps, 4 drives and 7 cabinets. The built-in amps and
+  cabinets were removed in store format 6 (end of this file); the drives stay.
+- Presets saved before v34 are converted at boot (store format 3, `px_type_v34`).
 
 ## v35: new reverbs, 2 s delay, 16-bit delay lines (89 KB of RAM freed)
 - RAM: the engine filled 332 of the 336 KB POOL. The delay line (1 s in 32-bit floats: 188 KB) and the reverb
@@ -250,15 +247,14 @@ Driver setup: `iis_open` IIS_PORTA, channel_in = BIT(1), channel_out = BIT(0), m
 
 ## v36: levels, 24 factory presets, a new screen
 - Levels, measured as loudness (ITU-R BS.1770, gated) on real DI guitar at the pedal's level, by
-  `tools/calib_levels.py` (writes `engine/px_trim.h`): each amp has a level curve over GAIN (11 points: noon at
-  -23 LUFS for every amp, +-3 dB over the knob; v35 spread 46 dB between JCM900 at 0 and full), every cabinet sits
-  with the 1x12, and every other type (knobs at noon) keeps the loudness when switched on. The 52 v35 presets
+  `tools/calib_levels.py` (writes `engine/px_trim.h`): each type (knobs at noon) keeps the loudness when switched
+  on; the built-in amps and cabinets that had level curves are gone (store format 6). The 52 v35 presets
   spanned -53 to -10 LUFS; the 24 v36 presets are all at -23.0 +-0.2 LUFS (`tools/level_presets.py`).
 - The preset LEVEL: GT block, 3rd setting "PRESET LVL" (-15..+15 dB, 0.3 dB a step). Store format 5 and the editor
   (files without `"v": 36`) set it to 0 dB on older presets.
 - Output: a soft limiter (transparent to 0.8, rounds off to 1.2) instead of the hard clip at 1.2.
 - SLOW SWELL: 2.9 ms look-ahead and a more sensitive attack detector, so a pick attack is not heard before the swell.
-- 24 factory presets round the fitted amps (near noon); 25..52: USER (clean TWIN + 1x12 + room).
+- 24 factory presets near noon; 25..52: USER.
 - Screen: PLAY (number and name large, amp / cab, the chain in colour, the selected block) and EDIT (the block on its
   colour, model, 5 settings with value + bar), new Inter fonts (26 and 58 px). `tests/uisim.c` draws every page on
   the PC and checks that each full page paints every pixel.
@@ -286,8 +282,8 @@ Driver setup: `iis_open` IIS_PORTA, channel_in = BIT(1), channel_out = BIT(0), m
   loader keeps that range (`loader/ldr_core.c`, `LDR_NAM_LO/HI`). The weights are read from the flash (SPI, with the
   audio held) when a preset picks the model.
 - Level: every model plays at the same loudness: a trim per model (-20 LUFS on `docs/nam_di.wav`, measured by the
-  editor for user models and by `tools/mk_nam_factory.py` for the factory ones), then one constant that puts NAM +
-  1x12 at GAIN noon at the fitted amps' -23 LUFS.
+  editor for user models and by `tools/mk_nam_factory.py` for the factory ones), then one constant that puts NAM at
+  GAIN noon at -23 LUFS.
 - 24 factory presets rebuilt on the 12 factory NAM models, levelled by `tools/level_presets.py`; USER slots: NAM TWIN.
 
 ## v40: the audio path in RAM, the delays at half rate (the stock firmware's way)
