@@ -1,8 +1,9 @@
 # Neural amp models (NAM A2) on the pedal (v37)
 
-Since v37 the AMP block has a ninth type, **NAM**, that plays a [Neural Amp Modeler](https://www.neuralampmodeler.com/)
-network instead of an amp built from circuit stages. It plays the networks of NAM's **A2** architecture, at its
-3-channel size, **A2-Lite**. That is the size the pedal's CPU can run.
+The AMP block plays a [Neural Amp Modeler](https://www.neuralampmodeler.com/) network (v37). Its one type is **NAM**:
+the amps built from circuit stages that came before it were removed in store format 6
+([SOUNDS-AND-CONTROLS.md](SOUNDS-AND-CONTROLS.md) says what happens to the presets that used them). It plays the
+networks of NAM's **A2** architecture, at its 3-channel size, **A2-Lite**. That is the size the pedal's CPU can run.
 
 ## The knobs
 
@@ -12,8 +13,10 @@ network instead of an amp built from circuit stages. It plays the networks of NA
 | GAIN | the level into the network, ±12 dB around the level of the captures (noon) |
 | BASS, MID, TREBLE | an EQ after the network: ±10 dB at 120 Hz, ±8 dB at 800 Hz, ±10 dB above 2.5 kHz |
 
-The models are amp captures without a cabinet, so keep a CAB after the AMP. Every model plays at the same loudness
-(-20 LUFS on the reference clip `docs/nam_di.wav`), so switching models keeps the volume.
+The factory models are amp captures without a cabinet, so keep a CAB after the AMP and load a cabinet IR into it (the
+editor's **Models** section; the factory presets play the IR in slot IR1). A capture of an amp and its cabinet together
+needs no CAB: switch the block off. Every model plays at the same loudness (-20 LUFS on the reference clip
+`docs/nam_di.wav`), so switching models keeps the volume.
 
 ## Factory models
 
@@ -39,7 +42,7 @@ heard: 0.01 is very close, and below about 0.05 the two are hard to tell apart.
 High-gain captures are harder for a network this small: their error is higher (the 6505+ most), while the clean
 and crunch models are very close. A larger A2 would do better, but would not fit the pedal's CPU.
 
-The factory presets use them; the fitted amps of v34 are still there as the other 8 AMP types.
+The factory presets use them.
 
 ## Your own models (TONE3000 and others)
 
@@ -50,7 +53,7 @@ The factory presets use them; the fitted amps of v34 are still there as the othe
    or drop them on the panel). The editor checks each file, measures its level and sends it to the next free slot
    (about 2 seconds each; the sound mutes a moment while the flash is written). A file the pedal cannot play is listed
    with the reason. An empty slot's own button loads a file into that slot.
-3. In a preset, set the AMP type to **NAM** and choose the capture in **MODEL** (your captures are listed by slot).
+3. In a preset, choose the capture in the AMP block's **MODEL** (your captures are listed by slot).
 
 Or press **Browse TONE3000** in the same section: TONE3000's own tone browser opens in a pop-up (sign in there; it shows
 A2 captures only), and the chosen tone comes back with its creator, its description and its A2 models; **Get** puts one

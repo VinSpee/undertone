@@ -415,7 +415,8 @@ const free = (kind, slot) => page.locator(`#${kind}list .free [data-slot="${slot
   // a preset that plays U01
   await go("sound");
   await page.click('#tiles .tile[data-b="5"] .tsel');
-  await page.selectOption("#type", { label: "NAM" });
+  ok(await page.locator("#type").isDisabled() && (await page.locator("#type option").allTextContents()).join() === "NAM",
+     "the AMP block has one type, NAM: its type list offers nothing else");
   await sleep(200);
   ok(/U01\s+PAGE AMP/.test(await text("#p0")) && await page.locator('#p0 option:disabled').count() === 14, "the AMP block's MODEL list: your captures by slot, the empty slots not selectable");
   await pickOpt("#p0", /^U01\s+PAGE AMP$/);

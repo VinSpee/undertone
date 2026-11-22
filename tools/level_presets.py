@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: GPL-3.0-only
 # OpenPocket — level the factory presets (v36): sets each preset's LEVEL (LVL(..) in px_preset_factory) so that it
-# plays at TARGET LUFS (BS.1770) on DI guitar, like the amps at noon. Prints loudness and peak.
+# plays at TARGET LUFS (BS.1770) on DI guitar, the level tools/calib_levels.py sets the blocks to. Prints loudness and peak.
 #   python3 tools/level_presets.py DI.wav [DI2.wav ...]
 import os, re, subprocess, sys
 import numpy as np

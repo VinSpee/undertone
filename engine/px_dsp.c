@@ -48,12 +48,6 @@ static inline float px_tanh(float x)                   /* rational, err < 1e-3 o
     return x * (27.0f + x2) / (27.0f + 9.0f * x2);
 }
 static inline float px_abs(float x) { return x < 0.0f ? -x : x; }
-static inline float triode(float u)                    /* grid current (u > 0) limits earlier and harder than cutoff */
-{                                                      /* = u >= 0 ? 0.7 px_tanh(u / 0.7) : px_tanh(u), folded */
-    float u2 = u * u;
-    if (u >= 0.0f) return u > 2.1f ? 0.7f : u * (13.23f + u2) / (13.23f + 9.0f * u2);
-    return u < -3.0f ? -1.0f : u * (27.0f + u2) / (27.0f + 9.0f * u2);
-}
 static inline float lfo_sin(float ph)                  /* parabolic sine, ph in [0,1) -> -1..1 */
 {
     if (ph < 0.5f) return 16.0f * ph * (0.5f - ph);
@@ -124,125 +118,7 @@ static void bq_block2(px_bq *p, px_bq *q, float *b, int n)
     }
     p->z1 = pz1; p->z2 = pz2; q->z1 = qz1; q->z2 = qz2;
 }
-/* v37: the same filter in integer arithmetic (the pedal's FPU is slow; its integer multiply-adds are not): the signal in
- * Q26 (+-32), the coefficients in Q29 (+-4), direct form I with a 64-bit sum. The float filter's coefficients
- * are converted each call (they may change between calls); 0 = a coefficient out of range: not run (use bq_block). */
-typedef struct { int32_t x1, x2, y1, y2; } px_fq;      /* (laid out as int32_t[4]) */
-int px_fx_int = 0;
 uint32_t (*px_clock)(void);                            /* v38: a clock for the per-block times (px_engine.pf), or none */
-int px_fx_hand;                                         /* the integer filter loop by hand (px_fx_check) */
-#define FQ_CB 29                                       /* coefficient fraction bits */
-#define FQ_SB 26                                       /* signal fraction bits (+-32) */
-static int32_t fq_c(float c) { return (int32_t)(c * (float)(1u << FQ_CB) + (c >= 0.0f ? 0.5f : -0.5f)); }
-static int fq_ok(const px_bq *f)
-{
-    const float m = (float)(1u << (31 - FQ_CB)) - 0.01f;
-    return f->b0 < m && f->b0 > -m && f->b1 < m && f->b1 > -m && f->b2 < m && f->b2 > -m &&
-           f->a1 < m && f->a1 > -m && f->a2 < m && f->a2 > -m;
-}
-/* the loop, on (b0, b1, b2, a1, a2) in Q29 and the state (x1, x2, y1, y2): the sum's bits 29..60 kept (rounded down,
- * no saturation: the signal's range leaves room). By hand on the pedal (checked against this one at start-up) */
-static void fq_loop_c(int32_t *b, int n, const int32_t *c, int32_t *st)
-{
-    int32_t x1 = st[0], x2 = st[1], y1 = st[2], y2 = st[3];
-    for (int k = 0; k < n; k++) {
-        const int32_t x = b[k];
-        int64_t acc = (int64_t)c[0] * x;
-        acc += (int64_t)c[1] * x1;
-        acc += (int64_t)c[2] * x2;
-        acc -= (int64_t)c[3] * y1;
-        acc -= (int64_t)c[4] * y2;
-        const int32_t y = (int32_t)(uint32_t)(uint64_t)(acc >> FQ_CB);
-        x2 = x1; x1 = x; y2 = y1; y1 = y;
-        b[k] = y;
-    }
-    st[0] = x1; st[1] = x2; st[2] = y1; st[3] = y2;
-}
-#if defined(__PI32V2__)
-void px_fq_asm(int32_t *b, int n, const int32_t *c, int32_t *st);
-__asm__("\t.text\n"
-        "\t.global px_fq_asm\n"
-        "px_fq_asm:\n"
-        "\t[--sp] = {rets, r15-r4}\n"
-        "\tsp += -4\n"
-        "\t[sp+0] = r3\n"
-        "\tr4 = [r2+0]\n\tr5 = [r2+4]\n\tr6 = [r2+8]\n\tr7 = [r2+12]\n\tr12 = [r2+16]\n"
-        "\tr13 = [r3+0]\n\tr14 = [r3+4]\n\tr15 = [r3+8]\n\tr11 = [r3+12]\n"
-        "\tr1 = r1 >> 1\n"
-        ".Lpx_fq:\n"
-        "\tr10 = [r0+0]\n"
-        "\tr9_r8 = r10 * r4 (s)\n"
-        "\tr9_r8 += r13 * r5 (s)\n"
-        "\tr9_r8 += r14 * r6 (s)\n"
-        "\tr9_r8 -= r15 * r7 (s)\n"
-        "\tr9_r8 -= r11 * r12 (s)\n"
-        "\tr9_r8 >>>= 29\n"
-        "\t[r0++=4] = r8\n"
-        "\tr14 = [r0+0]\n"
-        "\tr3_r2 = r14 * r4 (s)\n"
-        "\tr3_r2 += r10 * r5 (s)\n"
-        "\tr3_r2 += r13 * r6 (s)\n"
-        "\tr3_r2 -= r8 * r7 (s)\n"
-        "\tr3_r2 -= r15 * r12 (s)\n"
-        "\tr3_r2 >>>= 29\n"
-        "\t[r0++=4] = r2\n"
-        "\tr13 = r14\n\tr14 = r10\n\tr15 = r2\n\tr11 = r8\n"
-        "\tr1 += -1\n"
-        "\tif (r1 != 0) goto .Lpx_fq\n"
-        "\tr3 = [sp+0]\n"
-        "\t[r3+0] = r13\n\t[r3+4] = r14\n\t[r3+8] = r15\n\t[r3+12] = r11\n"
-        "\tsp += 4\n"
-        "\t{pc, r15-r4} = [sp++]\n");
-#endif
-static void (*fq_loop)(int32_t *, int, const int32_t *, int32_t *) = fq_loop_c;
-/* start-up: the hand loop against the C one (1 = in use) */
-int px_fx_check(void)
-{
-#if defined(__PI32V2__)
-    static int32_t a[66], b[66];
-    int32_t sa[4] = {1000, -2000, 3000, -4000}, sb[4] = {1000, -2000, 3000, -4000};
-    const int32_t c[5] = {fq_c(0.25f), fq_c(-0.4f), fq_c(0.2f), fq_c(-1.6f), fq_c(0.7f)};
-    uint32_t r = 777u;
-    for (int i = 0; i < 66; i++) { r = r * 1103515245u + 12345u; a[i] = b[i] = (int32_t)r >> 5; }
-    fq_loop_c(a, 66, c, sa);
-    px_fq_asm(b, 66, c, sb);
-    for (int i = 0; i < 66; i++) if (a[i] != b[i]) return 0;
-    for (int i = 0; i < 4; i++) if (sa[i] != sb[i]) return 0;
-    fq_loop = px_fq_asm;
-    return 1;
-#else
-    return 0;
-#endif
-}
-static void fq_block(const px_bq *f, px_fq *s, int32_t *b, int n)
-{
-    if (n <= 0) return;
-    const int32_t c[5] = {fq_c(f->b0), fq_c(f->b1), fq_c(f->b2), fq_c(f->a1), fq_c(f->a2)};
-    if (n & 1) fq_loop_c(b, n, c, &s->x1);              /* (the hand loop does 2 samples a turn) */
-    else fq_loop(b, n, c, &s->x1);
-}
-static int32_t px_fqbuf[PX_OVERSAMPLE * PX_MAX_BLOCK] PX_POOL_TAIL(px_fqbuf);
-static void fq_to(int32_t *q, const float *x, int n)
-{
-    for (int k = 0; k < n; k++) {
-        float v = x[k] * (float)(1u << FQ_SB);
-        q[k] = v >= 2147483520.0f ? 2147483520 : v <= -2147483520.0f ? -2147483520 : (int32_t)v;
-    }
-}
-static void fq_from(float *x, const int32_t *q, int n)
-{
-    for (int k = 0; k < n; k++) x[k] = (float)q[k] * (1.0f / (float)(1u << FQ_SB));
-}
-/* a chain of filters over a float buffer: in integer arithmetic if all can be, else as floats */
-static void fq_chain(px_bq *f, px_fq *s, int nf, float *b, int n)
-{
-    int ok = 1;
-    for (int c = 0; c < nf; c++) ok &= fq_ok(&f[c]);
-    if (!ok) { for (int c = 0; c < nf; c++) bq_block(&f[c], b, n); return; }
-    fq_to(px_fqbuf, b, n);
-    for (int c = 0; c < nf; c++) fq_block(&f[c], &s[c], px_fqbuf, n);
-    fq_from(b, px_fqbuf, n);
-}
 /* a chain of filters over a buffer, two at a time */
 static void bq_chain(px_bq *f, int nf, float *b, int n)
 {
@@ -302,22 +178,6 @@ static void bq_highshelf(px_bq *b, float fs, float f, float db)
            ap - am * c + tsa, 2 * (am - ap * c), ap - am * c - tsa);
 }
 static float tan_pi(float fs, float f) { float w = PI_F * clampf_hz(fs, f) / fs; return sinf(w) / cosf(w); }
-static inline float op_run(px_op *o, float x)
-{
-    float y = o->b0 * x + o->z;
-    o->z = o->b1 * x - o->a1 * y;
-    return y;
-}
-static void op_hp(px_op *o, float fs, float f)
-{
-    float K = tan_pi(fs, f), n = 1.0f / (1.0f + K);
-    o->b0 = n; o->b1 = -n; o->a1 = (K - 1.0f) * n;
-}
-static void op_lp(px_op *o, float fs, float f)
-{
-    float K = tan_pi(fs, f), n = 1.0f / (1.0f + K);
-    o->b0 = K * n; o->b1 = K * n; o->a1 = (K - 1.0f) * n;
-}
 static void bq_hp1(px_bq *b, float fs, float f)          /* first order (RC coupling, like the real circuits) */
 {
     float K = tan_pi(fs, f);
@@ -407,13 +267,10 @@ typedef struct {
     uint8_t clip, tm; float t0, t1;                                  /* clipper, post tone (oversampled) */
     float p2, p2db;                                                  /* fixed post filter (0 dB = low-pass) */
     float blend, bias, gate;                                         /* /100 */
-} drv_v;          /* (floats: tools/fit_drive.py fits them to captures) */
+} drv_v;
 #define L3(a, b, c) {a, b, c, 0, 0}, 3
 #define L4(a, b, c, d) {a, b, c, d, 0}, 4
-#ifdef PX_FIT
-drv_v px_fit_drv; int px_fit_drv_on; float px_fit_drv_trim = 1.0f;
-#endif
-/* v34: fitted to NAM captures of the pedals (tools/fit_drive.py); knobs at noon = the captured setting */
+/* v34: knobs at noon = the setting of the pedal's NAM capture named after each row (NAM community collection, GPL v3) */
 static const drv_v DV[PX_DRV_COUNT] = {
     {"TS9", L3(R_DRIVE, R_TONE, R_LEVEL), 69.84f, 100.0f, 0.0f, 0.0f, 0.0f, 7.0f, 29.46f, 49.46f, CL_SOFT, TM_LP, 2102.0f, 1.132e+04f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f},  /* Tim R TS9 */
     {"KLON", L3(R_DRIVE, R_TREBLE, R_LEVEL), 11.65f, 239.6f, 0.0f, 449.9f, 2.0f, 11.21f, 18.99f, 52.99f, CL_GE, TM_LP, 842.3f, 4717.0f, 0.0f, 0.0f, 2.468f, 0.0f, 0.0f},  /* Keith B klone_g6_t6_o5 */
@@ -421,57 +278,7 @@ static const drv_v DV[PX_DRV_COUNT] = {
     {"SWEDE HM-2", L4(R_DIST, R_LOW, R_HIGH, R_LEVEL), 49.27f, 0.0f, 0.0f, 0.0f, 0.0f, 7.0f, 36.83f, 61.83f, CL_HARD, TM_HM2, 100.1f, 1265.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f},  /* Peter N HM-2_SWEDE_Std_ESR-0.0034 */
 };
 
-/* =============================================================== amps ====== */
-typedef struct {
-    const char *name;
-    uint8_t n, hard;
-    float g[4], bias[4];
-    float lp[4], hp[4];                                   /* inter-stage low-pass / coupling high-pass (Hz) */
-    float tight, bright, bright_db;                       /* input high-pass, bright cap (fades with gain) */
-    float bass, mid, midq10, treb;                        /* tone stack */
-    float rb, rm, rt, scoop;                              /* knob ranges (dB), fixed mid scoop at noon */
-    float pres, res, res_db;                              /* presence, resonance (power amp + speaker) */
-    float vf, vdb;                                        /* fixed voice peak */
-    float sag100, pw10;                                   /* power-supply sag, power-amp drive */
-} amp_v;          /* (floats: tools/fit_amp.py fits them to captures; see docs/FITTED-MODELS.md) */
-#ifdef PX_FIT
-amp_v px_fit_amp; int px_fit_on; float px_fit_trim = 1.0f;
-#endif
-/* v34: each row fitted to a NAM capture of the real amp (tools/fit_amp.py, docs/FITTED-MODELS.md); knobs at noon
- * = the captured setting. Captures: the NAM community collection (GPL v3), credited in the comments. */
-static const amp_v AV[PX_AMP_COUNT] = {
-  {"TWIN", 1,0, {0.3f,0,0,0}, {-2.302e-07f,0,0,0}, {1.995e+04f,0,0,0}, {220.9f,0,0,0}, 29.88f,3532.0f,9.754f, 154.8f,439.0f,3.031f,1005.0f, 10.0f,8.0f,10.0f,-11.81f, 2825.0f,93.49f,1.404f, 599.8f,-7.461f, 4.05f,35.8f},  /* Tim R Fender TwinVerb Norm Bright */
-  {"AC15 TB", 3,0, {9.42f,9.975f,1.816f,0}, {0.06444f,-0.4316f,3.31e-07f,0}, {2544.0f,4256.0f,5172.0f,0}, {67.75f,71.05f,114.9f,0}, 92.86f,1343.0f,19.65f, 77.92f,878.4f,7.153f,703.2f, 9.0f,8.0f,11.0f,-10.72f, 1731.0f,40.08f,0.8217f, 4552.0f,12.52f, 196.4f,6.342f},  /* Phillipe P VOXAC15-TopBoost */
-  {"JCM900", 3,0, {2.21f,3.039f,2.231f,0}, {0.04791f,0.3043f,-0.1265f,0}, {2.094e+04f,2.089e+04f,2.085e+04f,0}, {145.2f,170.2f,173.3f,0}, 53.37f,4123.0f,12.42f, 50.09f,567.8f,2.264f,833.8f, 11.0f,10.0f,10.0f,-16.09f, 9891.0f,107.4f,3.579f, 2480.0f,2.732f, 16.73f,50.37f},  /* Tim R JCM90050WDualVerbCHAG6 */
-  {"JCM2000", 4,0, {8.543f,6.047f,7.104f,3.937f}, {-0.0004265f,-0.04477f,0.258f,0.3669f}, {1.051e+04f,1.011e+04f,1.077e+04f,1.818e+04f}, {38.3f,48.77f,90.03f,27.44f}, 111.2f,1016.0f,12.16f, 51.54f,719.6f,8.087f,6428.0f, 12.0f,10.0f,10.0f,-2.586f, 2911.0f,105.3f,3.054f, 304.5f,0.09714f, 18.58f,6.411f},  /* Tim R JCM2000 L2 G6 */
-  {"MARK IV", 4,0, {7.683f,7.948f,8.82f,6.955f}, {0.01532f,-0.01585f,0.0974f,-0.1513f}, {1.105e+04f,1.025e+04f,9167.0f,7818.0f}, {37.8f,61.58f,79.03f,53.29f}, 121.7f,1317.0f,7.075f, 410.8f,588.3f,4.153f,708.6f, 12.0f,12.0f,10.0f,-14.18f, 1864.0f,107.2f,0.7193f, 300.3f,-0.1191f, 30.97f,15.42f},  /* Roman A LT_MESA_MARKIV_1 */
-  {"SHIRLEY", 3,0, {14.57f,12.87f,0.9559f,0}, {8.291e-05f,1.581e-06f,0.4817f,0}, {1.609e+04f,9064.0f,1.022e+04f,0}, {75.04f,90.07f,140.2f,0}, 104.2f,735.8f,19.94f, 212.9f,536.8f,3.517f,3829.0f, 11.0f,10.0f,10.0f,-10.71f, 2764.0f,159.2f,6.964f, 1368.0f,0.01628f, 105.2f,16.02f},  /* Sascha S DirtyShirleyMini_crunch_G6 */
-  {"PRO MOD", 4,0, {6.752f,4.731f,19.9f,0.963f}, {-0.0004333f,-0.0001043f,0.5f,4.907e-08f}, {1.162e+04f,1.497e+04f,6022.0f,8590.0f}, {25.21f,34.53f,172.3f,8.071f}, 83.83f,581.3f,17.36f, 483.1f,631.1f,15.95f,1633.0f, 12.0f,10.0f,10.0f,-6.407f, 1859.0f,92.49f,12.0f, 6408.0f,5.301f, 39.48f,13.34f},  /* Tim R Splawn Pro Mod 2nd Gear - G12 */
-  {"5150", 4,0, {7.122f,7.229f,11.68f,10.45f}, {0.001611f,-0.02376f,0.1732f,-0.0003214f}, {8118.0f,8207.0f,8905.0f,1.582e+04f}, {35.27f,46.39f,56.44f,38.31f}, 95.85f,1282.0f,5.8f, 494.3f,603.4f,3.356f,4957.0f, 12.0f,11.0f,11.0f,-8.117f, 7287.0f,136.9f,6.174f, 7286.0f,-1.026f, 16.01f,9.421f},  /* Helga B 5150 BlockLetter - NoBoost */
-};
-#include "px_trim.h"                                   /* per-amp / per-drive level matching (calibrated on PC) */
-
-/* ============================================================ cabinets ===== */
-typedef struct {
-    const char *name;
-    float hp, hpq10, bump, bump_db;
-    float d1, d1db, d2, d2db;
-    float p1, p1db, p2, p2db, lp, lpq;                    /* lpq: the top end's resonance (0.9 = as before v34) */
-} cab_v;          /* (floats: tools/fit_cab.py fits them to measured cabinets) */
-#ifdef PX_FIT
-cab_v px_fit_cab; int px_fit_cab_on;
-#endif
-static const cab_v CV[PX_CAB_COUNT] = {
-    /* name hp q bump dB dip1 dB dip2 dB pres1 dB pres2 dB lp [lpq] */
-    {"1x12 US OPEN", 95, 9, 105, 3,   650,-3,    0, 0,  2700, 5, 5000, 3,  6500},
-    {"2x12 BLUE", 80, 8,  90, 3,  2000,-3,    0, 0,  1350, 3, 3500, 6,  6000},
-    {"4x12 GREEN", 70, 7, 100, 5,  2800,-3,    0, 0,  2000, 4, 3500, 3,  4800},
-    {"4x12 T75", 75, 7, 105, 5,   650,-3,    0, 0,  2500, 5, 5000, 5,  6000},
-    {"4x12 V30", 165.7f, 14.37f, 101.6f, 11.95f, 1558.0f, -5.565f, 5034.0f, 1.745f, 2868.0f, 9.288f, 5017.0f, 12.0f, 7097.0f, 0.5f},  /* fitted: 8 amp / amp+cab capture pairs (Phillipe P, GPL) */
-    {"1x12 CREAM", 80, 8,  90, 4,  1500,-2,    0, 0,  2500, 4, 4500, 3,  6000},
-    {"DI (NO CAB)", 0, 0,   0, 0,     0, 0,    0, 0,     0, 0,    0, 0,     0},
-    {"USER IR", 0, 0,   0, 0,     0, 0,    0, 0,     0, 0,    0, 0,     0},    /* v38: an impulse response (px_ir_*) */
-};
+#include "px_trim.h"                                   /* per-type level matching (calibrated on PC) */
 
 /* ================================================================== EQ ===== */
 static const char *const PN_EQ5[] = {"100 HZ", "400 HZ", "1 KHZ", "2.5 KHZ", "6 KHZ"};
@@ -516,16 +323,16 @@ static const tdef T_REV[PX_REV_COUNT] = {
     {"SHIMMER", 4, PN_RSH}, {"GATED", 3, PN_RGT}, {"AMBIENT", 3, PN_RV}};
 
 /* ------------------------------------------------------------ catalog API --- */
-static const char *const PN_AMP[] = {"GAIN", "BASS", "MID", "TREBLE", "PRESENCE"};
 static const char *const PN_NAM[] = {"MODEL", "GAIN", "BASS", "MID", "TREBLE"};
-static const char *const PN_CAB[] = {"BODY", "BRIGHT", "MIC"};
-static const char *const PN_CABIR[] = {"IR", "LOW CUT", "HIGH CUT"};   /* v38 */
+static const tdef T_AMP[PX_AMP_COUNT] = {{"NAM", 5, PN_NAM}};                 /* v37 */
+static const char *const PN_CABIR[] = {"IR", "LOW CUT", "HIGH CUT"};
+static const tdef T_CAB[PX_CAB_COUNT] = {{"USER IR", 3, PN_CABIR}};           /* v38 */
 
 const char *px_block_label(int b) { return (b >= 0 && b < PX_NBLK) ? BLK_LABEL[b] : "?"; }
 const char *px_block_name(int b)  { return (b >= 0 && b < PX_NBLK) ? BLK_NAME[b] : "?"; }
 int px_ntypes(int b)
 {
-    static const uint8_t N[PX_NBLK] = {1, PX_CMP_COUNT, PX_PIT_COUNT, PX_SFX_COUNT, PX_DRV_COUNT, PX_AMP_NTYPES,
+    static const uint8_t N[PX_NBLK] = {1, PX_CMP_COUNT, PX_PIT_COUNT, PX_SFX_COUNT, PX_DRV_COUNT, PX_AMP_COUNT,
                                        PX_CAB_COUNT, PX_EQ_COUNT, PX_MOD_COUNT, PX_DLY_COUNT, PX_REV_COUNT,
                                        PX_SYN_COUNT};
     return (b >= 0 && b < PX_NBLK) ? N[b] : 1;
@@ -537,6 +344,8 @@ static const tdef *tdef_of(int b, int t)
     case PX_B_COMP: return &T_COMP[t];
     case PX_B_PITCH: return &T_PITCH[t];
     case PX_B_SFX: return &T_SFX[t];
+    case PX_B_AMP: return &T_AMP[t];
+    case PX_B_CAB: return &T_CAB[t];
     case PX_B_EQ: return &T_EQ[t];
     case PX_B_MOD: return &T_MOD[t];
     case PX_B_DELAY: return &T_DLY[t];
@@ -549,8 +358,6 @@ const char *px_type_name(int b, int t)
 {
     if (t < 0 || t >= px_ntypes(b)) t = 0;
     if (b == PX_B_DRIVE) return DV[t].name;
-    if (b == PX_B_AMP) return t == PX_AMP_NAM ? "NAM" : AV[t].name;
-    if (b == PX_B_CAB) return CV[t].name;
     const tdef *d = tdef_of(b, t);
     return d ? d->name : "?";
 }
@@ -558,8 +365,6 @@ int px_nparams(int b, int t)
 {
     if (t < 0 || t >= px_ntypes(b)) t = 0;
     if (b == PX_B_DRIVE) return DV[t].np;
-    if (b == PX_B_AMP) return 5;
-    if (b == PX_B_CAB) return t == PX_CAB_DI ? 0 : 3;
     const tdef *d = tdef_of(b, t);
     return d ? d->np : 0;
 }
@@ -568,8 +373,6 @@ const char *px_param_name(int b, int t, int k)
     if (t < 0 || t >= px_ntypes(b)) t = 0;
     if (k < 0 || k >= px_nparams(b, t)) return "";
     if (b == PX_B_DRIVE) return ROLE_NAME[DV[t].role[k]];
-    if (b == PX_B_AMP) return t == PX_AMP_NAM ? PN_NAM[k] : PN_AMP[k];
-    if (b == PX_B_CAB) return t == PX_CAB_IR ? PN_CABIR[k] : PN_CAB[k];
     return tdef_of(b, t)->pn[k];
 }
 
@@ -601,7 +404,6 @@ static float syn_att_ms(float x) { return 10.0f + x * x * 1490.0f; }     /* STRI
 static float syn_rel_ms(float x) { return 50.0f + x * x * 2950.0f; }     /* release */
 static int syn_bari_st(int v) { return -1 - (int)((float)v * 0.01f * 11.99f); }
 static int syn_oct(int v) { return v < 34 ? -1 : (v < 67 ? 0 : 1); }
-/* presets saved before v34 (store format 1 / 2): the old amp / drive / cab numbers -> the nearest of the v34 set */
 /* the TIME knob value (0..100) whose delay is nearest to `ms` (MIDI clock sync) */
 int px_dly_value_for_ms(int type, float ms)
 {
@@ -620,11 +422,16 @@ int px_dly_time_v35(int type, int v)
     int k = (int)((float)v * (9.8f / 12.25f) + 0.5f);   /* old: 20 + 9.8 v ms; new: 20 + 12.25 v ms up to 80 */
     return k > 80 ? 80 : k;
 }
+/* the v34 set (store formats 3..5): 8 built-in amps then NAM; 6 built-in cabinets, DI (NO CAB), then USER IR. Store
+ * format 6 removed the built-in amps and cabinets (px_preset_v34_set) */
+enum { V34_TWIN, V34_AC15, V34_JCM900, V34_JCM2000, V34_MARK4, V34_SHIRLEY, V34_PROMOD, V34_5150, V34_NAM };
+enum { V34_112JN, V34_212BLUE, V34_412GB, V34_412T75, V34_412V30, V34_112CREAM, V34_DI, V34_IR };
+/* presets saved before v34 (store format 1 / 2): the old amp / drive / cab numbers -> the nearest of the v34 set */
 int px_type_v34(int blk, int old)
 {
-    static const uint8_t A[29] = {PX_AMP_TWIN, PX_AMP_TWIN, PX_AMP_TWIN, PX_AMP_SHIRLEY, PX_AMP_AC15, PX_AMP_AC15, PX_AMP_AC15, PX_AMP_SHIRLEY, PX_AMP_SHIRLEY, PX_AMP_JCM900, PX_AMP_JCM2000, PX_AMP_JCM900, PX_AMP_JCM2000, PX_AMP_AC15, PX_AMP_MARK4, PX_AMP_PROMOD, PX_AMP_MARK4, PX_AMP_5150, PX_AMP_5150, PX_AMP_5150, PX_AMP_PROMOD, PX_AMP_PROMOD, PX_AMP_5150, PX_AMP_5150, PX_AMP_5150, PX_AMP_TWIN, PX_AMP_AC15, PX_AMP_TWIN, PX_AMP_TWIN};
+    static const uint8_t A[29] = {V34_TWIN, V34_TWIN, V34_TWIN, V34_SHIRLEY, V34_AC15, V34_AC15, V34_AC15, V34_SHIRLEY, V34_SHIRLEY, V34_JCM900, V34_JCM2000, V34_JCM900, V34_JCM2000, V34_AC15, V34_MARK4, V34_PROMOD, V34_MARK4, V34_5150, V34_5150, V34_5150, V34_PROMOD, V34_PROMOD, V34_5150, V34_5150, V34_5150, V34_TWIN, V34_AC15, V34_TWIN, V34_TWIN};
     static const uint8_t D[27] = {PX_DRV_TS9, PX_DRV_TS9, PX_DRV_TS9, PX_DRV_KLON, PX_DRV_KLON, PX_DRV_M77, PX_DRV_HM2, PX_DRV_HM2, PX_DRV_M77, PX_DRV_KLON, PX_DRV_KLON, PX_DRV_KLON, PX_DRV_TS9, PX_DRV_M77, PX_DRV_M77, PX_DRV_M77, PX_DRV_M77, PX_DRV_M77, PX_DRV_M77, PX_DRV_M77, PX_DRV_M77, PX_DRV_M77, PX_DRV_KLON, PX_DRV_HM2, PX_DRV_HM2, PX_DRV_TS9, PX_DRV_KLON};
-    static const uint8_t C[15] = {PX_CAB_112JN, PX_CAB_112JN, PX_CAB_112JN, PX_CAB_212BLUE, PX_CAB_412GB, PX_CAB_112JN, PX_CAB_412GB, PX_CAB_412T75, PX_CAB_412V30, PX_CAB_412V30, PX_CAB_112CREAM, PX_CAB_112JN, PX_CAB_412V30, PX_CAB_112JN, PX_CAB_DI};
+    static const uint8_t C[15] = {V34_112JN, V34_112JN, V34_112JN, V34_212BLUE, V34_412GB, V34_112JN, V34_412GB, V34_412T75, V34_412V30, V34_412V30, V34_112CREAM, V34_112JN, V34_412V30, V34_112JN, V34_DI};
     if (old < 0) return 0;
     if (blk == PX_B_AMP) return old < 29 ? A[old] : 0;
     if (blk == PX_B_DRIVE) return old < 27 ? D[old] : 0;
@@ -651,26 +458,26 @@ int px_param_text(int b, int t, int k, int v, char *buf)
             return 1;
         }
         break;
-    case PX_B_CAB:
-        if (t == PX_CAB_IR && k == 0) {                /* v38: the IR's name */
+    case PX_B_CAB:                                     /* USER IR (v38) */
+        if (k == 0) {                                  /* the IR's name */
             char nm[12];
             px_ir_name(px_ir_slot(v), nm);
             for (int i = 0; i < 9; i++) buf[i] = nm[i];
             buf[8] = 0;
             return 1;
         }
-        if (t == PX_CAB_IR && k == 1) { put_int(buf, (int)(ir_lo_hz(v) + 0.5f), 0); return 1; }
-        if (t == PX_CAB_IR && k == 2) { put_int(buf, (int)(ir_hi_hz(v) + 0.5f), 0); return 1; }
+        if (k == 1) { put_int(buf, (int)(ir_lo_hz(v) + 0.5f), 0); return 1; }
+        if (k == 2) { put_int(buf, (int)(ir_hi_hz(v) + 0.5f), 0); return 1; }
         break;
-    case PX_B_AMP:
-        if (t == PX_AMP_NAM && k == 0) {               /* the model's name */
+    case PX_B_AMP:                                     /* NAM (v37) */
+        if (k == 0) {                                  /* the model's name */
             char nm[12];
             px_nam_name(px_nam_model(v), nm);
             for (int i = 0; i < 9; i++) buf[i] = nm[i];
             buf[8] = 0;
             return 1;
         }
-        if (t == PX_AMP_NAM && k == 1) { float db = (x - 0.5f) * 24.0f; put_int(buf, (int)(db + (db >= 0 ? 0.5f : -0.5f)), 1); return 1; }
+        if (k == 1) { float db = (x - 0.5f) * 24.0f; put_int(buf, (int)(db + (db >= 0 ? 0.5f : -0.5f)), 1); return 1; }
         break;
     case PX_B_PITCH:
         if (t == PX_PIT_HARMONY && k == 0) { put_str(buf, HARM_TXT[harm_idx(v)]); return 1; }
@@ -723,8 +530,8 @@ static void base_preset(px_preset_t *p)
     blk(p, PX_B_PITCH,  0, PX_PIT_OCTAVER, 70, 50, 0, 0, 40);
     blk(p, PX_B_SFX,    0, PX_SFX_AUTOWAH, 60, 60, 60, 40, 0);
     blk(p, PX_B_DRIVE,  0, PX_DRV_TS9, 30, 50, 60, 50, 50);
-    blk(p, PX_B_AMP,    1, PX_AMP_SHIRLEY, 60, 60, 50, 60, 50);
-    blk(p, PX_B_CAB,    1, PX_CAB_412V30, 50, 50, 50, 0, 0);
+    blk(p, PX_B_AMP,    1, PX_AMP_NAM, px_nam_knob(0), 50, 50, 50, 50);
+    blk(p, PX_B_CAB,    1, PX_CAB_IR, px_ir_knob(0), 0, 0, 0, 0);   /* IR1, cuts off */
     blk(p, PX_B_EQ,     0, PX_EQ_5BAND, 50, 50, 50, 50, 50);
     blk(p, PX_B_MOD,    0, PX_MOD_CHORUS, 30, 40, 40, 30, 50);
     blk(p, PX_B_DELAY,  0, PX_DLY_DIGITAL, 28, 30, 25, 50, 30);
@@ -742,10 +549,13 @@ enum { NPRESETS = 52 };
 int px_preset_count(void) { return NPRESETS; }
 /* v37: 24 factory presets built round the factory NAM A2 models (NAM(model, gain, bass, mid, treble): knobs at noon
  * = the captured amp), each one levelled (LEVEL, tools/level_presets.py: -23 LUFS on DI guitar, as v36); slots 25..52: USER,
- * a clean starting point */
+ * a clean starting point. Store format 6: their cabinet is USER IR in slot IR1 (IR1), which passes the sound while the
+ * slot is empty; LEVEL then keeps the loudness each preset had with its built-in cabinet (measured on docs/nam_di.wav:
+ * 0 to 6 dB up). With an IR in IR1 they play that much louder. */
 #define LVL(v) (p->p[PX_B_GATE][PX_PATCH_LEVEL] = (uint8_t)(v))
 #define NOGATE (p->on[PX_B_GATE] = 0)
 #define NAM(m, g, b, md, t) blk(p, PX_B_AMP, 1, PX_AMP_NAM, px_nam_knob(m), g, b, md, t)
+#define IR1 blk(p, PX_B_CAB, 1, PX_CAB_IR, px_ir_knob(0), 0, 0, 0, 0)
 enum { M_TWIN, M_AC15, M_SUPER59, M_SHIRLCL, M_JCM900, M_SHIRLEY, M_JCM2000, M_MARK4, M_JVM, M_PROMOD, M_5150, M_6505 };
 void px_preset_factory(px_preset_t *p, int idx)
 {
@@ -754,88 +564,88 @@ void px_preset_factory(px_preset_t *p, int idx)
     p->on[PX_B_AMP] = p->on[PX_B_CAB] = 1;
     switch (idx) {
     /* ---- clean ---- */
-    case 0: setname(p, "TWIN CLEAN"); blk(p, PX_B_GATE, 1, 0, 15, 50, 50, 0, 0); LVL(54);
+    case 0: setname(p, "TWIN CLEAN"); blk(p, PX_B_GATE, 1, 0, 15, 50, 50, 0, 0); LVL(59);
         blk(p, PX_B_COMP, 1, PX_CMP_STUDIO, 30, 50, 50, 50, 0);
-        NAM(M_TWIN, 50, 50, 50, 55); blk(p, PX_B_CAB, 1, PX_CAB_112JN, 50, 50, 50, 0, 0);
+        NAM(M_TWIN, 50, 50, 50, 55); IR1;
         blk(p, PX_B_REVERB, 1, PX_REV_PLATE, 40, 50, 22, 0, 0); break;
-    case 1: setname(p, "CHORUS CLEAN"); blk(p, PX_B_GATE, 1, 0, 15, 50, 50, 0, 0); LVL(55);
-        NAM(M_TWIN, 45, 50, 50, 55); blk(p, PX_B_CAB, 1, PX_CAB_212BLUE, 50, 50, 50, 0, 0);
+    case 1: setname(p, "CHORUS CLEAN"); blk(p, PX_B_GATE, 1, 0, 15, 50, 50, 0, 0); LVL(63);
+        NAM(M_TWIN, 45, 50, 50, 55); IR1;
         blk(p, PX_B_MOD, 1, PX_MOD_CHORUS, 30, 50, 50, 0, 0);
         blk(p, PX_B_DELAY, 1, PX_DLY_DIGITAL, 35, 25, 18, 50, 0); blk(p, PX_B_REVERB, 1, PX_REV_HALL, 45, 50, 22, 0, 0); break;
-    case 2: setname(p, "AC15 CHIME"); blk(p, PX_B_GATE, 1, 0, 20, 50, 50, 0, 0); LVL(50);
-        NAM(M_AC15, 50, 48, 50, 52); blk(p, PX_B_CAB, 1, PX_CAB_212BLUE, 50, 55, 50, 0, 0);
+    case 2: setname(p, "AC15 CHIME"); blk(p, PX_B_GATE, 1, 0, 20, 50, 50, 0, 0); LVL(56);
+        NAM(M_AC15, 50, 48, 50, 52); IR1;
         blk(p, PX_B_REVERB, 1, PX_REV_SPRING, 40, 50, 20, 40, 0); break;
-    case 3: setname(p, "FUNK WAH"); NOGATE; LVL(59);
+    case 3: setname(p, "FUNK WAH"); NOGATE; LVL(62);
         blk(p, PX_B_COMP, 1, PX_CMP_SQUASH, 55, 35, 50, 0, 0); blk(p, PX_B_SFX, 1, PX_SFX_AUTOWAH, 55, 50, 55, 40, 0);
-        NAM(M_TWIN, 45, 45, 55, 60); blk(p, PX_B_CAB, 1, PX_CAB_112JN, 50, 50, 50, 0, 0);
+        NAM(M_TWIN, 45, 45, 55, 60); IR1;
         blk(p, PX_B_REVERB, 1, PX_REV_ROOM, 35, 50, 15, 0, 0); break;
-    case 4: setname(p, "SURF SPRING"); blk(p, PX_B_GATE, 1, 0, 15, 50, 50, 0, 0); LVL(66);
-        NAM(M_SUPER59, 45, 50, 45, 58); blk(p, PX_B_CAB, 1, PX_CAB_112JN, 50, 55, 50, 0, 0);
+    case 4: setname(p, "SURF SPRING"); blk(p, PX_B_GATE, 1, 0, 15, 50, 50, 0, 0); LVL(70);
+        NAM(M_SUPER59, 45, 50, 45, 58); IR1;
         blk(p, PX_B_DELAY, 1, PX_DLY_TAPE, 7, 10, 15, 50, 20); blk(p, PX_B_REVERB, 1, PX_REV_SPRING, 55, 55, 40, 60, 0); break;
-    case 5: setname(p, "AMBIENT SWELL"); blk(p, PX_B_GATE, 1, 0, 18, 50, 50, 0, 0); LVL(68);
+    case 5: setname(p, "AMBIENT SWELL"); blk(p, PX_B_GATE, 1, 0, 18, 50, 50, 0, 0); LVL(73);
         blk(p, PX_B_COMP, 1, PX_CMP_SWELL, 50, 50, 50, 0, 0);
-        NAM(M_TWIN, 45, 50, 50, 50); blk(p, PX_B_CAB, 1, PX_CAB_112JN, 50, 45, 50, 0, 0);
+        NAM(M_TWIN, 45, 50, 50, 50); IR1;
         blk(p, PX_B_MOD, 1, PX_MOD_CHORUS, 20, 30, 30, 0, 0);
         blk(p, PX_B_DELAY, 1, PX_DLY_DUAL, 35, 45, 30, 40, 0); blk(p, PX_B_REVERB, 1, PX_REV_AMBIENT, 50, 45, 40, 0, 0); break;
     /* ---- edge of break-up, crunch ---- */
-    case 6: setname(p, "TS BLUES"); blk(p, PX_B_GATE, 1, 0, 18, 50, 50, 0, 0); LVL(64);
+    case 6: setname(p, "TS BLUES"); blk(p, PX_B_GATE, 1, 0, 18, 50, 50, 0, 0); LVL(69);
         blk(p, PX_B_DRIVE, 1, PX_DRV_TS9, 35, 50, 50, 0, 0);
-        NAM(M_SUPER59, 55, 50, 50, 52); blk(p, PX_B_CAB, 1, PX_CAB_112JN, 50, 50, 50, 0, 0);
+        NAM(M_SUPER59, 55, 50, 50, 52); IR1;
         blk(p, PX_B_REVERB, 1, PX_REV_SPRING, 40, 50, 18, 40, 0); break;
-    case 7: setname(p, "BLUES BREAKUP"); blk(p, PX_B_GATE, 1, 0, 22, 50, 50, 0, 0); LVL(51);
-        NAM(M_SHIRLCL, 55, 50, 50, 50); blk(p, PX_B_CAB, 1, PX_CAB_212BLUE, 50, 50, 50, 0, 0);
+    case 7: setname(p, "BLUES BREAKUP"); blk(p, PX_B_GATE, 1, 0, 22, 50, 50, 0, 0); LVL(59);
+        NAM(M_SHIRLCL, 55, 50, 50, 50); IR1;
         blk(p, PX_B_DELAY, 1, PX_DLY_ANALOG, 29, 20, 15, 40, 0); blk(p, PX_B_REVERB, 1, PX_REV_ROOM, 40, 50, 18, 0, 0); break;
-    case 8: setname(p, "KLON CRUNCH"); blk(p, PX_B_GATE, 1, 0, 18, 50, 50, 0, 0); LVL(66);
+    case 8: setname(p, "KLON CRUNCH"); blk(p, PX_B_GATE, 1, 0, 18, 50, 50, 0, 0); LVL(70);
         blk(p, PX_B_DRIVE, 1, PX_DRV_KLON, 40, 50, 55, 0, 0);
-        NAM(M_JCM900, 45, 50, 50, 50); blk(p, PX_B_CAB, 1, PX_CAB_412GB, 50, 50, 50, 0, 0);
+        NAM(M_JCM900, 45, 50, 50, 50); IR1;
         blk(p, PX_B_REVERB, 1, PX_REV_ROOM, 40, 50, 18, 0, 0); break;
-    case 9: setname(p, "BRIT CRUNCH"); blk(p, PX_B_GATE, 1, 0, 25, 30, 50, 0, 0); LVL(51);
-        NAM(M_JCM900, 55, 50, 55, 50); blk(p, PX_B_CAB, 1, PX_CAB_412GB, 50, 50, 50, 0, 0);
+    case 9: setname(p, "BRIT CRUNCH"); blk(p, PX_B_GATE, 1, 0, 25, 30, 50, 0, 0); LVL(57);
+        NAM(M_JCM900, 55, 50, 55, 50); IR1;
         blk(p, PX_B_REVERB, 1, PX_REV_ROOM, 35, 50, 15, 0, 0); break;
-    case 10: setname(p, "70S ROCK"); blk(p, PX_B_GATE, 1, 0, 25, 30, 50, 0, 0); LVL(48);
+    case 10: setname(p, "70S ROCK"); blk(p, PX_B_GATE, 1, 0, 25, 30, 50, 0, 0); LVL(53);
         blk(p, PX_B_DRIVE, 1, PX_DRV_M77, 20, 50, 65, 0, 0);
-        NAM(M_AC15, 60, 55, 55, 50); blk(p, PX_B_CAB, 1, PX_CAB_412GB, 50, 50, 50, 0, 0);
+        NAM(M_AC15, 60, 55, 55, 50); IR1;
         blk(p, PX_B_REVERB, 1, PX_REV_PLATE, 35, 50, 15, 0, 0); break;
-    case 11: setname(p, "BOUTIQUE"); blk(p, PX_B_GATE, 1, 0, 25, 30, 50, 0, 0); LVL(40);
-        NAM(M_SHIRLEY, 50, 50, 50, 50); blk(p, PX_B_CAB, 1, PX_CAB_412V30, 50, 50, 50, 0, 0);
+    case 11: setname(p, "BOUTIQUE"); blk(p, PX_B_GATE, 1, 0, 25, 30, 50, 0, 0); LVL(55);
+        NAM(M_SHIRLEY, 50, 50, 50, 50); IR1;
         blk(p, PX_B_DELAY, 1, PX_DLY_DIGITAL, 29, 15, 12, 45, 0); blk(p, PX_B_REVERB, 1, PX_REV_ROOM, 40, 50, 15, 0, 0); break;
     /* ---- lead ---- */
-    case 12: setname(p, "BRIT LEAD"); blk(p, PX_B_GATE, 1, 0, 30, 30, 50, 0, 0); LVL(50);
-        NAM(M_JCM2000, 55, 50, 55, 50); blk(p, PX_B_CAB, 1, PX_CAB_412GB, 50, 50, 50, 0, 0);
+    case 12: setname(p, "BRIT LEAD"); blk(p, PX_B_GATE, 1, 0, 30, 30, 50, 0, 0); LVL(55);
+        NAM(M_JCM2000, 55, 50, 55, 50); IR1;
         blk(p, PX_B_DELAY, 1, PX_DLY_ANALOG, 39, 30, 20, 45, 0); blk(p, PX_B_REVERB, 1, PX_REV_HALL, 45, 45, 20, 0, 0); break;
-    case 13: setname(p, "SMOOTH LEAD"); blk(p, PX_B_GATE, 1, 0, 30, 30, 50, 0, 0); LVL(41);
-        NAM(M_MARK4, 55, 50, 55, 50); blk(p, PX_B_CAB, 1, PX_CAB_412V30, 50, 50, 50, 0, 0);
+    case 13: setname(p, "SMOOTH LEAD"); blk(p, PX_B_GATE, 1, 0, 30, 30, 50, 0, 0); LVL(54);
+        NAM(M_MARK4, 55, 50, 55, 50); IR1;
         blk(p, PX_B_DELAY, 1, PX_DLY_TAPE, 35, 30, 20, 45, 20); blk(p, PX_B_REVERB, 1, PX_REV_HALL, 45, 45, 18, 0, 0); break;
-    case 14: setname(p, "HAIR METAL"); blk(p, PX_B_GATE, 1, 0, 35, 30, 50, 0, 0); LVL(50);
+    case 14: setname(p, "HAIR METAL"); blk(p, PX_B_GATE, 1, 0, 35, 30, 50, 0, 0); LVL(56);
         blk(p, PX_B_DRIVE, 1, PX_DRV_M77, 25, 55, 60, 0, 0);
-        NAM(M_JVM, 50, 55, 45, 55); blk(p, PX_B_CAB, 1, PX_CAB_412GB, 50, 50, 50, 0, 0);
+        NAM(M_JVM, 50, 55, 45, 55); IR1;
         blk(p, PX_B_DELAY, 1, PX_DLY_DIGITAL, 33, 25, 15, 50, 0); blk(p, PX_B_REVERB, 1, PX_REV_PLATE, 40, 50, 18, 0, 0); break;
-    case 15: setname(p, "SPACE LEAD"); blk(p, PX_B_GATE, 1, 0, 30, 30, 50, 0, 0); LVL(48);
-        NAM(M_PROMOD, 50, 50, 50, 50); blk(p, PX_B_CAB, 1, PX_CAB_412V30, 50, 50, 50, 0, 0);
+    case 15: setname(p, "SPACE LEAD"); blk(p, PX_B_GATE, 1, 0, 30, 30, 50, 0, 0); LVL(61);
+        NAM(M_PROMOD, 50, 50, 50, 50); IR1;
         blk(p, PX_B_DELAY, 1, PX_DLY_DUAL, 29, 40, 25, 40, 0); blk(p, PX_B_REVERB, 1, PX_REV_SHIMMER, 55, 45, 30, 40, 0); break;
     /* ---- high gain ---- */
-    case 16: setname(p, "MODERN ROCK"); blk(p, PX_B_GATE, 1, 0, 40, 30, 50, 0, 0); LVL(44);
-        NAM(M_PROMOD, 55, 50, 50, 50); blk(p, PX_B_CAB, 1, PX_CAB_412V30, 50, 50, 50, 0, 0);
+    case 16: setname(p, "MODERN ROCK"); blk(p, PX_B_GATE, 1, 0, 40, 30, 50, 0, 0); LVL(57);
+        NAM(M_PROMOD, 55, 50, 50, 50); IR1;
         blk(p, PX_B_REVERB, 1, PX_REV_ROOM, 30, 50, 12, 0, 0); break;
-    case 17: setname(p, "5150 RHYTHM"); blk(p, PX_B_GATE, 1, 0, 45, 25, 50, 0, 0); LVL(44);
+    case 17: setname(p, "5150 RHYTHM"); blk(p, PX_B_GATE, 1, 0, 45, 25, 50, 0, 0); LVL(57);
         blk(p, PX_B_DRIVE, 1, PX_DRV_TS9, 0, 55, 75, 0, 0);
-        NAM(M_5150, 50, 50, 50, 50); blk(p, PX_B_CAB, 1, PX_CAB_412V30, 50, 50, 50, 0, 0); break;
-    case 18: setname(p, "TIGHT METAL"); blk(p, PX_B_GATE, 1, 0, 50, 20, 50, 0, 0); LVL(42);
-        NAM(M_6505, 50, 55, 45, 55); blk(p, PX_B_CAB, 1, PX_CAB_412V30, 50, 55, 50, 0, 0); break;
-    case 19: setname(p, "SWEDE DEATH"); blk(p, PX_B_GATE, 1, 0, 55, 25, 50, 0, 0); LVL(62);
+        NAM(M_5150, 50, 50, 50, 50); IR1; break;
+    case 18: setname(p, "TIGHT METAL"); blk(p, PX_B_GATE, 1, 0, 50, 20, 50, 0, 0); LVL(54);
+        NAM(M_6505, 50, 55, 45, 55); IR1; break;
+    case 19: setname(p, "SWEDE DEATH"); blk(p, PX_B_GATE, 1, 0, 55, 25, 50, 0, 0); LVL(69);
         blk(p, PX_B_DRIVE, 1, PX_DRV_HM2, 70, 80, 80, 50, 0);
-        NAM(M_JCM900, 40, 50, 50, 50); blk(p, PX_B_CAB, 1, PX_CAB_412GB, 50, 50, 50, 0, 0); break;
-    case 20: setname(p, "DOOM"); blk(p, PX_B_GATE, 1, 0, 40, 35, 50, 0, 0); LVL(26);
-        NAM(M_5150, 60, 62, 45, 45); blk(p, PX_B_CAB, 1, PX_CAB_412V30, 60, 40, 40, 0, 0);
+        NAM(M_JCM900, 40, 50, 50, 50); IR1; break;
+    case 20: setname(p, "DOOM"); blk(p, PX_B_GATE, 1, 0, 40, 35, 50, 0, 0); LVL(46);
+        NAM(M_5150, 60, 62, 45, 45); IR1;
         blk(p, PX_B_DELAY, 1, PX_DLY_ANALOG, 45, 20, 10, 40, 0); blk(p, PX_B_REVERB, 1, PX_REV_HALL, 40, 35, 15, 0, 0); break;
     /* ---- effects ---- */
-    case 21: setname(p, "VIBE ROCK"); blk(p, PX_B_GATE, 1, 0, 18, 50, 50, 0, 0); LVL(51);
+    case 21: setname(p, "VIBE ROCK"); blk(p, PX_B_GATE, 1, 0, 18, 50, 50, 0, 0); LVL(56);
         blk(p, PX_B_MOD, 1, PX_MOD_UNIVIBE, 35, 55, 60, 0, 0);
-        NAM(M_JCM900, 55, 50, 50, 50); blk(p, PX_B_CAB, 1, PX_CAB_412GB, 50, 50, 50, 0, 0);
+        NAM(M_JCM900, 55, 50, 50, 50); IR1;
         blk(p, PX_B_REVERB, 1, PX_REV_ROOM, 40, 50, 18, 0, 0); break;
-    case 22: setname(p, "ORGAN"); NOGATE; LVL(75);
+    case 22: setname(p, "ORGAN"); NOGATE; LVL(79);
         blk(p, PX_B_SYN, 1, PX_SYN_ORGAN, 50, 70, 40, 30, 0);
-        NAM(M_TWIN, 45, 50, 50, 50); blk(p, PX_B_CAB, 1, PX_CAB_112JN, 50, 50, 50, 0, 0);
+        NAM(M_TWIN, 45, 50, 50, 50); IR1;
         blk(p, PX_B_MOD, 1, PX_MOD_ROTARY, 30, 60, 50, 0, 0); blk(p, PX_B_REVERB, 1, PX_REV_ROOM, 40, 50, 18, 0, 0); break;
     case 23: setname(p, "ACOUSTIC"); NOGATE; LVL(66);
         blk(p, PX_B_SYN, 1, PX_SYN_ACOUSTIC, 55, 50, 55, 40, 0); blk(p, PX_B_COMP, 1, PX_CMP_STUDIO, 40, 40, 85, 60, 0);
@@ -846,14 +656,40 @@ void px_preset_factory(px_preset_t *p, int idx)
         char n[14] = "USER ";
         n[5] = (char)('0' + (idx + 1) / 10); n[6] = (char)('0' + (idx + 1) % 10); n[7] = 0;
         setname(p, n); NOGATE; LVL(50);
-        NAM(M_TWIN, 50, 50, 50, 50); blk(p, PX_B_CAB, 1, PX_CAB_112JN, 50, 50, 50, 0, 0);
+        NAM(M_TWIN, 50, 50, 50, 50); IR1;
         blk(p, PX_B_REVERB, 1, PX_REV_ROOM, 35, 50, 15, 0, 0);
     } break;
     }
 }
 #undef NAM
+#undef IR1
 #undef LVL
 #undef NOGATE
+/* a preset of the v34 set (store formats 1..5) -> format 6. A built-in amp becomes the factory NAM model trained on the
+ * same amp's capture, its GAIN, BASS, MID and TREBLE kept (PRESENCE has no place); NAM keeps its settings. A built-in
+ * cabinet becomes USER IR in slot IR1 with its cuts off, on or off as it was: an empty slot passes the sound, a loaded one
+ * plays it. DI (NO CAB), which played the amp alone 2.6 dB up, becomes the CAB block off and the preset LEVEL 2.7 dB up.
+ * USER IR keeps its settings. */
+void px_preset_v34_set(px_preset_t *p)
+{
+    static const uint8_t M[V34_NAM] = {M_TWIN, M_AC15, M_JCM900, M_JCM2000, M_MARK4, M_SHIRLEY, M_PROMOD, M_5150};
+    uint8_t *a = p->p[PX_B_AMP], *c = p->p[PX_B_CAB];
+    int t = p->type[PX_B_AMP];
+    if (t != V34_NAM) {
+        if (t > V34_NAM) t = V34_TWIN;                 /* (the v34 engine played an unknown number as the first amp) */
+        a[4] = a[3]; a[3] = a[2]; a[2] = a[1]; a[1] = a[0];
+        a[0] = (uint8_t)px_nam_knob(M[t]);
+    }
+    p->type[PX_B_AMP] = PX_AMP_NAM;
+    t = p->type[PX_B_CAB] % (V34_IR + 1);              /* (as the v34 engine read it) */
+    if (t == V34_DI && p->on[PX_B_CAB]) {
+        const int l = p->p[PX_B_GATE][PX_PATCH_LEVEL] + 9;
+        p->p[PX_B_GATE][PX_PATCH_LEVEL] = (uint8_t)(l > 100 ? 100 : l);
+        p->on[PX_B_CAB] = 0;
+    }
+    if (t != V34_IR) { c[0] = (uint8_t)px_ir_knob(0); c[1] = 0; c[2] = 0; }
+    p->type[PX_B_CAB] = PX_CAB_IR;
+}
 
 /* ============================================================ recalc ======= */
 /* reverb (v35). FDN: 8 lines (prime lengths at 44.1 kHz, x the type's size), Hadamard feedback, each line with its own
@@ -1038,9 +874,6 @@ static void rc_drive(px_engine *e)
     float sr = e->sr, osr = sr * (float)(e->drv_os ? e->drv_os : PX_OVERSAMPLE);
     int t = p->type[PX_B_DRIVE] % PX_DRV_COUNT;
     const drv_v *d = &DV[t];
-#ifdef PX_FIT
-    if (px_fit_drv_on) { d = &px_fit_drv; t = -1; }     /* the fitter's candidate: no per-type special case */
-#endif
     const uint8_t *q = p->p[PX_B_DRIVE];
     float dr = role_val(d, q, R_DRIVE, -1.0f);
     if (dr < 0.0f) dr = role_val(d, q, R_DIST, -1.0f);
@@ -1110,9 +943,6 @@ static void rc_drive(px_engine *e)
     float bl = (float)d->blend * 0.01f;
     bl *= (1.0f - 0.8f * dr);                     /* Klon: clean path fades as gain rises */
     e->drv_blend = bl;
-#ifdef PX_FIT
-    if (px_fit_drv_on) { e->drv_level = px_fit_drv_trim * 2.0f * level; return; }
-#endif
     e->drv_level = DRV_TRIM[t] * 2.0f * level * powf(10.0f, DRV_DB[t] * 0.05f);   /* (v36 trim: before the amp) */
 }
 
@@ -1200,7 +1030,6 @@ int px_nam_check(uint32_t (*ticks)(void))
     typedef char room[sizeof px_nam_r0 >= PXN_TEST_WORDS * 4u ? 1 : -1];
     (void)sizeof(room);
     const int ok = pxn_selftest(px_nam_r0);
-    px_fx_hand = px_fx_check();
     px_nam_m.ready = 0;
     if (ticks) {
         float lv;
@@ -1230,7 +1059,7 @@ int px_nam_lp_equiv(void)
 uint32_t px_nam_tuned(int mode) { return mode >= 0 && mode < PXN_MODES ? px_nam_tt[mode] : 0; }
 /* the network will run on two cores in this engine's next blocks: the caller must run px_engine_process on the core
  * that hands jobs to the other one (pxn_set_helper) */
-int px_nam_dual(const px_engine *e) { return pxn_dual() && e->amp_nam && e->cur.on[PX_B_AMP] && px_nam_m.ready; }
+int px_nam_dual(const px_engine *e) { return pxn_dual() && e->cur.on[PX_B_AMP] && px_nam_m.ready; }
 void px_nam_lp_mem(void *base, unsigned bytes) { pxn_set_lp(base, bytes); }
 int px_nam_lp(px_engine *e, int on)
 {
@@ -1257,17 +1086,16 @@ void px_nam_lp_clock(uint32_t (*ticks)(void), uint32_t limit) { pxn_lp_clock(tic
 int px_nam_lp_gave_up(void) { return pxn_lp_gave_up(); }
 void px_nam_helper(int (*run)(void (*fn)(uint32_t), uint32_t arg), int (*wait)(void)) { pxn_set_helper(run, wait); }
 void px_nam_fast(void *base, unsigned bytes) { pxn_set_fast((int32_t *)base, bytes); }
-/* every model is trimmed to -20 LUFS on the DI clip (its level trim); this puts NAM + the 1x12 at GAIN noon at the fitted
- * amps' -23 LUFS (mean over the factory models, measured by tools/level_presets.py's DI) */
+/* every model is trimmed to -20 LUFS on the DI clip (its level trim); 6 dB less puts a model at GAIN noon, through a
+ * cabinet, at about -23 LUFS, the presets' level (v37: mean over the factory models, measured by tools/level_presets.py's
+ * DI) */
 #define PX_NAM_REF_DB (-6.0f)
-static void rc_nam(px_engine *e)
+static void rc_amp(px_engine *e)
 {
     const px_preset_t *p = &e->cur;
     const uint8_t *q = p->p[PX_B_AMP];
     float sr = e->sr, lv = 0.0f;
     int m = px_nam_model(q[0]);
-    e->amp_n = 0;
-    e->amp_nam = 1;
     if ((m != e->nam_idx || !px_nam_m.ready) && px_may_load) {   /* (v38: never on the audio side) */
         if (nam_load(m, &lv)) { e->nam_idx = -1; return; }
         e->nam_idx = m;
@@ -1290,160 +1118,6 @@ PX_HOT static void nam_run(px_engine *e, float *b, int n, float trim)
     bq_block(&e->ts_high, b, n);
 }
 
-static void rc_amp(px_engine *e)
-{
-    const px_preset_t *p = &e->cur;
-    float sr = e->sr, osr = sr * PX_OVERSAMPLE;
-    int t = p->type[PX_B_AMP];
-    if (t >= PX_AMP_NTYPES) t = 0;
-    e->amp_nam = 0;
-    if (t == PX_AMP_NAM) { rc_nam(e); return; }
-    const amp_v *v = &AV[t];
-#ifdef PX_FIT
-    if (px_fit_on) v = &px_fit_amp;                   /* the fitter's candidate (tests/fit/fitlib.c) */
-#endif
-    const uint8_t *q = p->p[PX_B_AMP];
-    float gain = f01(q[0]);
-    float userg = 0.3f + gain * gain * 3.2f;
-    e->amp_n = v->n; e->amp_hard = v->hard;
-    for (int i = 0; i < v->n; i++) {
-        e->amp_g[i] = v->g[i] * userg;
-        e->amp_bias[i] = v->bias[i];
-        e->amp_boff[i] = triode(v->bias[i]);
-        op_lp(&e->amp_lp[i], osr, (float)v->lp[i] * 0.85f);      /* tube stage: Miller-cap roll-off */
-        op_hp(&e->amp_hp[i], osr, (float)v->hp[i]);      /* coupling cap */
-    }
-    bq_highpass(&e->amp_tight, sr, (float)v->tight, 0.7f);
-    if (v->bright) bq_highshelf(&e->amp_bright, sr, (float)v->bright, (float)v->bright_db * (1.0f - gain));
-    else bq_ident(&e->amp_bright);
-    bq_lowshelf(&e->ts_low, sr, (float)v->bass, (f01(q[1]) - 0.5f) * 2.0f * (float)v->rb);
-    bq_peak(&e->ts_mid, sr, (float)v->mid, (float)v->midq10 * 0.1f, (f01(q[2]) - 0.5f) * 2.0f * (float)v->rm + (float)v->scoop);
-    bq_highshelf(&e->ts_high, sr, (float)v->treb, (f01(q[3]) - 0.5f) * 2.0f * (float)v->rt);
-    bq_highshelf(&e->amp_pres, sr, (float)v->pres, f01(q[4]) * 7.0f - 1.0f);
-    if (v->res_db) bq_lowshelf(&e->amp_res, sr, (float)v->res, (float)v->res_db); else bq_ident(&e->amp_res);
-    if (v->vdb) bq_peak(&e->amp_voice, sr, (float)v->vf, 0.8f, (float)v->vdb); else bq_ident(&e->amp_voice);
-    e->amp_sagk = (float)v->sag100 * 0.012f;
-    e->amp_envk = 1.0f - expf(-1.0f / (0.1f * sr));     /* blocking: ~100 ms (coupling cap x grid leak), once per sample */
-    e->amp_bk = (v->n >= 4 ? 0.45f : 0.35f) * e->amp_envk;   /* env is kept pre-scaled by the depth (0.45 / 0.35) */
-    e->amp_pw = (float)v->pw10 * 0.1f;
-    e->amp_pwn = 1.0f / px_tanh(e->amp_pw);
-    {   /* v36: the level at each GAIN setting, measured (px_trim.h): every amp at the same loudness at noon, +-3 dB
-         * over the whole knob, so a clean and a high-gain preset sit together */
-        float gi = gain * 10.0f; int i0 = (int)gi; if (i0 > 9) i0 = 9;
-        float db = AMP_LVL[t][i0] + (AMP_LVL[t][i0 + 1] - AMP_LVL[t][i0]) * (gi - (float)i0);
-        e->amp_out = powf(10.0f, db * 0.05f);
-    }
-#ifdef PX_FIT
-    if (px_fit_on) e->amp_out = px_fit_trim;
-#endif
-}
-
-/* cabinet fine structure, one sample: sparse taps on a 64-sample ring + breakup resonators, h[k] = A dec^k sin(kw)
- * = b z^-1 / (1 - a1 z^-1 - a2 z^-2). The state is passed in so the level normalisation can run its own copy. */
-PX_INL static inline float cab_detail(const px_cabd *c, float x, float *rb, int *rw, float (*ms)[2])
-{
-    int w = (*rw - 1) & 63;
-    float y = 0.0f, xp;
-    *rw = w;
-    rb[w] = x;
-    for (int k = 0; k < c->nt; k++) y += c->tg[k] * rb[(w + c->ti[k]) & 63];
-    xp = rb[(w + 1) & 63];                              /* x[n-1] */
-    for (int m = 0; m < PX_CABM; m++) {
-        float yn = c->m[m][0] * ms[m][0] + c->m[m][1] * ms[m][1] + c->m[m][2] * xp;
-        ms[m][1] = ms[m][0]; ms[m][0] = yn;
-        y += yn;
-    }
-    return y * c->dg;
-}
-
-/* a cabinet's whole set (v38: made away from the engine, so that the main loop can make it while the audio plays: its
- * normalisation runs the impulse through 4608 samples, too long for the audio interrupt) */
-typedef struct { px_bq f[8]; int n; px_cabd cd; float g; } cab_set;
-static void cab_make(float sr, const px_preset_t *p, cab_set *o)
-{
-    int t = p->type[PX_B_CAB] % PX_CAB_COUNT;
-    const cab_v *c = &CV[t];
-#ifdef PX_FIT
-    if (px_fit_cab_on) c = &px_fit_cab;               /* the fitter's candidate (the type still sets open back) */
-#endif
-    const uint8_t *q = p->p[PX_B_CAB];
-    px_bq *f = o->f;
-    px_cabd *cd = &o->cd;
-    int n = 0;
-    memset(o, 0, sizeof *o);
-    if (t == PX_CAB_DI || t == PX_CAB_IR) return;
-    float body = (f01(q[0]) - 0.5f) * 10.0f, bright = (f01(q[1]) - 0.5f) * 10.0f, mic = 0.65f + f01(q[2]) * 0.7f;
-    bq_highpass(&f[n++], sr, (float)c->hp, (float)c->hpq10 * 0.1f);
-    bq_peak(&f[n++], sr, (float)c->bump, 1.0f, (float)c->bump_db + body);
-    if (c->d1) bq_peak(&f[n++], sr, (float)c->d1, 1.2f, (float)c->d1db);
-    if (c->d2) bq_peak(&f[n++], sr, (float)c->d2, 1.5f, (float)c->d2db);
-    if (c->p1) bq_peak(&f[n++], sr, (float)c->p1, 1.4f, (float)c->p1db + bright);
-    if (c->p2) bq_peak(&f[n++], sr, (float)c->p2, 1.6f, (float)c->p2db + bright * 0.6f);
-    {
-        float lq = c->lpq > 0.0f ? c->lpq : 0.9f;      /* the cone's top: the knee's sharpness */
-        bq_lowpass(&f[n++], sr, (float)c->lp * mic, lq);
-        bq_lowpass(&f[n++], sr, (float)c->lp * mic * 1.15f, lq * (0.8f / 0.9f));
-    }
-    o->n = n;
-    /* fine structure: what a real speaker adds to the smooth curve above. Sparse taps (direct sound, the mic's
-     * off-axis comb, the back wave of open cabinets) + the cone's breakup modes as 2-pole resonators: the same
-     * impulse response as v25's 128-tap FIR (A dec^k sin kw per mode), without its cost on the pedal. */
-    {
-        uint32_t rnd = 0x9E3779B9u * (uint32_t)(t + 1);
-#define RND() (rnd = rnd * 1664525u + 1013904223u, (float)(rnd >> 8) * (1.0f / 16777216.0f))
-        int nt = 0;
-        float dc = 0.0f;
-        /* mic: two paths across the cone (centre .. edge): an off-axis comb;
-         * MIC 100 = cap centre (notch out of band), MIC 0 = cone edge (notch ~6 kHz) */
-        float tau = (0.00002f + (1.0f - f01(q[2])) * 0.00006f) * sr;   /* notch from ~25 kHz (centre) to ~6 kHz (edge) */
-        int ti = (int)tau; float tf = tau - (float)ti;
-        cd->ti[nt] = 0; cd->tg[nt++] = 0.80f;                        /* depth: at most -4.4 dB */
-        if (ti == 0) cd->tg[0] += 0.20f * (1.0f - tf); else { cd->ti[nt] = (uint8_t)ti; cd->tg[nt++] = 0.20f * (1.0f - tf); }
-        cd->ti[nt] = (uint8_t)(ti + 1); cd->tg[nt++] = 0.20f * tf;
-        /* open back: the rear wave comes round, inverted, ~0.8 ms later */
-        if (t == PX_CAB_112JN || t == PX_CAB_212BLUE) {
-            static const float BW[5] = {-0.01f, -0.025f, -0.03f, -0.025f, -0.01f};
-            int d = (int)(0.0008f * sr);
-            if (d > 61) d = 61;
-            for (int k = 0; k < 5; k++) { cd->ti[nt] = (uint8_t)(d - 2 + k); cd->tg[nt++] = BW[k]; }
-        }
-        cd->nt = nt;
-        for (int k = 0; k < nt; k++) dc += cd->tg[k];
-        /* cone breakup: narrow resonances between 1.2 and 6 kHz, fixed per speaker (seeded by the cab): the same 10
-         * draws as v25, the PX_CABM strongest kept (the weakest, < 1 dB, were not worth their cost) */
-        float mf[10], mq[10], mr[10];
-        for (int m = 0; m < 10; m++) {
-            mf[m] = 1200.0f * powf(5.0f, RND());
-            mq[m] = 5.0f + 7.0f * RND();
-            mr[m] = 0.10f + 0.20f * RND();                      /* peaks of +1..+2.5 dB, a few dips */
-            if (RND() < 0.25f) mr[m] = -0.6f * mr[m];
-        }
-        for (int m = 0; m < PX_CABM; m++) {
-            int b = m;
-            for (int j = m + 1; j < 10; j++) if (px_abs(mr[j]) > px_abs(mr[b])) b = j;
-            float fr = mf[b], Q = mq[b], rel = mr[b];
-            mf[b] = mf[m]; mq[b] = mq[m]; mr[b] = mr[m];
-            float w = 2.0f * PI_F * fr / sr, dec = expf(-PI_F * fr / (Q * sr)), A = rel * 2.0f * PI_F * fr / (Q * sr);
-            float a1 = 2.0f * dec * cosf(w), a2 = -dec * dec, bb = A * dec * sinf(w);   /* h[k] = A dec^k sin(kw) */
-            cd->m[m][0] = a1; cd->m[m][1] = a2; cd->m[m][2] = bb;
-            dc += bb / (1.0f - a1 - a2);
-        }
-        cd->dg = 1.0f / dc;                                     /* unity at low frequencies: the bass stays as above */
-#undef RND
-    }
-    px_bq g[8];
-    float en = 0.0f, rb[64], ms[PX_CABM][2];
-    int rw = 0;
-    for (int k = 0; k < n; k++) { g[k] = f[k]; bq_reset(&g[k]); }
-    memset(rb, 0, sizeof rb); memset(ms, 0, sizeof ms);
-    for (int i = 0; i < 4096 + 512; i++) {              /* energy normalisation (filters, then the detail): every */
-        float x = (i == 0) ? 1.0f : 0.0f;               /* cab plays at the same level */
-        for (int k = 0; k < n; k++) x = bq_run(&g[k], x);
-        float y = cab_detail(cd, x, rb, &rw, ms);
-        en += y * y;
-    }
-    o->g = (en > 1e-12f) ? 1.0f / sqrtf(en * 2.0f) : 1.0f;
-}
 /* ---- v38: USER IR, uniform partitioned convolution ----
  * The IR's PX_IR_LEN taps in IR_P partitions of IR_B (= the engine's 64-frame block). Each partition's spectrum is kept
  * (real FFT of 128: the partition, then 64 zeros); every block the last two blocks of input are transformed (overlap-
@@ -1601,12 +1275,11 @@ int px_ir_name(int s, char *buf)
     buf[i] = 0;
     return 0;
 }
-static void rc_cab_ir(px_engine *e)
+static void rc_cab(px_engine *e)
 {
     const uint8_t *q = e->cur.p[PX_B_CAB];
     const float sr = e->sr;
     const int s = px_ir_slot(q[0]);
-    e->cab_n = 0; e->cab_firon = 0;
     if ((s != e->ir_slot || !ir_ok) && px_may_load) {  /* (a new slot is a full change: never on the audio side) */
         char nm[12];
         float *h = &ir_X[0][0];                        /* (scratch: cleared after; the IR in the first half, ir_load_h's in the second) */
@@ -1619,35 +1292,6 @@ static void rc_cab_ir(px_engine *e)
     bq_highpass(&e->ir_lo, sr, ir_lo_hz(q[1]), 0.7071f);
     const float hi = ir_hi_hz(q[2]);
     if (hi >= sr * 0.45f) bq_ident(&e->ir_hi); else bq_lowpass(&e->ir_hi, sr, hi, 0.7071f);
-}
-
-/* px_engine_prepare's store: the last set made, and what it was made for */
-static cab_set px_cab_st;
-static struct { int ok; float sr; uint8_t type, q[3]; } px_cab_key;
-static int cab_key_is(float sr, const px_preset_t *p)
-{
-    return px_cab_key.ok && px_cab_key.sr == sr && px_cab_key.type == p->type[PX_B_CAB] &&
-           !memcmp(px_cab_key.q, p->p[PX_B_CAB], 3);
-}
-static void rc_cab(px_engine *e)
-{
-    const px_preset_t *p = &e->cur;
-    if (p->type[PX_B_CAB] % PX_CAB_COUNT == PX_CAB_IR) { rc_cab_ir(e); return; }
-    static cab_set o;                                  /* (off the stack: 400 bytes) */
-    const cab_set *c = &o;
-    if (cab_key_is(e->sr, p)) c = &px_cab_st; else cab_make(e->sr, p, &o);
-    const int n = c->n;
-    if (!n) { e->cab_n = 0; e->cab_firon = 0; return; }
-    if (!e->cab_firon) { memset(e->cab_rb, 0, sizeof e->cab_rb); memset(e->cab_ms, 0, sizeof e->cab_ms); e->cab_rw = 0; }
-    e->cd = c->cd;
-    e->cab_firon = 1;
-    e->cab_g = c->g;
-    for (int k = 0; k < n; k++) {                      /* new coefficients, the state kept (reset if the chain changed) */
-        px_bq f = c->f[k];
-        if (e->cab_n == n) { f.z1 = e->cab[k].z1; f.z2 = e->cab[k].z2; } else bq_reset(&f);
-        e->cab[k] = f;
-    }
-    e->cab_n = n;
 }
 
 static void rc_eq(px_engine *e)
@@ -2046,7 +1690,7 @@ static void px_recalc(px_engine *e)
     rc_sfx(e);
     (void)osr;                                         /* (v38: the half-band filters have fixed coefficients) */
     /* v37: before a NAM amp the drive runs at x2 (the network does not alias; x4 cost 18% of the CPU) */
-    e->drv_os = (e->cur.on[PX_B_AMP] && e->cur.type[PX_B_AMP] == PX_AMP_NAM) ? 2 : PX_OVERSAMPLE;
+    e->drv_os = e->cur.on[PX_B_AMP] ? 2 : PX_OVERSAMPLE;
     rc_drive(e);
     rc_amp(e);
     rc_cab(e);
@@ -2057,8 +1701,8 @@ static void px_recalc(px_engine *e)
     rc_syn(e);
     /* v36: each type's level at noon, measured (px_trim.h): switching a block on keeps the loudness */
     const px_preset_t *p = &e->cur;
-    static const float *const DB[PX_NBLK] = {0, CMP_DB, PIT_DB, SFX_DB, 0, 0, CAB_DB, 0, MOD_DB, DLY_DB, REV_DB, SYN_DB};
-    static const uint8_t NT[PX_NBLK] = {1, PX_CMP_COUNT, PX_PIT_COUNT, PX_SFX_COUNT, PX_DRV_COUNT, 1, PX_CAB_COUNT, 1,
+    static const float *const DB[PX_NBLK] = {0, CMP_DB, PIT_DB, SFX_DB, 0, 0, 0, 0, MOD_DB, DLY_DB, REV_DB, SYN_DB};
+    static const uint8_t NT[PX_NBLK] = {1, PX_CMP_COUNT, PX_PIT_COUNT, PX_SFX_COUNT, PX_DRV_COUNT, 1, 1, 1,
                                         PX_MOD_COUNT, PX_DLY_COUNT, PX_REV_COUNT, PX_SYN_COUNT};
     for (int b = 0; b < PX_NBLK; b++)
         e->btr[b] = DB[b] ? powf(10.0f, DB[b][p->type[b] % NT[b]] * 0.05f) : 1.0f;
@@ -2334,8 +1978,7 @@ static const uint32_t GL_F[] = {
     GLF_(sfx_mix), GLF_(sfx_c), GLF_(sfx_d),
     GLF_(syn_dry), GLF_(syn_out), GLF_(syn_d8), GLF_(syn_plvl), GLF_(syn_lvl[0]), GLF_(syn_lvl[1]), GLF_(syn_lvl[2]),
     GLF_(drv_gain), GLF_(drv_level), GLF_(drv_blend), GLF_(drv_mix), GLF_(drv_shelf_lo),
-    GLF_(amp_g[0]), GLF_(amp_g[1]), GLF_(amp_g[2]), GLF_(amp_g[3]), GLF_(amp_out), GLF_(nam_in_g),
-    GLF_(cab_g),
+    GLF_(nam_in_g),
     GLF_(mod_mix), GLF_(mod_depth), GLF_(mod_fb), GLF_(mod_base), GLF_(mod_sweep), GLF_(mod_shape), GLF_(ph_lo),
     GLF_(ph_hi), GLF_(rot_bal),
     GLF_(dly.dly_mix), GLF_(dly.dly_fb),
@@ -2356,16 +1999,15 @@ int px_engine_change(const px_engine *e, const px_preset_t *p)
     if (!px_order_valid(o)) { px_order_default(od); o = od; }
     if (memcmp(o, e->ord, PX_NBLK)) return PX_CH_FULL;
     int k = 0;
-    const int nam = c->type[PX_B_AMP] == PX_AMP_NAM;
     for (int b = 0; b < PX_NBLK; b++) {
         if (c->type[b] != p->type[b]) return PX_CH_FULL;
         if (c->on[b] != p->on[b]) {
-            if (b == PX_B_AMP && nam) return PX_CH_FULL;    /* the NAM amp sets how the blocks share the two cores */
+            if (b == PX_B_AMP) return PX_CH_FULL;      /* the NAM amp sets how the blocks share the two cores */
             k = 1;
         }
         if (memcmp(c->p[b], p->p[b], PX_NPAR)) {
-            if (b == PX_B_AMP && nam && nam_model_of(c) != nam_model_of(p)) return PX_CH_FULL;   /* another network */
-            if (b == PX_B_CAB && c->type[b] == PX_CAB_IR && px_ir_slot(c->p[b][0]) != px_ir_slot(p->p[b][0]))
+            if (b == PX_B_AMP && nam_model_of(c) != nam_model_of(p)) return PX_CH_FULL;   /* another network */
+            if (b == PX_B_CAB && px_ir_slot(c->p[b][0]) != px_ir_slot(p->p[b][0]))
                 return PX_CH_FULL;                     /* another IR (read from the flash) */
             k = 1;
         }
@@ -2376,14 +2018,6 @@ int px_engine_change(const px_engine *e, const px_preset_t *p)
         if (dly_reach(&t) > t.dly_hi - t.dly_lo) return PX_CH_FULL;
     }
     return k ? PX_CH_KNOBS : PX_CH_NONE;
-}
-void px_engine_prepare(const px_engine *e, const px_preset_t *p)
-{
-    if (cab_key_is(e->sr, p)) return;
-    px_cab_key.ok = 0;
-    cab_make(e->sr, p, &px_cab_st);
-    px_cab_key.sr = e->sr; px_cab_key.type = p->type[PX_B_CAB]; memcpy(px_cab_key.q, p->p[PX_B_CAB], 3);
-    px_cab_key.ok = 1;
 }
 void px_engine_knobs(px_engine *e, const px_preset_t *p)
 {
@@ -2493,20 +2127,6 @@ static inline float drive_pre(px_engine *e, float x)   /* base rate */
     if (e->drv_pre & 1) x = x * e->drv_shelf_lo + bq_run(&e->drv_shelf, x);
     return x;
 }
-PX_INL static inline float drive_run(px_engine *e, float x)   /* oversampled */
-{
-    float d = clip_run(e, x * e->drv_gain) + e->dn;
-    if (e->drv_dcb) { e->drv_dcs += (d - e->drv_dcs) * e->drv_dck; d -= e->drv_dcs; }
-    if (e->drv_tm == TM_MUFF) {
-        float lo = bq_run(&e->drv_t1, d), hi = bq_run(&e->drv_t2, d);
-        d = lo + (hi - lo) * e->drv_mix;
-    } else {
-        d = bq_run(&e->drv_t1, d);
-        if (e->drv_np & 2) d = bq_run(&e->drv_t2, d);
-    }
-    if (e->drv_np & 4) d = bq_run(&e->drv_t3, d);
-    return d * e->drv_level + x * e->drv_blend;
-}
 /* ---- v38: oversampling by polyphase IIR half-band filters (as the stock firmware does: two all-pass branches, each
  * section y = c (x - y1) + x1, one multiply; the branches run at the lower rate). x4 = two x2 stages: stage 1 (44.1 <->
  * 88.2 kHz) passes 0..20 kHz and stops 24.1..44.1 kHz by 78 dB with 6 sections; stage 2 (88.2 <-> 176.4 kHz) has 20..68.2
@@ -2586,11 +2206,11 @@ static void os_down(px_hb *st, const float *in, float *out, int n, int os)   /* 
     hb1_down(&st[3], px_os_m, out, n);
 }
 
-/* drive_run over n oversampled samples in place, stage by stage (the same operations as drive_run sample by sample);
- * the anti-denormal offset follows the base-rate sample (os samples each) */
+/* the drive over n oversampled samples in place, stage by stage: the clipper, its DC blocker, the post tone, then the
+ * level and the clean blend; the anti-denormal offset follows the base-rate sample (os samples each) */
 static float px_os_t[PX_OVERSAMPLE * PX_MAX_BLOCK] PX_LO(px_os_t), px_os_h[PX_OVERSAMPLE * PX_MAX_BLOCK] PX_LO(px_os_h),
              px_os_u[PX_OVERSAMPLE * PX_MAX_BLOCK] PX_LO(px_os_u);
-/* v40.4: the oversampled sections' input at the base rate (the drive's, or a fitted amp's: one at a time), and the delay's
+/* v40.4: the drive's input at the base rate, and the delay's
  * and the reverb's wet output when they run in the chain: not on px_engine_part's stack (the second core's is 2.8 KB) */
 static float px_os_p[PX_MAX_BLOCK] PX_LO(px_os_p), px_wb[2][PX_MAX_BLOCK] PX_LO(px_wb);
 static void drive_block(px_engine *e, float *u, int n, int os)   /* (static buffers: off the interrupt's stack) */
@@ -2612,14 +2232,6 @@ static void drive_block(px_engine *e, float *u, int n, int os)   /* (static buff
     } else bq_block(&e->drv_t1, t, n);
     if (e->drv_np & 4) bq_block(&e->drv_t3, t, n);
     for (int i = 0; i < n; i++) u[i] = t[i] * e->drv_level + u[i] * e->drv_blend;
-}
-PX_INL static inline float amp_stage(px_engine *e, int i, float x, int upd)
-{
-    x = op_run(&e->amp_hp[i], x);
-    float u = x * e->amp_g[i] + e->amp_bias[i] - e->amp_env[i];
-    if (upd) e->amp_env[i] += (u > 0.0f ? u : 0.0f) * e->amp_bk - e->amp_env[i] * e->amp_envk;   /* grid current charges the */
-    x = triode(u) - e->amp_boff[i] + e->dn;        /* coupling cap: the bias shifts with playing, then recovers */
-    return op_run(&e->amp_lp[i], x);               /* (the bias swallows tiny signals: re-inject the offset) */
 }
 static inline float rd_frac(const float *buf, int mask, float pos)   /* pos in [0, mask+1) */
 {
@@ -3299,44 +2911,6 @@ static __attribute__((noinline)) void pitch_run(px_engine *e, int whammy, float 
     }
     e->dn = ((n0 - 1) & 1) ? 1e-15f : -1e-15f;
 }
-static float px_cab_h[64 + 2 * PX_MAX_BLOCK] PX_LO(px_cab_h);   /* the last 64 inputs and the run's in a row; the run's output */
-/* the cabinet's fine structure (cab_detail) over n samples: the taps one after the other over the run, on the last 64
- * inputs laid out in a row (each tap then reads straight on), then the breakup resonators, two at a time */
-static __attribute__((noinline)) void cab_detail_run(px_engine *e, float *xb, int n, float strim)
-{
-    const px_cabd *c = &e->cd;
-    float *const h = px_cab_h, *const y = px_cab_h + 64 + PX_MAX_BLOCK;
-    float *rb = e->cab_rb;
-    const int w0 = e->cab_rw;                          /* rb[(w0 + d) & 63]: the input d samples before the last one */
-    for (int d = 0; d < 64; d++) h[63 - d] = rb[(w0 + d) & 63];
-    for (int k = 0; k < n; k++) { const float x = xb[k]; h[64 + k] = x; rb[(w0 - 1 - k) & 63] = x; y[k] = 0.0f; }
-    e->cab_rw = (w0 - n) & 63;
-    int t = 0;
-    for (; t + 3 < c->nt; t += 4) {                    /* (four taps a pass, each sample's sum in the taps' order) */
-        const float g0 = c->tg[t], g1 = c->tg[t + 1], g2 = c->tg[t + 2], g3 = c->tg[t + 3];
-        const float *q0 = h + 64 - (c->ti[t] & 63), *q1 = h + 64 - (c->ti[t + 1] & 63), *q2 = h + 64 - (c->ti[t + 2] & 63),
-                    *q3 = h + 64 - (c->ti[t + 3] & 63);
-        for (int k = 0; k < n; k++) y[k] = y[k] + g0 * q0[k] + g1 * q1[k] + g2 * q2[k] + g3 * q3[k];
-    }
-    for (; t < c->nt; t++) {
-        const float g = c->tg[t], *q = h + 64 - (c->ti[t] & 63);
-        for (int k = 0; k < n; k++) y[k] += g * q[k];
-    }
-    const float *xp = h + 63;                          /* x[n-1] */
-    for (int m = 0; m + 1 < PX_CABM; m += 2) {
-        const float a0 = c->m[m][0], a1 = c->m[m][1], a2 = c->m[m][2], b0 = c->m[m + 1][0], b1 = c->m[m + 1][1], b2 = c->m[m + 1][2];
-        float s0 = e->cab_ms[m][0], s1 = e->cab_ms[m][1], t0 = e->cab_ms[m + 1][0], t1 = e->cab_ms[m + 1][1];
-        for (int k = 0; k < n; k++) {
-            const float x1 = xp[k], ya = a0 * s0 + a1 * s1 + a2 * x1, yb = b0 * t0 + b1 * t1 + b2 * x1;
-            s1 = s0; s0 = ya; t1 = t0; t0 = yb;
-            y[k] = y[k] + ya + yb;
-        }
-        e->cab_ms[m][0] = s0; e->cab_ms[m][1] = s1; e->cab_ms[m + 1][0] = t0; e->cab_ms[m + 1][1] = t1;
-    }
-    const float dg = c->dg, cg = e->cab_g;
-    for (int k = 0; k < n; k++) xb[k] = y[k] * dg * cg * strim;
-}
-typedef char px_cabm_even[(PX_CABM & 1) ? -1 : 1];     /* (the resonators run in pairs) */
 /* GATE, COMP */
 static __attribute__((noinline)) void gate_run(px_engine *e, int on, float *xb, int n, float strim)
 {
@@ -3729,32 +3303,24 @@ PX_HOT void px_engine_part(px_engine *e, const float *in, float *out, int n, int
     const int sfx_t = p->type[PX_B_SFX] % PX_SFX_COUNT;
     const int mod_t = p->type[PX_B_MOD] % PX_MOD_COUNT;
     const int dly_t = p->type[PX_B_DELAY] % PX_DLY_COUNT;
-    const int drv_on = p->on[PX_B_DRIVE], amp_on = p->on[PX_B_AMP], amp_os = amp_on && e->amp_n > 0;
+    const int drv_on = p->on[PX_B_DRIVE], amp_on = p->on[PX_B_AMP];
     const int syn_t = p->type[PX_B_SYN] % PX_SYN_COUNT;
     /* the blocks to run, in this preset's order (GATE always: it carries the anti-denormal offset) */
     uint8_t st[PX_NBLK];
     float tr[PX_NBLK];                                 /* each block's level trim */
-    int ns = 0, ip_drv = -100, ip_amp = -200;
+    int ns = 0, ip_amp = -200;
     for (int i = 0; i < PX_NBLK; i++) {
         int b = e->ord[i];
         if (b != PX_B_GATE && !p->on[b]) continue;
-        if (b == PX_B_DRIVE) ip_drv = ns;
         if (b == PX_B_AMP) ip_amp = ns;
         tr[ns] = e->btr[b];
         st[ns++] = (uint8_t)b;
     }
     const float pg = e->patch_g;
-    /* DRIVE right before AMP: one oversampled section for both (set A). Otherwise each its own: the amp keeps
-     * set A, a drive elsewhere takes set B (set A when the amp does not oversample). */
-    const int pair = drv_on && amp_on && ip_amp == ip_drv + 1 &&
-                     e->bf[PX_B_DRIVE] == 1.0f && e->bfa[PX_B_DRIVE] == 1.0f && e->bf[PX_B_AMP] == 1.0f &&
-                     e->bfa[PX_B_AMP] == 1.0f;         /* v38: not while one of them fades (each fades on its own) */
-    /* supply sag: slow (~11 ms), its two divisions once a block (divisions are slow on the pedal's FPU) */
-    const float sag_pa = 1.0f / (1.0f + e->amp_sag * e->amp_sagk), sag_pre = 1.0f / (1.0f + e->amp_sag * e->amp_sagk * 0.3f);
 
     /* v37: a NAM amp works on whole blocks: the blocks before it run first over the n samples (pass 0), the network
      * on them, then the blocks after it (pass 1). Without NAM: one pass, sample by sample, as before. */
-    const int nam = amp_on && e->amp_nam && px_nam_m.ready && ip_amp >= 0 && n <= PX_MAX_BLOCK;
+    const int nam = amp_on && px_nam_m.ready && ip_amp >= 0 && n <= PX_MAX_BLOCK;
     if (part != PX_PART_ALL && !nam) {                 /* (the caller checks px_nam_dual: not reached) */
         if (out != in) for (int k = 0; k < n; k++) out[k] = part == PX_PART_PRE ? in[k] : 0.0f;
         return;
@@ -3808,49 +3374,26 @@ PX_HOT void px_engine_part(px_engine *e, const float *in, float *out, int n, int
         const int fading = p->on[sblk] && (fa < 1.0f || fz < 1.0f);   /* (GATE runs off too: not a fade) */
         float dryb[PX_MAX_BLOCK];
         if (fading) for (int k = 0; k < n; k++) dryb[k] = xb[k];
-        if (sblk == PX_B_CAB) {                          /* cabinet: its filters one after the other over the block */
-            if (p->on[PX_B_CAB] && p->type[PX_B_CAB] % PX_CAB_COUNT == PX_CAB_IR) {   /* v38: an impulse response */
+        if (sblk == PX_B_CAB) {                          /* cabinet: an impulse response (v38) */
+            if (p->on[PX_B_CAB]) {
                 if (ir_ok && n == IR_B) ir_run(xb);      /* (blocks of 64 as on the pedal; other sizes pass) */
                 bq_block2(&e->ir_lo, &e->ir_hi, xb, n);
-                for (int k = 0; k < n; k++) xb[k] *= strim;
-            } else if (p->on[PX_B_CAB] && e->cab_n) {
-                if (px_fx_int) fq_chain(e->cab, (px_fq *)e->fq_cab, e->cab_n, xb, n);
-                else bq_chain(e->cab, e->cab_n, xb, n);
-#if PX_RUNS
-                if (e->cab_firon) cab_detail_run(e, xb, n, strim);
-                else
-#endif
-                for (int k = 0; k < n; k++) {
-                    float x = xb[k];
-                    if (e->cab_firon) x = cab_detail(&e->cd, x, e->cab_rb, &e->cab_rw, e->cab_ms);
-                    xb[k] = x * e->cab_g * strim;
-                }
-            } else for (int k = 0; k < n; k++) xb[k] *= strim;
+            }
+            for (int k = 0; k < n; k++) xb[k] *= strim;
             goto faded;
         }
-        if (sblk == PX_B_DRIVE) {                        /* drive (+ the fitted amp's preamp when it comes right after:
-                                                            pair), oversampled, stage by stage over the block. Set A, or B
-                                                            when the amp oversamples on its own; set C at x2 before NAM */
+        if (sblk == PX_B_DRIVE) {                        /* drive, oversampled, stage by stage over the block: set A, or
+                                                            set C at x2 before NAM */
             if (drv_on) {
-                const int both = pair && amp_os;
-                const int os = (!both && e->drv_os == 2) ? 2 : PX_OVERSAMPLE, no = os * n;
-                px_hb *set = os == 2 ? e->os_c : (pair || !amp_os) ? e->os_a : e->os_b;
+                const int os = e->drv_os == 2 ? 2 : PX_OVERSAMPLE, no = os * n;
+                px_hb *set = os == 2 ? e->os_c : e->os_a;
                 float *ub = px_os_u, *const pre = px_os_p;
                 for (int k = 0; k < n; k++) {
                     e->dn = (k & 1) ? 1e-15f : -1e-15f;
-                    float x = drive_pre(e, xb[k]);
-                    if (both) { x = bq_run(&e->amp_tight, x); x = bq_run(&e->amp_bright, x); x *= sag_pre; }
-                    pre[k] = x;
+                    pre[k] = drive_pre(e, xb[k]);
                 }
                 os_up(set, pre, ub, n, os);
-                if (both) {                              /* drive and preamp sample by sample (bias: once a base sample) */
-                    for (int j = 0; j < no; j++) {
-                        e->dn = ((j >> 2) & 1) ? 1e-15f : -1e-15f;
-                        float u = drive_run(e, ub[j]);
-                        for (int i = 0; i < e->amp_n; i++) u = amp_stage(e, i, u, (j & 3) == 0);
-                        ub[j] = u;
-                    }
-                } else drive_block(e, ub, no, os);
+                drive_block(e, ub, no, os);
                 os_down(set, ub, xb, n, os);
                 for (int k = 0; k < n; k++) xb[k] *= strim;
             } else for (int k = 0; k < n; k++) xb[k] *= strim;
@@ -3884,22 +3427,6 @@ PX_HOT void px_engine_part(px_engine *e, const float *in, float *out, int n, int
             }
             for (int k = 0; k < n; k++) xb[k] *= strim;
             goto faded;
-        }
-        if (sblk == PX_B_AMP && !pair && amp_os) {       /* the fitted amp's own oversampled preamp (set A), over the block;
-                                                            its tone stack and power amp then sample by sample below */
-            float *ub = px_os_u, *const pre = px_os_p;
-            for (int k = 0; k < n; k++) {
-                float x = bq_run(&e->amp_tight, xb[k]);
-                pre[k] = bq_run(&e->amp_bright, x) * sag_pre;
-            }
-            os_up(e->os_a, pre, ub, n, PX_OVERSAMPLE);
-            for (int j = 0; j < PX_OVERSAMPLE * n; j++) {
-                e->dn = ((j >> 2) & 1) ? 1e-15f : -1e-15f;
-                float u = ub[j];
-                for (int i = 0; i < e->amp_n; i++) u = amp_stage(e, i, u, (j & 3) == 0);
-                ub[j] = u;
-            }
-            os_down(e->os_a, ub, xb, n, PX_OVERSAMPLE);
         }
         /* v40.4: the blocks that run over the block pass by pass (above); the others sample by sample, below */
 #if PX_RUNS
@@ -4059,29 +3586,6 @@ PX_HOT void px_engine_part(px_engine *e, const float *in, float *out, int n, int
         case PX_B_SYN:
             x = syn_run(e, syn_t, x);
             break;
-        case PX_B_AMP:                                 /* (its oversampled preamp: above, over the block) */
-            if (amp_on && !e->amp_nam) {                 /* (NAM without its model: passes through) */
-                if (!amp_os) x = bq_run(&e->amp_tight, x);
-                x = bq_run(&e->ts_low, x);
-                x = bq_run(&e->ts_mid, x);
-                x = bq_run(&e->ts_high, x);
-                x = bq_run(&e->amp_voice, x);
-                x = bq_run(&e->amp_res, x);
-                x = bq_run(&e->amp_pres, x);
-                float a = px_abs(x);                       /* power amp + supply sag */
-                e->amp_sag += (a - e->amp_sag) * 0.002f;
-                x = px_tanh(x * e->amp_pw) * e->amp_pwn * sag_pa;
-                x = x * e->amp_out + e->dn;
-            }
-        break;
-        case PX_B_CAB:
-            /* ---- cabinet ---- */
-            if (p->on[PX_B_CAB] && e->cab_n) {
-                for (int c = 0; c < e->cab_n; c++) x = bq_run(&e->cab[c], x);
-                if (e->cab_firon) x = cab_detail(&e->cd, x, e->cab_rb, &e->cab_rw, e->cab_ms);   /* breakup, mic, back wave */
-                x *= e->cab_g;
-            }
-        break;
         case PX_B_EQ:
             /* ---- eq ---- */
             if (p->on[PX_B_EQ]) for (int c = 0; c < e->eq_n; c++) x = bq_run(&e->eq[c], x);

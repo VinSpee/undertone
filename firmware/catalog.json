@@ -3,7 +3,7 @@
     {
       "id": "openpocket",
       "name": "OpenPocket",
-      "what": "A guitar multi-effects firmware: a chain of 12 blocks with amps, cabinets and effects in presets, neural amp models (NAM), and a preset editor in the browser."
+      "what": "A guitar multi-effects firmware: a chain of 12 blocks in presets, with neural amp models (NAM), your own cabinet IRs, drives and effects, and a preset editor in the browser."
     },
     {
       "id": "palette",

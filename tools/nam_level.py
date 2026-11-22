@@ -9,7 +9,8 @@ import numpy as np
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SR = 44100
-REF = -20.0              # LUFS of the model's own output after the trim (v37: NAM + cabinet ~ the fitted amps at noon)
+REF = -20.0              # LUFS of the model's own output after the trim (v37: with the engine's PX_NAM_REF_DB, a
+                         # model at GAIN noon through a cabinet plays at about the presets' -23 LUFS)
 CLAMP = 24.0
 
 

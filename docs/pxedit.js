@@ -140,9 +140,10 @@ export class Editor {
   }
 
   // ---- the catalogue: blocks, types, parameter names and value texts (cached per firmware) ----
+  // The blocks are asked every time and the cache is used only when they match it: a build that changed a block's types
+  // under the same version (store format 6 left AMP and CAB one type each) is read again.
   async catalog(progress = () => {}) {
     const key = `openpocket-cat-${this.info.identity}-${this.info.version}`;
-    try { const c = JSON.parse(localStorage.getItem(key) || "null"); if (c && c.blocks && c.blocks.length === this.info.nblk) { this.cat = c; if (this.hasNam) await this.namTexts(); if (this.hasIr) await this.irTexts(); return c; } } catch (_) { }
     const blocks = [];
     for (let b = 0; b < this.info.nblk; b++) {
       const r = new Reader(await this.request(C.CAT_BLOCK, [b]));
@@ -152,6 +153,12 @@ export class Editor {
       const rgb = `#${(((c >> 11) & 31) * 255 / 31 | 0).toString(16).padStart(2, "0")}${(((c >> 5) & 63) * 255 / 63 | 0).toString(16).padStart(2, "0")}${((c & 31) * 255 / 31 | 0).toString(16).padStart(2, "0")}`;
       blocks.push({ label, name, color: rgb, types: new Array(ntypes) });
     }
+    try {
+      const c = JSON.parse(localStorage.getItem(key) || "null");
+      if (c && c.blocks && c.blocks.length === blocks.length && c.blocks.every((x, i) => x.label === blocks[i].label && x.types.length === blocks[i].types.length)) {
+        this.cat = c; if (this.hasNam) await this.namTexts(); if (this.hasIr) await this.irTexts(); return c;
+      }
+    } catch (_) { }
     const total = blocks.reduce((s, b) => s + b.types.length, 0);
     let done = 0;
     for (let b = 0; b < blocks.length; b++) {
@@ -331,9 +338,40 @@ export function presetToJSON(q, cat, slot) {
 }
 export function filePresets(presets) { return { format: "openpocket-presets", version: 1, presets }; }
 
-// v34: amps, drives and cabs were replaced by fitted models (docs/FITTED-MODELS.md); a preset file from v32 / v33
-// names the old types: each one -> the nearest new type, the same choice the pedal makes for its saved presets (px_type_v34)
+// v34: the amps, drives and cabs were replaced by a smaller set; a preset file from v32 / v33 names the old types: each
+// one -> the nearest type of the v34 set, the same choice the pedal makes for its saved presets (px_type_v34)
 export const V33_TYPES = {"AMP": {"TWIN CLEAN": "TWIN", "DELUXE 65": "TWIN", "PRINCETONE": "TWIN", "TWEED 59": "SHIRLEY", "TWEED CHAMP": "AC15 TB", "AC 30 TB": "AC15 TB", "AC 15": "AC15 TB", "JTM 45": "SHIRLEY", "PLEXI 68": "SHIRLEY", "BRIT 800": "JCM900", "BRIT JVM": "JCM2000", "HIWATT DR": "JCM900", "ORANGE 120": "JCM2000", "CHIME 30": "AC15 TB", "ODS LEAD": "MARK IV", "SLO 100": "PRO MOD", "MARK IIC+": "MARK IV", "RECTIFIED": "5150", "5150 LEAD": "5150", "5150 III": "5150", "ECSTASY": "PRO MOD", "BE LEAD": "PRO MOD", "UBER VH4": "5150", "EURO BALL": "5150", "REVV GEN": "5150", "JC CLEAN": "TWIN", "SUPRO 64": "AC15 TB", "TWO-ROCK": "TWIN", "SVT BASS": "TWIN"}, "DRV": {"TS 808": "TS9", "TS 9": "TS9", "SD-1 OD": "TS9", "KLONE": "KLON", "BD BLUES": "KLON", "OCD DRIVE": "M77 OD", "RAT DIST": "SWEDE HM-2", "DS-1 DIST": "SWEDE HM-2", "DIST PLUS": "M77 OD", "BLUESBREAKER": "KLON", "KING OF TONE": "KLON", "TIMMY": "KLON", "ZEN DRIVE": "TS9", "MUFF PI": "M77 OD", "RAMS HEAD": "M77 OD", "GREEN RUSSIAN": "M77 OD", "FACE GERMAN.": "M77 OD", "FACE SILICON": "M77 OD", "BENDER MK2": "M77 OD", "OCTAFUZZ": "M77 OD", "FUZZ FACTORY": "M77 OD", "TREBLE BOOST": "M77 OD", "EP BOOST": "KLON", "METAL ZONE": "SWEDE HM-2", "PRECISION": "TS9", "BASS DI 7K": "KLON"}, "CAB": {"1x10 OPEN": "1x12 US OPEN", "2x10 VIBRO": "1x12 US OPEN", "2x12 BRIT": "4x12 GREEN", "4x10 TWEED": "1x12 US OPEN", "4x12 H30": "4x12 V30", "1x15 OPEN": "1x12 US OPEN", "8x10 BASS": "4x12 V30", "4x10 HORN": "1x12 US OPEN"}};
+
+// store format 6: the built-in amps and cabinets of the v34 set were removed (AMP: NAM only, CAB: USER IR only). A file
+// that names one: a built-in amp -> NAM with the factory model of the same capture, its GAIN, BASS, MID and TREBLE kept;
+// a built-in cabinet -> USER IR in slot IR1 with its cuts off; DI (NO CAB) -> the CAB block off and the preset LEVEL
+// 2.7 dB up. The same choice the pedal makes for its saved presets (px_preset_v34_set)
+export const V34_AMPS = { "TWIN": "TWIN", "AC15 TB": "AC15", "JCM900": "JCM900", "JCM2000": "JCM2000", "MARK IV": "MARK IV", "SHIRLEY": "SHIRLEY", "PRO MOD": "PRO MOD", "5150": "5150" };
+export const V34_CABS = ["1x12 US OPEN", "2x12 BLUE", "4x12 GREEN", "4x12 T75", "4x12 V30", "1x12 CREAM", "DI (NO CAB)"];
+// the middle of the first run of knob values whose text is `text` (a model's or an IR slot's name): -1 if none
+function knobOf(texts, text) {
+  const lo = texts ? texts.indexOf(text) : -1;
+  if (lo < 0) return -1;
+  let hi = lo;
+  while (hi < 100 && texts[hi + 1] === text) hi++;
+  return (lo + hi) >> 1;
+}
+// a removed built-in type of this catalogue block -> { t, params, di, warn }, or null
+function builtIn(block, name, params, b) {
+  const t = b.types.findIndex((x) => x && x.name === (block === "AMP" ? "NAM" : "USER IR"));
+  const texts = t < 0 ? null : b.types[t].params[0] && b.types[t].params[0].texts;
+  const p = params || [];
+  if (block === "AMP" && V34_AMPS[name]) {
+    const k = knobOf(texts, V34_AMPS[name]);
+    return k < 0 ? null : { t, params: [k, p[0], p[1], p[2], p[3]], di: false, warn: `AMP: ${name} (built-in, removed) -> NAM ${V34_AMPS[name]}` };
+  }
+  if (block === "CAB" && V34_CABS.includes(name)) {
+    const k = texts ? knobOf(texts, texts[0]) : -1, di = name === "DI (NO CAB)";
+    return k < 0 ? null : { t, params: [k, 0, 0, p[3], p[4]], di,
+      warn: di ? "CAB: DI (NO CAB) (removed) -> the CAB block off, LEVEL +2.7 dB" : `CAB: ${name} (built-in, removed) -> USER IR in slot IR1` };
+  }
+  return null;
+}
 
 // v35: delay TIME 20..1000 ms in 100 steps became 20..1000 ms in 80 steps, then up to 2 s (px_dly_time_v35)
 export const dlyTimeV35 = (v) => Math.min(80, Math.floor(v * (9.8 / 12.25) + 0.5));
@@ -343,20 +381,29 @@ export function presetFromJSON(o, cat, base) {
   const q = clonePreset(base), warn = [];
   q.name = cleanName(o.name || q.name);
   const byLabel = new Map(cat.blocks.map((b, i) => [b.label, i]));
+  let di = false;
   for (const ob of Array.isArray(o.blocks) ? o.blocks : []) {
     const i = byLabel.get(ob.block);
     if (i === undefined) { warn.push(`unknown block ${ob.block}`); continue; }
     q.on[i] = ob.on ? 1 : 0;
     let t = typeof ob.type === "number" ? ob.type : cat.blocks[i].types.findIndex((x) => x.name === ob.type);
+    let name = ob.type, params = Array.isArray(ob.params) ? ob.params : null;
     const moved = typeof ob.type === "string" && t < 0 && V33_TYPES[ob.block] && V33_TYPES[ob.block][ob.type];
     if (moved) {
+      name = moved;
       t = cat.blocks[i].types.findIndex((x) => x.name === moved);
       if (t >= 0) warn.push(`${ob.block}: ${ob.type} (before v34) -> ${moved}`);
     }
+    const old = typeof name === "string" && t < 0 && builtIn(ob.block, name, params, cat.blocks[i]);
+    if (old) {
+      if (moved) warn.push(`${ob.block}: ${ob.type} (before v34) -> ${moved}`);
+      t = old.t; params = old.params; warn.push(old.warn);
+      if (old.di && q.on[i]) { q.on[i] = 0; di = true; }
+    }
     if (t < 0 || t >= cat.blocks[i].types.length) { warn.push(`${ob.block}: unknown type ${ob.type}`); t = q.type[i]; }
     q.type[i] = t;
-    if (Array.isArray(ob.params)) for (let k = 0; k < q.p[i].length; k++) {
-      const v = Number(ob.params[k]);
+    if (params) for (let k = 0; k < q.p[i].length; k++) {
+      const v = Number(params[k]);
       if (Number.isFinite(v)) q.p[i][k] = Math.max(0, Math.min(100, Math.round(v)));
     }
     if (!(o.v >= 36) && ob.block === "GT") q.p[i][2] = 50;           // before v36: no preset LEVEL (0 dB)
@@ -365,6 +412,8 @@ export function presetFromJSON(o, cat, base) {
       if (now !== old) { q.p[i][0] = now; warn.push(`DLY: TIME ${old} (before v35) -> ${now}, same delay`); }
     }
   }
+  const gt = byLabel.get("GT");
+  if (di && gt !== undefined) q.p[gt][2] = Math.min(100, q.p[gt][2] + 9);   // DI's +2.6 dB, as the preset LEVEL (0.3 dB a step)
   if (Array.isArray(o.order)) {
     const ord = o.order.map((l) => typeof l === "number" ? l : byLabel.get(l));
     if (ord.length === q.order.length && new Set(ord).size === ord.length && ord.every((x) => x !== undefined && x >= 0 && x < q.order.length)) q.order = ord;

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: GPL-3.0-only
 # OpenPocket — a small, independent NumPy implementation of NAM's A1 WaveNet (the "standard / lite / feather / nano"
-# captures), used only as the REFERENCE when fitting the pedal's amp models (tools/fit_amp.py). A .nam file is JSON:
+# captures), used only as the REFERENCE when training the pedal's factory A2-Lite models (tools/train_a2.py). A .nam file is JSON:
 # the architecture's config and a flat list of weights; this reads both and runs the network, whole file at a time.
 #
 # Network (per layer array): rechannel 1x1 (no bias) -> layers [dilated causal conv (bias) + input mixin from the raw

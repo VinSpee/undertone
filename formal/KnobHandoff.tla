@@ -3,14 +3,13 @@
 \* A change of settings handed from the main loop to the audio side.
 \*
 \* audio_apply (firmware/px_audio.h) gives a change of knobs or of blocks on / off to the audio side without
-\* stopping the sound: it waits until the change before was taken (a_wait on a_kpend), prepares the cabinet's
-\* filters in a store of its own (px_engine_prepare), copies the preset to a_kp and sets a_kpend. a_commit, at
-\* the start of a block, applies it (px_engine_knobs reads a_kp and that store, writes the engine) and clears
-\* a_kpend. a_commit runs in the audio interrupt on CPU0, and again in dsp_block, which CPU1 runs beside the
+\* stopping the sound: it waits until the change before was taken (a_wait on a_kpend), copies the preset to a_kp
+\* and sets a_kpend. a_commit, at the start of a block, applies it (px_engine_knobs reads a_kp, writes the engine)
+\* and clears a_kpend. a_commit runs in the audio interrupt on CPU0, and again in dsp_block, which CPU1 runs beside the
 \* main loop. Any other change is a full one: the interrupt masked, a_collect, px_engine_set.
 \*
-\* Promise: a_kp, the cabinet store and the engine's preset are never read by one side while the other writes
-\* them, and px_engine_set runs with no block in progress.
+\* Promise: a_kp and the engine's preset are never read by one side while the other writes them, and
+\* px_engine_set runs with no block in progress.
 \*
 \* The block is CPU1's whole chain (dsp_job). With a NAM amp on two cores a_commit runs only on CPU0
 \* (dsp_pipe_run, dsp_lp_run); that case is not modelled.
@@ -32,7 +31,7 @@ VARIABLES
 vars == <<mpc, kpend, masked, job, applies, clash>>
 
 \* the places where the main loop reads the engine's preset or writes what px_engine_knobs reads
-Sharing == {"change", "prep", "copy", "fset"}
+Sharing == {"change", "copy", "fset"}
 
 Init ==
   /\ mpc = "idle" /\ kpend = FALSE /\ masked = FALSE
@@ -59,12 +58,7 @@ WaitTimeout ==
 \* px_engine_change has read the engine's preset: nothing to do, knobs only, or a full change
 Change ==
   /\ mpc = "change"
-  /\ mpc' \in {"idle", "prep", "fmask"}
-  /\ UNCHANGED <<kpend, masked, job, applies, clash>>
-
-\* px_engine_prepare has written the cabinet store
-Prepare ==
-  /\ mpc = "prep" /\ mpc' = "copy"
+  /\ mpc' \in {"idle", "copy", "fmask"}
   /\ UNCHANGED <<kpend, masked, job, applies, clash>>
 
 \* a_kp = pp is written
@@ -104,7 +98,7 @@ FullUnmask ==
   /\ UNCHANGED <<kpend, job, applies, clash>>
 
 MainStep ==
-  \/ WaitOk \/ WaitTimeout \/ Change \/ Prepare \/ Copy \/ Flag
+  \/ WaitOk \/ WaitTimeout \/ Change \/ Copy \/ Flag
   \/ FullMask \/ FullCollect \/ FullSet \/ FullClear \/ FullUnmask
 
 \* ---- the audio side ----
@@ -143,13 +137,13 @@ Spec ==
   /\ WF_vars(Cpu1Check) /\ WF_vars(Cpu1Knobs) /\ WF_vars(Cpu1Done)
 
 TypeOK ==
-  /\ mpc \in {"idle", "wait", "change", "prep", "copy", "flag", "fmask", "fcollect", "fset", "fclear", "funmask"}
+  /\ mpc \in {"idle", "wait", "change", "copy", "flag", "fmask", "fcollect", "fset", "fclear", "funmask"}
   /\ kpend \in BOOLEAN /\ masked \in BOOLEAN
   /\ job \in {"none", "start", "knobs", "rest"}
   /\ applies \in 0..MaxApplies /\ clash \in BOOLEAN
 
-\* The promise: px_engine_knobs never runs while the main loop reads the engine's preset or writes a_kp or the
-\* cabinet store, and never on CPU0 while CPU1 has a block in progress.
+\* The promise: px_engine_knobs never runs while the main loop reads the engine's preset or writes a_kp, and never
+\* on CPU0 while CPU1 has a block in progress.
 NoTornHandoff == ~clash /\ ~(job = "knobs" /\ mpc \in Sharing)
 
 \* px_engine_set, and the a_kpend = 0 after it, run with no block in progress and the interrupt masked.

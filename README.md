@@ -12,23 +12,19 @@ Written from scratch for the pedal's own chip (JieLi AC791N, two cores), install
 
 ## What it does
 
-- **12-block chain, 78 models**, in any order you like (double-click PUSH to move a block; the order is saved with
+- **12-block chain, 63 models**, in any order you like (double-click PUSH to move a block; the order is saved with
   the preset): GATE, COMP, PITCH, SPECIAL FX, SYNTH, DRIVE, AMP, CAB, EQ, MOD, DELAY, REVERB
 - **Synths, keyboards and other guitars** from a normal guitar (no MIDI pickup): organ, church organ, string machine,
   choir, mono synth with pitch tracking and a resonant ladder filter, PWM synth, bass synth, 12-string, acoustic,
   sitar (bridge buzz + sympathetic strings), baritone
-- **Neural amp models (v37)**: the AMP block's NAM type runs Neural Amp Modeler **A2** networks on the pedal: 12
-  factory models trained for it (Twin, AC15, Super 59, Dirty Shirley, JCM900, JCM2000, JVM, Mark IV, Pro Mod, 5150,
-  6505+) and 16 user slots you fill from the web editor with A2 captures (TONE3000...). All 24 factory presets use
-  them. Details: [docs/NAM.md](docs/NAM.md)
-- **8 amps fitted to captures of the real ones** (v34): Twin Reverb, AC15 Top Boost, JCM900, JCM2000, Mark IV,
-  Dirty Shirley, Pro Mod, 5150. A computer sets the engine's numbers (tube stages oversampled ×4, tone stack, power
-  amp, sag) so that it matches a Neural Amp Modeler capture of each amp on real guitar playing; same CPU cost as a
-  voiced-by-ear amp. Method and results: [docs/FITTED-MODELS.md](docs/FITTED-MODELS.md)
-- **4 drives fitted the same way** (TS9, Klon, MXR M77, HM-2) and **7 cabinets** (the 4x12 V30 fitted to measurements;
-  Greenback, T75, Alnico Blue, Jensen, Cream, DI) with a MIC position
-- **Pro levels (v36)**: every amp, block and preset at the same loudness (-23 LUFS, measured on real guitar);
-  24 factory presets round the fitted amps, 28 USER slots; a PRESET LVL per preset; soft output limiter
+- **Neural amp models (v37)**: the AMP block runs Neural Amp Modeler **A2** networks on the pedal: 12 factory models
+  trained for it (Twin, AC15, Super 59, Dirty Shirley, JCM900, JCM2000, JVM, Mark IV, Pro Mod, 5150, 6505+) and 16
+  user slots you fill from the web editor with A2 captures (TONE3000...). Details: [docs/NAM.md](docs/NAM.md)
+- **Your own cabinet IRs (v38)**: the CAB block plays an impulse response you load from the web editor (8 slots).
+  There are no built-in amps or cabinets: the AMP block is NAM and the CAB block is USER IR
+- **4 drives** (TS9, Klon, MXR M77, HM-2), knobs at noon set like the captured pedals
+- **Pro levels (v36)**: every NAM model, block and preset at the same loudness (-23 LUFS, measured on real guitar);
+  24 factory presets round the NAM models, 28 USER slots; a PRESET LVL per preset; soft output limiter
 - **MIDI over USB-C (v37)**: Program Change selects a preset, Control Change switches blocks and sets their models and
   settings, the pedal tells the computer when you change the sound, MIDI clock sets the delay time. Class-compliant, no driver;
   Bluetooth MIDI is only in the test image ([docs/BLE-TEST.md](docs/BLE-TEST.md)). Reference: [docs/MIDI.md](docs/MIDI.md), hardware test: [docs/MIDI-TEST.md](docs/MIDI-TEST.md)
@@ -44,8 +40,6 @@ Written from scratch for the pedal's own chip (JieLi AC791N, two cores), install
   ring modulator, bitcrusher, slicer, square-wave synth, 4 compressors, 3 EQs
 - **52 preset slots you can overwrite** (hold PUSH = SAVE; power-cut safe, kept across updates), 52 factory presets
   (one per style), a flicker-free colour UI, a chromatic tuner
-- **Detailed cabinets** (cone breakup, off-axis mic comb, open-back reflection) and **tube stages with bias shift**
-  (the note compresses on a hard attack and blooms back)
 - **24-bit audio** in and out, guitar read from the left input channel only, like the official firmware (the right
   channel only carries noise: mixing it in was the constant hiss on high-gain amps)
 - **USB update**: the pedal shows up as a USB-MIDI device and takes updates from the [web installer](docs/index.html), or from the command line (`make flash`, see [docs/BUILDING.md](docs/BUILDING.md))
@@ -173,8 +167,8 @@ proposed upstream.
 ## Licence
 
 GPL-3.0-only. Board support and loader: MPL-2.0 (felucca-bsp). JieLi SDK files: Apache-2.0. Inter: OFL 1.1.
-The fitted models were computed from the NAM captures of [pelennor2170/NAM_models](https://github.com/pelennor2170/NAM_models)
-(GPL-3.0, thanks to their authors) and the DI recordings of
+The factory NAM models were trained, and the drives' settings matched, on the NAM captures of
+[pelennor2170/NAM_models](https://github.com/pelennor2170/NAM_models) (GPL-3.0, thanks to their authors) and the DI recordings of
 [Alec-Wright/Automated-GuitarAmpModelling](https://github.com/Alec-Wright/Automated-GuitarAmpModelling) (GPL-3.0); neither is shipped.
 Product names are trademarks of their owners, used only to describe the sound.
 See [NOTICE.md](NOTICE.md). Not affiliated with Donner or M-VAVE. Install at your own risk.
