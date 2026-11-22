@@ -91,7 +91,7 @@ Install only on a pedal you can afford to recover. Read section 6 first.
 node tools/op.mjs serve app mine          # or: make serve-app APP=mine
 ```
 
-The page opens as `index.html?app=mine`. Step 2 has one card per firmware. Yours is the last one, with its name and
+The page opens as `install.html?app=mine`. Step 2 has one card per firmware. Yours is the last one, with its name and
 a line that says it is offered by this link only. Each card has one button. While the pedal runs your firmware,
 step 1 names it, its card says "on the pedal", and the button of OpenPocket's card reads "Back to OpenPocket".
 

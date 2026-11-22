@@ -300,7 +300,7 @@ The tools use this as follows:
 
 - **The installer page** names the product a pedal runs. It offers each firmware of its catalog in a card of its own
   (`release.json`, written by the build from `firmware/catalog.json`), and any other app only with
-  `index.html?app=<name>`. While a pedal runs one firmware, the button of another one's card reads "Back to" with
+  `install.html?app=<name>`. While a pedal runs one firmware, the button of another one's card reads "Back to" with
   that firmware's name.
 - **The flasher** installs an app only with `--app <name>`. It names the product a pedal runs, checks after an
   install that the pedal runs the product that was installed, and ends with the way back.
@@ -370,7 +370,7 @@ OpenPocket's upstream does not have `firmware/base/`, the apps, or the product i
 - The version line, the `app_main` loop, and the lists of RAM code in `build.sh` did not move. A release upstream
   merges into them without a conflict.
 - These files that upstream also edits have additions for the second product. A conflict there is in the added
-  lines, and upstream's side is kept as it is: `docs/index.html`, `docs/pxota.js`, `docs/pxedit.js`,
+  lines, and upstream's side is kept as it is: `docs/install.html` (upstream's `docs/index.html`), `docs/pxota.js`, `docs/pxedit.js`,
   `docs/editor.js`, `docs/edcore.js`, `tools/flash.mjs`, `tools/log.mjs`, `tools/op.mjs`, `tools/pxpkg.py`,
   `tools/sim.mjs`, `tools/serve.py`, `tests/devsim.c`, `tests/fixtures.py`, `tests/run_tests.sh`,
   `tests/test_usb_audio.c`, `tests/test_page.mjs`, `tests/test_editor_page.mjs`, `tests/test_log.mjs`,

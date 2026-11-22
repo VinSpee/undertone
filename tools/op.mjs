@@ -6,7 +6,7 @@
 //   node tools/op.mjs all        every product of this tree and the tests: OpenPocket (package, with the release pin), each
 //                                app of firmware/apps, then the host tests with the packages just built (test --built)
 //   node tools/op.mjs app NAME   another app on the base firmware (firmware/apps/NAME, docs/BASE-FIRMWARE.md) -> build/apps/NAME/
-//   node tools/op.mjs serve app NAME   the installer with that app offered too (index.html?app=NAME), when it is not on the
+//   node tools/op.mjs serve app NAME   the installer with that app offered too (install.html?app=NAME), when it is not on the
 //                                      catalog of firmware/catalog.json, whose firmwares the page offers by itself
 //   node tools/op.mjs flash --dry-run | --confirm-flash [--rescue] [--package FILE] [--app NAME]   (writes to a connected pedal: docs/BUILDING.md)
 //   node tools/op.mjs log [--follow] [--json] [--wait SEC] [--scan SEC]   (reads a connected pedal's state: docs/BLE-TEST.md)
@@ -143,7 +143,7 @@ const commands = {
       if (built !== 0) return built;
     }
     const py = python;
-    const page = arg === "editor" ? "editor.html" : alt ? `index.html?app=${name}` : "index.html";
+    const page = arg === "editor" ? "editor.html" : alt ? `install.html?app=${name}` : "install.html";
     const r = spawnSync(py[0], [...py.slice(1), "tools/serve.py", page, ...(ble ? ["build/ble"] : [])], { stdio: "inherit", cwd: root });
     if (r.error) fail("Python 3 is needed to serve the installer offline (python.org).");
     return r.status ?? 0;

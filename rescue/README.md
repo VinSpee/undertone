@@ -22,7 +22,7 @@ node tools/op.mjs kit            # or: make kit, or: python3 rescue/build_kit.py
 ```
 
 It writes `docs/rescue/OpenPocket-rescue-kit-<version>.zip` and `docs/rescue/manifest.json`. Both are ignored by git.
-The installer page (`docs/index.html`) reads the manifest and offers the zip with its SHA-256. The build needs only
+The installer page (`docs/install.html`) reads the manifest and offers the zip with its SHA-256. The build needs only
 Python 3.
 
 The zip unpacks to one folder, `OpenPocket-rescue-kit`. That name is fixed, because the guides tell the user to go to

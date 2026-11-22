@@ -1,6 +1,6 @@
 ---
 name: verify
-description: Verify OpenPocket (guitar multi-effects firmware for the Donner Pocket X / M-VAVE BlackBox) without a pedal: build the firmware and installer packages in the pinned container, run the host tests and simulators, and drive the web installer (docs/index.html) and editor (docs/editor.html) in headless Chromium against simulated pedals. Use after any change to firmware/, engine/, loader/, tools/, tests/ or docs/*.html|js, and before claiming a change works. For a connected pedal, use the verify-pedal skill; only a person can verify sound.
+description: Verify OpenPocket (guitar multi-effects firmware for the Donner Pocket X / M-VAVE BlackBox) without a pedal: build the firmware and installer packages in the pinned container, run the host tests and simulators, and drive the web installer (docs/install.html) and editor (docs/editor.html) in headless Chromium against simulated pedals. Use after any change to firmware/, engine/, loader/, tools/, tests/ or docs/*.html|js, and before claiming a change works. For a connected pedal, use the verify-pedal skill; only a person can verify sound.
 ---
 
 # Verify OpenPocket
@@ -43,7 +43,7 @@ Run it first whenever anything looks off.
 | The pedal as a user plays it: footswitches, knob, pages, save, tuner, the live screen | `node tools/op.mjs sim`, then the HTTP API (skill `openpocket-simulator`, `docs/SIMULATOR.md`) | `GET /api/state` and `/api/screen.png` after each press; the flash file `build/sim/flash.bin` survives a restart |
 | The pedal skin: every control by mouse, touch and keyboard, the backlights, the live LCD | `pages.sh` (runs `tests/test_pedal_page.mjs`) | `build/pedal/pedal-skin*.png`, last line `pedal page: ok` |
 | The sound in the simulator: the engine on known signals, against its native build; the input picker, meters, bypass, the preset heard | `node tests/test_audio.mjs`, `pages.sh` (runs `tests/test_audio_page.mjs`) | every line `ok`; `build/audio/sound.png`; `node tools/sim/render.mjs DIR` renders WAV files to listen to |
-| Editor and installer pages by hand or with `chrome-devtools-axi` | `sim` serves them at `/site/editor.html` and `/site/index.html` with a virtual Web MIDI | Connect finds "OpenPocket"; an edit shows in `/api/state` |
+| Editor and installer pages by hand or with `chrome-devtools-axi` | `sim` serves them at `/site/editor.html` and `/site/install.html` with a virtual Web MIDI | Connect finds "OpenPocket"; an edit shows in `/api/state` |
 | MIDI musical messages | see `features/midi-usb.md` | host simulator tests when the USB-MIDI feature is in; hardware: `docs/MIDI-TEST.md` |
 
 Features: `features/README.md` and one file per feature there. A proof that drives only one entry point is incomplete when

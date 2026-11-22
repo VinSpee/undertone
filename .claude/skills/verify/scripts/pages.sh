@@ -1,5 +1,5 @@
 #!/bin/sh
-# Drives docs/index.html (installer), docs/editor.html (editor) and the pedal skin in headless Chromium against the simulated
+# Drives docs/install.html (installer), docs/editor.html (editor) and the pedal skin in headless Chromium against the simulated
 # pedals (devsim.c / edsim.c) with a mocked Web MIDI device. Never touches a real pedal. Evidence: build/page/*.png,
 # build/editor/*.png, build/pedal/*.png.
 #   PW_DIR=/path/with/node_modules sh .claude/skills/verify/scripts/pages.sh      (default PW_DIR: ~/.cache/openpocket-pw)

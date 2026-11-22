@@ -4,5 +4,5 @@ offers (`tools/catalog.py`). They are published with the release and on GitHub P
 by `PUBLISH-GITHUB.bat`, not kept in the repository.
 
 A test build (for example `node tools/op.mjs package-test`) goes to a subfolder, `midi-test/`, with its own `manifest.json`. The
-installer page offers it only through `index.html?channel=midi-test`, with a banner; the normal page and the files above are never
+installer page offers it only through `install.html?channel=midi-test`, with a banner; the normal page and the files above are never
 changed by it.
