@@ -3,7 +3,7 @@
     {
       "id": "openpocket",
       "name": "OpenPocket",
-      "what": "Gamut, the new name of this guitar firmware: neural amp models (NAM), drives and effects in a chain of blocks in any order, saved in presets, and a preset editor in the browser."
+      "what": "Gamut, the new name of this guitar firmware: a chain of 12 blocks in presets, with neural amp models (NAM), your own cabinet IRs, drives and effects, and a preset editor in the browser."
     },
     {
       "id": "palette",

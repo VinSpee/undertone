@@ -47,7 +47,7 @@ A configuration that models a finding fails until the code is fixed. A mutation 
 | `FlashHold.tla` | While the SFC is off, CPU1 is in its RAM loop. | `st_audio_hold` (`firmware/px_store.h`), `nm_commit` (`firmware/px_models.h`), `ir_commit` (`firmware/px_irs.h`), `a_block`, `a_send`, `a_collect`, and `lp_job` (`firmware/px_audio.h`), `fl_enter` (`firmware/bsp/chip/fm1_flash.h`) |
 | `EditorWatch.tla` | Once nothing is in flight and no push is owed, the editor shows the pedal's sound. | `ed_service` and `ed_handle` (`firmware/px_editor.h`), `Editor.request` and `Editor._onMessage` (`docs/pxedit.js`), `ping` (`docs/editor.js`), `sendParam` (`docs/edsound.js`) |
 | `PresetStore.tla` | After a power cut at any step, the next start loads the last confirmed save or a later one. | `st_commit` and `st_load` (`firmware/px_store.h`) |
-| `KnobHandoff.tla` | `a_kp`, the cabinet store, and the engine's preset are never read by one side while the other writes them. | `audio_apply` and `a_commit` (`firmware/px_audio.h`), `px_engine_prepare` and `px_engine_knobs` (`engine/px_dsp.c`) |
+| `KnobHandoff.tla` | `a_kp` and the engine's preset are never read by one side while the other writes them. | `audio_apply` and `a_commit` (`firmware/px_audio.h`), `px_engine_knobs` (`engine/px_dsp.c`) |
 | `LayerSplit.tla` | Each ring of the NAM network belongs to one core at a time, and every layer runs every block once, in order. | `pxn_lp_a` and `pxn_lp_b` (`engine/px_nam.c`) |
 
 In each `.tla` file, the comment on an action names the function the action stands for.
@@ -127,7 +127,7 @@ When you change one of the files below, read the model's actions against the new
 | `a_enc`, `a_dec`, `a_block`, `a_send`, `a_collect`, `lp_job`, or the mailbox of `fm1_cpu1.h` | `FlashHold.tla` |
 | `ed_service`, `ed_handle`, or the editor's `request`, `_onMessage`, `ping`, and `sendParam` | `EditorWatch.tla` |
 | `st_commit` or `st_load` | `PresetStore.tla` |
-| `audio_apply`, `a_commit`, `dsp_block`, `px_engine_change`, `px_engine_prepare`, or `px_engine_knobs` | `KnobHandoff.tla` |
+| `audio_apply`, `a_commit`, `dsp_block`, `px_engine_change`, or `px_engine_knobs` | `KnobHandoff.tla` |
 | `pxn_lp_a`, `pxn_lp_b`, `pxn_lp_split`, or `lp_split` | `LayerSplit.tla` |
 
 When you fix a finding, the configurations that model the code as it was no longer describe the code.

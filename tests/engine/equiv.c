@@ -1,11 +1,11 @@
 /* v40.4: the engine's output hashed bit for bit over a wide set of runs, to compare two versions of the engine
  * (tests/equiv.sh REF builds this file against the engine of commit REF and against this tree's, and compares the lists):
  *  A  every block x type x 8 settings, the block alone (no amp, no cabinet): the block's own arithmetic
- *  B  every block x type x 2 settings with a fitted amp and a cabinet (the oversampled pair paths)
+ *  B  every block x type x 2 settings with a drive, a NAM amp and a USER IR cabinet (the drive at x2 before NAM)
  *  C  60 random chains (types, settings, order, on/off), with knob changes and blocks switched while playing (the
  *     glides and fades: px_engine_knobs), in blocks of 64, 48, 16 and 1 frames
  *  D  12 random chains with a NAM amp through the two-core pipeline's parts (PRE, NAM, POST) and the wet lanes
- * 852 runs. Two engines give the same output if and only if their lists are identical. ARG: the sections (default ABCD).
+ * 702 runs. Two engines give the same output if and only if their lists are identical. ARG: the sections (default ABCD).
  * Build it as the pedal builds the engine, -fno-builtin -ffp-contract=off: the pedal has no square-root instruction
  * (px_math.c's sqrtf is used) and does not fuse a multiply with an add; a PC compiler left to itself does both. */
 #include <stdio.h>
@@ -69,8 +69,7 @@ static void rnd_preset(px_preset_t *p, int nam)
         p->type[z] = (uint8_t)(rnd() % (unsigned)px_ntypes(z));
         for (int k = 0; k < 5; k++) { const uint32_t r = rnd() % 8; p->p[z][k] = (uint8_t)(r == 0 ? 0 : r == 1 ? 100 : rnd() % 101); }
     }
-    if (nam) { p->on[PX_B_AMP] = 1; p->type[PX_B_AMP] = PX_AMP_NAM; }
-    else if (p->type[PX_B_AMP] == PX_AMP_NAM) p->type[PX_B_AMP] = (uint8_t)(rnd() % PX_AMP_COUNT);
+    if (nam) p->on[PX_B_AMP] = 1;
     for (int i = PX_NBLK - 1; i > 0; i--) { const int j = (int)(rnd() % (unsigned)(i + 1)); const uint8_t t = p->order[i]; p->order[i] = p->order[j]; p->order[j] = t; }
     if (rnd() & 1) px_order_default(p->order);
 }
@@ -94,7 +93,7 @@ int main(int argc, char **argv)
     }
     if (strchr(sec, 'B'))
     for (int blk = 0; blk < PX_NBLK; blk++) for (int t = 0; t < px_ntypes(blk); t++) for (int a = 0; a < 2; a++) {
-        px_preset_t p; px_preset_factory(&p, 9);          /* BRIT CRUNCH: a fitted amp, a drive before it */
+        px_preset_t p; px_preset_factory(&p, 9);          /* BRIT CRUNCH: a NAM amp, a USER IR, a drive before them */
         for (int z = 0; z < PX_NBLK; z++) p.on[z] = (z == PX_B_AMP || z == PX_B_CAB || z == PX_B_DRIVE || z == blk);
         if (blk == PX_B_AMP && t == PX_AMP_NAM) continue;
         p.type[blk] = (uint8_t)t; memcpy(p.p[blk], V[5 + a], 5);
@@ -113,7 +112,7 @@ int main(int argc, char **argv)
                 px_preset_t q = e.cur;
                 for (int j = 0; j < 4; j++) { const int z = (int)(rnd() % PX_NBLK); q.p[z][rnd() % 5] = (uint8_t)(rnd() % 101); }
                 const int z = (int)(rnd() % PX_NBLK); q.on[z] ^= 1;
-                if (px_engine_change(&e, &q) == PX_CH_KNOBS) { px_engine_prepare(&e, &q); px_engine_knobs(&e, &q); }
+                if (px_engine_change(&e, &q) == PX_CH_KNOBS) px_engine_knobs(&e, &q);
             }
             px_engine_process(&e, sig + (at % (NS - 64)), out, bs);
             h = H(h, out, bs);
@@ -133,7 +132,7 @@ int main(int argc, char **argv)
                 px_preset_t q = e.cur;
                 const int z = (int)(rnd() % PX_NBLK); if (z != PX_B_AMP) q.on[z] ^= 1;
                 q.p[rnd() % PX_NBLK][rnd() % 5] = (uint8_t)(rnd() % 101);
-                if (px_engine_change(&e, &q) == PX_CH_KNOBS) { px_engine_prepare(&e, &q); px_engine_knobs(&e, &q); }
+                if (px_engine_change(&e, &q) == PX_CH_KNOBS) px_engine_knobs(&e, &q);
             }
             if (e.wl_on) px_wet_swap(&e);
             if (e.wl_on) px_wet_run(&e, 0, 0);

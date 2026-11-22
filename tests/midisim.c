@@ -118,13 +118,16 @@ int main(void)
             ok(ch == 1 && p.p[PX_B_AMP][1] == 100, "the amp's 2nd setting at 127 is 100");
         }
         {
-            px_cc_t t = {PXM_TYPE, PX_B_AMP, 0};
-            uint32_t n = (uint32_t)px_ntypes(PX_B_AMP);
-            p.type[PX_B_AMP] = 0;                   /* (v37: the factory presets already play the last amp, NAM) */
+            px_cc_t t = {PXM_TYPE, PX_B_MOD, 0};
+            uint32_t n = (uint32_t)px_ntypes(PX_B_MOD);
+            p.type[PX_B_MOD] = 0;
             ch = px_midi_cc_apply(&p, px_cc_of(&t), 127, &master, &mset);
-            ok(ch == 1 && p.type[PX_B_AMP] == n - 1u, "the amp model at 127 is its last one");
+            ok(ch == 1 && p.type[PX_B_MOD] == n - 1u, "the modulation model at 127 is its last one");
             ch = px_midi_cc_apply(&p, px_cc_of(&t), 0, &master, &mset);
-            ok(ch == 1 && p.type[PX_B_AMP] == 0, "and at 0 its first");
+            ok(ch == 1 && p.type[PX_B_MOD] == 0, "and at 0 its first");
+            t.blk = PX_B_AMP;                       /* (the AMP block has one model, NAM: its model CC changes nothing) */
+            ch = px_midi_cc_apply(&p, px_cc_of(&t), 127, &master, &mset);
+            ok(ch == 0 && p.type[PX_B_AMP] == PX_AMP_NAM, "the amp's model CC at 127 keeps NAM, its only one");
         }
         ch = px_midi_cc_apply(&p, 7, 127, &master, &mset);
         ok(ch == 0 && mset && master == 100, "CC 7 sets the MASTER volume (0..100), not the sound");
@@ -161,9 +164,9 @@ int main(void)
         cur.on[PX_B_REVERB] ^= 1;
         pkt = px_midi_tx_next(&tx, &cfg, &cur, 7);
         ok(pkt == cc_pkt(0, 20 + PX_B_REVERB, cur.on[PX_B_REVERB] ? 127 : 0), "a block switched sends 127 or 0");
-        cur.type[PX_B_AMP] = (uint8_t)((cur.type[PX_B_AMP] + 1) % px_ntypes(PX_B_AMP));
+        cur.type[PX_B_MOD] = (uint8_t)((cur.type[PX_B_MOD] + 1) % px_ntypes(PX_B_MOD));
         pkt = px_midi_tx_next(&tx, &cfg, &cur, 7);
-        ok((pkt & 15u) == 0xB && ((pkt >> 16) & 0xFF) == 52u + PX_B_AMP, "a new model sends the model Control Change (52 + block)");
+        ok((pkt & 15u) == 0xB && ((pkt >> 16) & 0xFF) == 52u + PX_B_MOD, "a new model sends the model Control Change (52 + block)");
         n = 0;
         for (uint32_t b = 0; b < PX_NBLK; b++) cur.p[b][4] = (uint8_t)(cur.p[b][4] ^ 1), n++;
         {

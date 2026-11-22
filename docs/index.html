@@ -13,7 +13,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <script>(function(){var q=new URLSearchParams(location.search);if(q.has("app")||q.has("channel"))location.replace("install.html"+location.search+location.hash)})()</script>
 <title>Gamut 1.0: open firmware for the Donner Pocket X and M-VAVE BlackBox</title>
-<meta name="description" content="Gamut is open firmware for two small guitar pedals: neural amp models, drives and effects, USB audio and MIDI, a browser editor and a rescue kit. Built on Undertone, the open kit for pedal firmware.">
+<meta name="description" content="Gamut is open firmware for two small guitar pedals: neural amp models, your own cabinet IRs, drives and effects, USB audio and MIDI, a browser editor and a rescue kit. Built on Undertone, the open kit for pedal firmware.">
 <meta property="og:type" content="website">
 <meta property="og:title" content="Gamut 1.0: open firmware for the Donner Pocket X and M-VAVE BlackBox">
 <meta property="og:description" content="Open firmware for two small guitar pedals, installed from the browser. Built on Undertone.">
@@ -184,7 +184,7 @@ h2{font-size:clamp(40px,6.4vw,104px);line-height:.88;font-weight:900;font-variat
     <div class="hero__base">
       <h1 id="h-top"><b>Gamut 1.0</b>Open firmware for the Donner Pocket X and <span style="white-space:nowrap">M-VAVE</span> BlackBox</h1>
       <div class="hero__side">
-        <p>Neural amp models, drives and effects in a chain you put in any order, with USB audio and MIDI, a tuner and a preset editor in the browser. Installed from Chrome or Edge in about two minutes.</p>
+        <p>Neural amp models, your own cabinet IRs, drives and effects in a chain you put in any order, with USB audio and MIDI, a tuner and a preset editor in the browser. Installed from Chrome or Edge in about two minutes.</p>
         <p>Built on Undertone, the open kit for pedal firmware.</p>
         <div class="row" style="margin-top:20px">
           <a class="btn btn--ink" href="install.html">Install Gamut</a>
@@ -201,7 +201,7 @@ h2{font-size:clamp(40px,6.4vw,104px);line-height:.88;font-weight:900;font-variat
     <h2 class="reg" id="h-numbers">Gamut in five numbers</h2>
     <ul class="nums">
       <li><b class="reg">12</b><span>neural amp models trained for the pedal's own chip</span></li>
-      <li><b class="reg">16</b><span>slots for your own NAM captures, from TONE3000 or anywhere else</span></li>
+      <li><b class="reg">16</b><span>slots for your own NAM captures, from TONE3000 or anywhere else, and 8 for cabinet IRs</span></li>
       <li><b class="reg">52</b><span>preset slots you can overwrite, kept across updates</span></li>
       <li><b class="reg">2.9<small>ms</small></b><span>a block of audio: 128 samples at 44.1 kHz</span></li>
       <li><b class="reg">−23</b><span>LUFS for every preset, measured on real guitar, so switching keeps the volume</span></li>
@@ -227,7 +227,7 @@ h2{font-size:clamp(40px,6.4vw,104px);line-height:.88;font-weight:900;font-variat
       <div class="amp"><b>Peavey 5150</b><span>Block letter, boosted. Capture by Helga B</span><i style="--e:52%" data-esr="0.064"></i></div>
       <div class="amp"><b>Peavey 6505+</b><span>Red channel, MXR drive. Capture by Helga B</span><i style="--e:100%" data-esr="0.124"></i></div>
     </div>
-    <p class="amps-note" style="color:var(--soft)">High-gain captures are harder for a network this small, so their error is higher. Load a capture of your own into one of the 16 slots from the editor. The list and the training: <a href="https://github.com/VinSpee/undertone/blob/main/docs/NAM.md">NAM.md</a>. Product names belong to their owners and only describe the sound.</p>
+    <p class="amps-note" style="color:var(--soft)">High-gain captures are harder for a network this small, so their error is higher. The models are amps without a cabinet: the CAB block after them plays a cabinet IR you load. Load a capture of your own into one of the 16 slots from the editor. The list and the training: <a href="https://github.com/VinSpee/undertone/blob/main/docs/NAM.md">NAM.md</a>. Product names belong to their owners and only describe the sound.</p>
     <div class="drives">
       <h3>Four drives</h3><span>TS9</span><span>Klon</span><span>MXR M77</span><span>HM-2</span>
     </div>
@@ -242,8 +242,8 @@ h2{font-size:clamp(40px,6.4vw,104px);line-height:.88;font-weight:900;font-variat
       <div class="pedal"><img src="assets/img/gamut-play.png" width="248" height="249" alt=""><div class="pedal__knobs"><i></i><i></i><i></i></div><div class="pedal__fs"><i></i><i></i></div></div>
     </div>
     <h2 class="reg reg-in" id="h-gamut">Gamut<small>1.0, the firmware for playing</small></h2>
-    <p>NAM amps, drives and effects in a chain of blocks in any order, with a preset editor in the browser and the pedal as a USB sound card.</p>
-    <ul class="chip"><li>12 NAM models</li><li>16 slots</li><li>52 presets</li><li>USB audio</li><li>Tuner</li></ul>
+    <p>NAM amps, your own cabinet IRs, drives and effects in a chain of blocks in any order, with a preset editor in the browser and the pedal as a USB sound card.</p>
+    <ul class="chip"><li>12 NAM models</li><li>16 NAM slots</li><li>8 IR slots</li><li>52 presets</li><li>USB audio</li><li>Tuner</li></ul>
     <p class="aside">Gamut is the new name of the OpenPocket firmware. Until the rename reaches the firmware, the pedal and the installer still call it OpenPocket.</p>
     <div class="row"><a class="btn btn--ink" href="install.html">Install Gamut</a></div>
   </article>
@@ -264,7 +264,7 @@ h2{font-size:clamp(40px,6.4vw,104px);line-height:.88;font-weight:900;font-variat
       <ul class="does">
         <li><b>Presets</b>Search, load, rename, copy, move and back up all 52.</li>
         <li><b>Sound</b>Every block of the chain, Compare with the saved preset, and the chip's load.</li>
-        <li><b>Models</b>The 16 NAM slots, filled from your files or TONE3000's catalogue.</li>
+        <li><b>Models</b>The 16 NAM slots and the 8 cabinet IR slots, filled from your files or TONE3000's catalogue.</li>
         <li><b>MIDI</b>The pedal's Control Change numbers, and controls learned from yours.</li>
       </ul>
       <div class="row"><a class="btn btn--ink" href="editor.html">Open the editor</a></div>

@@ -2,62 +2,42 @@
 
 ![OpenPocket screens](ui-v23.png)
 
-## The chain (12 blocks, 79 models)
+## The chain (12 blocks, 64 models)
 Default order: `GT → CMP → PIT → SFX → SYN → DRV → AMP → CAB → EQ → MOD → DLY → REV`
 
 Since v29 every preset has its own block order: **double-click PUSH** on the chain to grab the selected block, turn
 the knob to move it, PUSH to drop it (HOME puts it back). Delay before the amp, wah after the drive, octaver after
-the fuzz... The order is saved with the preset. DRV and AMP share one oversampled section when AMP comes right after
-DRV; elsewhere each runs its own.
+the fuzz... The order is saved with the preset.
 
 Each block has a **type** (the model), an **ON/OFF** state and up to **5 settings (0–100)**. Where a bare number
 would mean nothing, the screen shows the real value: interval (`+5TH`), semitones (`-7`), time in ms (`510`),
 playback heads (`1+2`), EQ dB (`+6`), bits (`8`), `SLOW`/`FAST` for the rotary.
 
-The names refer to the famous units the sounds are inspired by. Amps, drives and the V30 cabinet are fitted to
-captures of the real units (v34); the effects follow published circuit analyses (ElectroSmash, Electric Druid,
+The names refer to the famous units the sounds are inspired by. The amps are neural network models of real amps, the
+cabinets your own impulse responses, and the effects follow published circuit analyses (ElectroSmash, Electric Druid,
 R.G. Keen, Boss/Roland/EHX manuals). They are digital models, not copies. The product names are trademarks of their
 owners, used only to describe the sound.
 
 ### AMP — NAM: neural amp models (v37; MODEL, GAIN, BASS, MID, TREBLE)
-The ninth AMP type plays Neural Amp Modeler A2 networks: 12 factory models (TWIN, AC15, SUPER 59, SHIRL CL, JCM900,
+The AMP block plays Neural Amp Modeler A2 networks: 12 factory models (TWIN, AC15, SUPER 59, SHIRL CL, JCM900,
 SHIRLEY, JCM2000, MARK IV, JVM OD2, PRO MOD, 5150, 6505 RED) and 16 user slots filled from the web editor with A2
 captures. MODEL picks the network, GAIN sets the level into it (±12 dB), BASS / MID / TREBLE are an EQ after it. The
-models have no cabinet: keep a CAB after the AMP. All the factory presets use NAM. Details: [NAM.md](NAM.md).
+factory models have no cabinet: keep a CAB after the AMP and load an IR into it. Details: [NAM.md](NAM.md).
 
-### AMP — 8 amps, fitted to captures of the real ones (GAIN, BASS, MID, TREBLE, PRESENCE)
-Since v34 there are fewer amps, and each one is fitted by computer to a capture of the real amp (method and
-references: [FITTED-MODELS.md](FITTED-MODELS.md)). With the knobs at noon it sounds like the capture.
+### CAB — USER IR (v38; IR, LOW CUT, HIGH CUT)
+The CAB block plays a cabinet impulse response loaded from the web editor (8 slots, a `.wav` file each): its first
+23 ms (1024 samples at 44.1 kHz), convolved exactly (partitioned FFT), every IR at the same energy. IR picks the slot
+(its name shows on the PLAY page), LOW CUT 20..400 Hz, HIGH CUT 20 kHz..2 kHz. An empty slot passes the sound as it
+is: the amp alone, as a DI.
 
-| Type | Style | Reference |
-|---|---|---|
-| TWIN | American clean | Fender Twin Reverb |
-| AC15 TB | chime | Vox AC15 Top Boost |
-| JCM900 | British crunch | Marshall JCM900 |
-| JCM2000 | British lead | Marshall JCM2000 DSL |
-| MARK IV | American lead | Mesa Boogie Mark IV |
-| SHIRLEY | boutique crunch | Friedman Dirty Shirley |
-| PRO MOD | modern rock | Splawn Pro Mod |
-| 5150 | high gain | Peavey 5150 |
+The built-in amps (TWIN, AC15 TB, JCM900, JCM2000, MARK IV, SHIRLEY, PRO MOD, 5150) and cabinets (1x12 US OPEN,
+2x12 BLUE, 4x12 GREEN, 4x12 T75, 4x12 V30, 1x12 CREAM, DI) were removed in store format 6. A preset saved with one
+changes when it loads: a built-in amp becomes the NAM model trained on the same amp, with its GAIN, BASS, MID and
+TREBLE (PRESENCE has no place); a built-in cabinet becomes USER IR in slot IR1 with its cuts off, on or off as it
+was; DI becomes the CAB block off, with the preset's LEVEL 2.7 dB up for the level DI added. A preset file from the
+editor changes the same way when it is imported.
 
-Each amp = 1 to 4 preamp stages (gain, asymmetry, RC filters per stage) oversampled ×4, input filter (tightness),
-a "bright" cap that fades as the gain goes up, a tone stack, presence, resonance, power-stage saturation and supply
-sag (asymmetric triode curve, bias shift that follows your playing, sag that reaches the preamp too). All 8 amps are
-level-matched (±0.1 dB).
-
-### CAB — 7 cabinets (BODY, BRIGHT, MIC) and USER IR (v38: IR, LOW CUT, HIGH CUT)
-1x12 US OPEN (Jensen C12N) · 2x12 BLUE (Alnico Blue) · 4x12 GREEN (Greenback) · 4x12 T75 · 4x12 V30 (Vintage 30,
-fitted to measurements since v34) · 1x12 CREAM · DI (NO CAB) · USER IR.
-**USER IR** (v38) plays a cabinet impulse response loaded from the web editor (8 slots, a `.wav` file each): its first
-23 ms (1024 samples at 44.1 kHz), convolved exactly (partitioned FFT), at the same loudness as the other cabinets. IR
-picks the slot (its name shows on the PLAY page), LOW CUT 20..400 Hz, HIGH CUT 20 kHz..2 kHz.
-Speaker resonance, presence dips and peaks taken from the makers' curves (the V30 from 8 measured amp / amp + cab
-pairs). **MIC** moves the mic from the edge (dark) to the centre (bright).
-Each cabinet also has a detail layer: the cone's breakup resonances between 1.2 and 6 kHz, the comb filtering of an
-off-axis mic (MIC 0 = cone edge: dip around 6 kHz; MIC 100 = centre: out of the audio band) and the rear wave of
-the open-back cabinets (1x12 US, 2x12 BLUE), computed with resonators.
-
-### DRV — 4 drives, fitted to captures (DRIVE / DIST, TONE, LEVEL)
+### DRV — 4 drives (DRIVE / DIST, TONE, LEVEL)
 | Type | Style | Reference |
 |---|---|---|
 | TS9 | overdrive (mid hump) | Ibanez TS9 |
@@ -65,9 +45,9 @@ the open-back cabinets (1x12 US, 2x12 BLUE), computed with resonators.
 | M77 OD | boost / hot overdrive | MXR M77 Custom Badass |
 | SWEDE HM-2 (LOW, HIGH) | Swedish distortion | Boss HM-2 |
 
-Each drive follows its circuit (input filter, the TS "shelf", clipping type, original tone control), with its
-numbers fitted to a capture of the pedal at noon. Level-matched: at noon every drive comes out at the same level as
-the guitar.
+Each drive follows its circuit (input filter, the TS "shelf", clipping type, original tone control); at noon its
+settings are those of the captured pedal named in the table. Oversampled ×4, ×2 before a NAM amp. Level-matched: at
+noon every drive comes out at the same level as the guitar.
 
 ### SYN — 11 synths, keyboards and other guitars (v29)
 Played with a normal guitar: no special pickup, no MIDI.
@@ -130,9 +110,11 @@ the trails come back with the sound.
 - If the DSP load goes over its limit while a trail rings, the trail is dropped, not the sound.
 
 ## Factory presets (v37): 24 sounds, all at the same loudness, then 28 USER slots
-Built round the NAM models (v37; v36's were built round the fitted amps) and the fitted drives. Every preset is levelled to the
-same loudness (-23 LUFS, EBU R128, measured on real DI guitar by `tools/level_presets.py`): going from a clean to a
-high-gain preset no longer jumps by 20 dB.
+Built round the NAM models (v37) and the drives. Every preset is levelled to the same loudness (-23 LUFS, EBU R128,
+measured on real DI guitar by `tools/level_presets.py`): going from a clean to a high-gain preset no longer jumps by
+20 dB. Their CAB block is USER IR in slot IR1: load an IR there and every factory preset plays through it. With the
+slot empty a preset plays at the loudness it had with its built-in cabinet; with an IR it plays louder, by 0 to 6 dB
+(measured on `docs/nam_di.wav`, the most on the high-gain presets).
 
 | | Clean | Crunch | Lead | High gain | Effects |
 |---|---|---|---|---|---|
@@ -143,12 +125,11 @@ high-gain preset no longer jumps by 20 dB.
 | | 05 SURF SPRING | 11 70S ROCK | | 21 DOOM | |
 | | 06 AMBIENT SWELL | 12 BOUTIQUE | | | |
 
-25–52: **USER 25 … USER 52**, a clean NAM TWIN + 1x12 + a little room, to build your own.
+25–52: **USER 25 … USER 52**, a clean NAM TWIN + USER IR (IR1) + a little room, to build your own.
 
-**Levels (v36)**: every amp plays at the same loudness at GAIN noon and moves only +-3 dB over the whole knob; every
-block type, with its knobs at noon, keeps the loudness when switched on; each preset has its own **PRESET LVL**
-(GT page, 3rd line: -15..+15 dB) to balance your sounds. The output ends in a soft limiter (transparent up to
--2 dBFS) instead of a hard clip.
+**Levels (v36)**: every NAM model plays at the same loudness at GAIN noon; every block type, with its knobs at
+noon, keeps the loudness when switched on; each preset has its own **PRESET LVL** (GT page, 3rd line: -15..+15 dB) to
+balance your sounds. The output ends in a soft limiter (transparent up to -2 dBFS) instead of a hard clip.
 
 ## Controls
 | Control | Action |
@@ -237,9 +218,9 @@ The right input channel only carries constant noise (−77 dB); before v28 it wa
 high-gain amps turned it into a constant hiss, even with nothing plugged in.
 
 ## Checks run on the PC (with the pedal's own math library, `firmware/px_math.c`)
-- 2,443 configurations (every block × type × extreme settings, changed while playing; signal, silence, very loud
+- 2,092 configurations (every block × type × extreme settings, changed while playing; signal, silence, very loud
   signal): 0 NaN.
-- 231 long runs (3 s plucked string + 8 s of silence, every model at full settings): nothing runs away; only the
+- 192 long runs (3 s plucked string + 8 s of silence, every model at full settings): nothing runs away; only the
   delays at FDBK 100 keep repeating (by design).
 - Pitch shifters: 100 % of the energy on the target note (440 Hz, 110 Hz, −7 semitones) thanks to phase alignment
   at every crossfade (SOLA).

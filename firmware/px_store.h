@@ -21,7 +21,7 @@
 #define ST_NSLOT   52u
 #define ST_SLOT    112u
 #define ST_S0N     34u                          /* slots in sector 0: 16 + 34 * 112 = 0xEF0 < 0xF00 */
-#define ST_VER     5u          /* 5: v36 (preset LEVEL); 4: v35 (delay TIME up to 2 s); 3: v34 (amp / drive / cab types renumbered); 2: v29; 1: v25 */
+#define ST_VER     6u          /* 6: the built-in amps and cabinets removed (AMP: NAM, CAB: USER IR); 5: v36 (preset LEVEL); 4: v35 (delay TIME up to 2 s); 3: v34 (amp / drive / cab types renumbered); 2: v29; 1: v25 */
 #define ST1_NSLOT  42u                          /* format 1 (v25..v28) */
 #define ST1_SLOT   96u
 #define ST1_S0N    38u
@@ -76,6 +76,13 @@ static void st_types_v34(void)
         px_preset_t *q = (px_preset_t *)(void *)st_slot[k];
         for (uint32_t i = 0; i < 3u; i++) q->type[B[i]] = (uint8_t)px_type_v34(B[i], q->type[B[i]]);
     }
+}
+/* format 1..5 -> 6: the saved presets' built-in amp and cabinet replaced (px_preset_v34_set: the NAM model of the same
+ * capture; USER IR in slot IR1, or the CAB block off for DI). In RAM only, as above */
+static void st_v34_set(void)
+{
+    for (uint32_t k = 0; k < ST_NSLOT; k++)
+        if (st_slot[k][sizeof(px_preset_t)] == ST_MARK) px_preset_v34_set((px_preset_t *)(void *)st_slot[k]);
 }
 static void st_level_v36(void)               /* saved before v36: no preset LEVEL yet (that byte was unused) = 0 dB */
 {
@@ -154,6 +161,7 @@ static void st_load(void)
     if (best && bh.ver < 3u) st_types_v34();        /* saved before v34: the old amp / drive / cab numbers */
     if (best && bh.ver < 4u) st_time_v35();         /* saved before v35: delay TIME on the 1 s scale */
     if (best && bh.ver < 5u) st_level_v36();        /* saved before v36: preset LEVEL = 0 dB */
+    if (best && bh.ver < 6u) st_v34_set();          /* saved with the built-in amps and cabinets (after the LEVEL: DI raises it) */
 }
 
 static int st_saved(uint32_t k) { return k < ST_NSLOT && st_slot[k][sizeof(px_preset_t)] == ST_MARK; }

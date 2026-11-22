@@ -4,14 +4,14 @@
  * px_dsp.h — v3: a preset = 11 blocks; each block has a TYPE, an ON/OFF state and 5 settings 0..100.
  * The UI and the engine share exactly this structure.
  *
- *   default order: IN -> GATE -> COMP -> PITCH -> SFX -> SYN -> [ DRIVE -> AMP ] (x4) -> CAB -> EQ -> MOD -> DELAY
+ *   default order: IN -> GATE -> COMP -> PITCH -> SFX -> SYN -> DRIVE (x4, x2 before NAM) -> AMP -> CAB -> EQ -> MOD -> DELAY
  *                  -> REVERB -> OUT
- *   v29: each preset carries its own block order (order[]); DRIVE and AMP share one oversampled section when AMP
- *   comes right after DRIVE, otherwise each runs its own.
+ *   v29: each preset carries its own block order (order[]).
  *
- * Models are voiced from published circuit analyses (ElectroSmash, Electric Druid, Rob Robinette,
- * Duncan Amps, Celestion/Jensen datasheets, Boss/Roland/Ampeg manuals...) — see docs/SOUNDS-AND-CONTROLS.md.
- * Names evoke the models they are inspired by, without using any brand.
+ * Effects are voiced from published circuit analyses (ElectroSmash, Electric Druid, Boss/Roland/Ampeg manuals...) —
+ * see docs/SOUNDS-AND-CONTROLS.md. The AMP block plays Neural Amp Modeler networks and the CAB block impulse responses
+ * (store format 6: the built-in amps and cabinets were removed). Names evoke the models they are inspired by, without
+ * using any brand.
  * Single-precision float (AC791N FPU); minimal libm: sinf/cosf/expf/logf/powf/sqrtf (firmware/px_math.c).
  */
 #ifndef PX_DSP_H
@@ -40,21 +40,18 @@ enum { PX_CMP_SQUASH, PX_CMP_STUDIO, PX_CMP_OPTO, PX_CMP_SWELL, PX_CMP_COUNT };
 enum { PX_PIT_OCTAVER, PX_PIT_POLYOCT, PX_PIT_WHAMMY, PX_PIT_HARMONY, PX_PIT_DETUNE, PX_PIT_COUNT };
 enum { PX_SFX_AUTOWAH, PX_SFX_LFOWAH, PX_SFX_RING, PX_SFX_CRUSH, PX_SFX_SLICER, PX_SFX_LOFI, PX_SFX_SYNTH, PX_SFX_COUNT };
 enum { PX_DRV_TS9, PX_DRV_KLON, PX_DRV_M77, PX_DRV_HM2, PX_DRV_COUNT };
-enum { PX_AMP_TWIN, PX_AMP_AC15, PX_AMP_JCM900, PX_AMP_JCM2000, PX_AMP_MARK4, PX_AMP_SHIRLEY, PX_AMP_PROMOD,
-       PX_AMP_5150, PX_AMP_COUNT };
-/* v37: Neural Amp Modeler A2-Lite (px_nam.c) as one more AMP type, after the 8 fitted amps. Its 5 settings: MODEL,
- * GAIN (into the model, +-12 dB), BASS, MID, TREBLE (after it). Models: PX_NAM_NFACT in the firmware, PX_NAM_NUSER
- * slots the web editor fills with A2 captures (.nam files, e.g. from TONE3000). */
-#define PX_AMP_NAM    PX_AMP_COUNT
-#define PX_AMP_NTYPES (PX_AMP_COUNT + 1)
+/* The AMP block's one type (v37; the only one since store format 6): Neural Amp Modeler A2-Lite (px_nam.c). Its 5
+ * settings: MODEL, GAIN (into the model, +-12 dB), BASS, MID, TREBLE (after it). Models: PX_NAM_NFACT in the firmware,
+ * PX_NAM_NUSER slots the web editor fills with A2 captures (.nam files, e.g. from TONE3000). */
+enum { PX_AMP_NAM, PX_AMP_COUNT };
 #define PX_NAM_NFACT  12
 #define PX_NAM_NUSER  16
 #define PX_NAM_N      (PX_NAM_NFACT + PX_NAM_NUSER)
-enum { PX_CAB_112JN, PX_CAB_212BLUE, PX_CAB_412GB, PX_CAB_412T75, PX_CAB_412V30, PX_CAB_112CREAM, PX_CAB_DI,
-       PX_CAB_IR, PX_CAB_COUNT };      /* v38: USER IR, a cabinet impulse response loaded from the editor */
-/* v38: user cabinet IRs. PX_IR_N slots (the firmware keeps them in flash: firmware/px_irs.h); the engine plays the first
+/* The CAB block's one type (v38; the only one since store format 6): USER IR, a cabinet impulse response loaded from the
+ * editor. PX_IR_N slots (the firmware keeps them in flash: firmware/px_irs.h); the engine plays the first
  * PX_IR_LEN taps (23 ms at 44.1 kHz) by uniform partitioned FFT convolution, 64-frame partitions. Its settings: IR (the
  * slot), LOW CUT, HIGH CUT. */
+enum { PX_CAB_IR, PX_CAB_COUNT };
 #define PX_IR_N   8
 #define PX_IR_LEN 1024
 enum { PX_SYN_ORGAN, PX_SYN_CHURCH, PX_SYN_STRINGS, PX_SYN_CHOIR, PX_SYN_MONO, PX_SYN_PWM, PX_SYN_BASS,
@@ -86,11 +83,12 @@ int         px_ntypes(int blk);
 const char *px_type_name(int blk, int type);
 int         px_nparams(int blk, int type);
 const char *px_param_name(int blk, int type, int k);
-/* text for a knob value when a bare 0..100 says little ("+5TH", "440" ms...); returns 0 = show the number */
-int         px_type_v34(int blk, int old);   /* presets saved before v34: old type -> new */
+int         px_type_v34(int blk, int old);   /* presets saved before v34 (store format 1 / 2): old type -> the v34 set */
+void        px_preset_v34_set(px_preset_t *p);   /* presets of the v34 set (formats 1..5): its built-in amp and cab removed */
 #define PX_PATCH_LEVEL 2                /* the preset LEVEL: p[PX_B_GATE][2] ("PRESET LVL" on the GT page), 50 = 0 dB (v36) */
 int         px_dly_time_v35(int type, int v);   /* presets saved before v35: delay TIME (20..1000 ms) -> today's knob */
 int         px_dly_value_for_ms(int type, float ms);   /* the TIME value nearest to a delay of ms (MIDI clock sync) */
+/* text for a knob value when a bare 0..100 says little ("+5TH", "440" ms...); returns 0 = show the number */
 int         px_param_text(int blk, int type, int k, int v, char *buf8);
 int         px_preset_count(void);
 /* NAM models: the MODEL knob (0..100) <-> model 0..PX_NAM_N-1 (factory first, then the user slots) */
@@ -134,19 +132,12 @@ int         px_ir_name(int slot, char *buf12);          /* 1 = the slot holds an
 
 /* ---------------------------------------------------------------- state --- */
 typedef struct { float b0, b1, b2, a1, a2, z1, z2; } px_bq;
-typedef struct { float b0, b1, a1, z; } px_op;      /* first-order section (RC) */
 typedef struct { float x[6], y[6]; } px_hb;           /* v38: a half-band filter's all-pass sections (x2 up or down) */
 
 #define PX_PS_N 2048                   /* pitch shifter buffer (46 ms) */
 #define PX_SYN_CB 1024                 /* SYN: ensemble / doubler / body reflections (23 ms) */
 #define PX_DLY_N 45056                 /* v40: 2.04 s of delay at half rate (22.05 kHz, 16-bit: 88 KB), as the stock */
 #define PX_RV_M 16384                  /* reverb memory: one 16-bit ring (32 KB) at half rate, laid out per type */
-#define PX_CABM 6                      /* cabinet detail: cone breakup modes (2-pole resonators) */
-#define PX_CABT 8                      /* cabinet detail: sparse taps (mic comb, back wave) */
-typedef struct {                       /* cabinet detail: its taps, breakup resonators and gain (v38: one struct, so */
-    float tg[PX_CABT], m[PX_CABM][3], dg;   /* that a new set can be made away from the engine) */
-    uint8_t ti[PX_CABT]; int nt;
-} px_cabd;
 #define PX_GL_MAX 64                   /* v38: the most settings that glide (px_dsp.c: GL_F) */
 
 /* trails: the delay's and the reverb's state, each in a struct of its own, so that a second one of each can run: the
@@ -203,12 +194,11 @@ typedef struct {
     float sfx_a, sfx_b, sfx_c, sfx_d, sfx_mix, sfx_qd;
     int   sfx_pat, crush_n, crush_k; float crush_v, crush_q;
     px_bq sfx_f1, sfx_f2;
-    /* oversampling (set A: amp, or drive + amp together; set B: a drive that is not right before the amp; set C: x2, a
-     * drive before a NAM amp). v38: polyphase IIR half-band filters (two all-pass branches, one multiply a section), in
-     * two x2 stages: per set the state of stage 1 up, stage 2 up, stage 2 down, stage 1 down */
-    px_hb os_a[4], os_b[4], os_c[4];
+    /* the drive's oversampling (set A: x4; set C: x2, before a NAM amp). v38: polyphase IIR half-band filters (two
+     * all-pass branches, one multiply a section), in two x2 stages: per set the state of stage 1 up, stage 2 up, stage 2
+     * down, stage 1 down */
+    px_hb os_a[4], os_c[4];
     int drv_os;                                       /* the drive's oversampling: PX_OVERSAMPLE, or 2 before a NAM amp */
-    struct { int32_t x1, x2, y1, y2; } fq_cab[8];    /* v37: the integer filters' state (px_fx_int) */
     uint8_t ord[PX_NBLK];
     /* synth / instrument block (v29) */
     float syn_buf[PX_PS_N]; int syn_w;                 /* shifter source (organ, strings...); sitar: string combs */
@@ -231,23 +221,13 @@ typedef struct {
     px_bq drv_hp, drv_shelf, drv_lp, drv_mid, drv_t1, drv_t2, drv_t3;
     float drv_gain, drv_level, drv_blend, drv_bias, drv_off, drv_gate, drv_dcs, drv_dck, drv_shelf_lo, drv_mix;
     int   drv_clip, drv_tm, drv_np, drv_pre, drv_dcb;
-    /* amp */
-    int   amp_n, amp_hard;
-    float amp_g[4], amp_bias[4], amp_boff[4], amp_env[4], amp_envk, amp_bk;   /* env: bias shift (blocking), x depth */
-    px_bq amp_tight, amp_bright;
-    px_op amp_hp[4], amp_lp[4];
-    px_bq ts_low, ts_mid, ts_high, amp_pres, amp_res, amp_voice;
-    float amp_sag, amp_sagk, amp_pw, amp_pwn, amp_out;
-    /* NAM (v37): one model at a time (its network and history: px_dsp.c, outside this struct) */
-    int   amp_nam, nam_idx;                            /* AMP type is NAM; the model loaded (-1: none) */
+    /* amp: NAM (v37), one model at a time (its network and history: px_dsp.c, outside this struct) */
+    int   nam_idx;                                     /* the model loaded (-1: none) */
     float nam_in_g, nam_out_g;
     float nam_buf[PX_MAX_BLOCK];
-    /* cabinet */
-    px_bq cab[8]; float cab_g; int cab_n;
-    /* fine structure (v27: same response as v25's 128-tap FIR, ~4x cheaper): sparse taps + breakup resonators */
-    float cab_rb[64], cab_ms[PX_CABM][2];
-    px_cabd cd; int cab_rw, cab_firon;
-    int   ir_slot;                                     /* v38: the IR loaded (-1: none; its spectra: px_dsp.c) */
+    px_bq ts_low, ts_mid, ts_high;                     /* its BASS, MID and TREBLE */
+    /* cabinet: USER IR (v38) */
+    int   ir_slot;                                     /* the IR loaded (-1: none; its spectra: px_dsp.c) */
     px_bq ir_lo, ir_hi;                                /* its LOW CUT and HIGH CUT */
     /* eq */
     px_bq eq[5]; int eq_n;
@@ -310,21 +290,16 @@ int  px_trails(const px_engine *e);
 void px_trails_stop(px_engine *e, int now);
 /* v38: changes without clicks.
  * px_engine_change: what going from the engine's preset to p takes: PX_CH_NONE; PX_CH_KNOBS (settings and blocks on or
- *   off only: px_engine_knobs, between two blocks, no stop); PX_CH_FULL (another type, order or NAM model: px_engine_set,
+ *   off only: px_engine_knobs, between two blocks, no stop); PX_CH_FULL (another type, order, NAM model or IR slot: px_engine_set,
  *   the caller fading the output out and back in round it; also a delay time its line cannot hold while trails ring).
  * px_engine_knobs: the new settings glide in over ~23 ms, blocks switched on or off fade. Light (only the blocks whose
- *   settings changed are recomputed), so the audio side can call it at the start of a block.
- * px_engine_prepare: the heavy part of px_engine_knobs (the cabinet's normalisation) made ahead, from any thread: it reads
- *   only p and writes only its own store, which px_engine_knobs then uses when it matches. */
+ *   settings changed are recomputed), so the audio side can call it at the start of a block. */
 enum { PX_CH_NONE, PX_CH_KNOBS, PX_CH_FULL };
 int  px_engine_change(const px_engine *e, const px_preset_t *p);
 void px_engine_knobs(px_engine *e, const px_preset_t *p);
-void px_engine_prepare(const px_engine *e, const px_preset_t *p);
 void px_engine_process(px_engine *e, const float *in, float *out, int n);
 enum { PX_PART_ALL, PX_PART_PRE, PX_PART_NAM, PX_PART_POST };   /* v37: px_engine_part's stages (see px_dsp.c) */
 void px_engine_part(px_engine *e, const float *in, float *out, int n, int part);
-extern int px_fx_int;                   /* v37: 1 = the cabinet and drive filters in integer arithmetic (off: slower) */
-extern int px_fx_hand;                  /* v37: their loop by hand (checked at start-up) */
 extern uint32_t (*px_clock)(void);      /* v38: set by the firmware: px_engine.pf counts each block's time */
 /* v39: wet lanes, as in the stock firmware (docs/STOCK-FIRMWARE.md 7.3). With them on, the DELAY and REVERB blocks no
  * longer process in the chain: at their place the chain sends its signal to the lane and mixes in the lane's wet output

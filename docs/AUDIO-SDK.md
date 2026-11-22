@@ -223,13 +223,10 @@ Driver setup: `iis_open` IIS_PORTA, channel_in = BIT(1), channel_out = BIT(0), m
   long-press reset off), Megal's BlackBox with `PINR 09` (bit 0 set: on). Bit 0 is the enable in the SDK's
   `long_press_reset_enable` (cpu.a power_wakeup.c: P33 0x94 bit 0, and 0x95 bit 0).
 
-## v34: amps, drives and the V30 cab fitted to captures
-- The 29 amps / 27 drives / 15 cabinets voiced by ear make way for 8 amps, 4 drives and 7 cabinets whose numbers are
-  fitted by computer to Neural Amp Modeler captures of the real units, on real DI guitar
-  ([FITTED-MODELS.md](FITTED-MODELS.md)). Same engine, same CPU (+3 % on average, the heaviest preset a little
-  lighter), only the tables change.
-- Presets saved before v34 are converted at boot to the nearest new type (store format 3, `px_type_v34`); the other
-  blocks are untouched. Six factory presets are renamed (their old amp no longer exists).
+## v34: amps, drives and cabinets fitted to captures (history)
+- v34 replaced the hand-voiced amps, drives and cabinets with 8 amps, 4 drives and 7 cabinets. The built-in amps and
+  cabinets were removed in store format 6 (end of this file); the drives stay.
+- Presets saved before v34 are converted at boot (store format 3, `px_type_v34`).
 
 ## v35: new reverbs, 2 s delay, 16-bit delay lines (89 KB of RAM freed)
 - RAM: the engine filled 332 of the 336 KB POOL. The delay line (1 s in 32-bit floats: 188 KB) and the reverb
@@ -250,15 +247,14 @@ Driver setup: `iis_open` IIS_PORTA, channel_in = BIT(1), channel_out = BIT(0), m
 
 ## v36: levels, 24 factory presets, a new screen
 - Levels, measured as loudness (ITU-R BS.1770, gated) on real DI guitar at the pedal's level, by
-  `tools/calib_levels.py` (writes `engine/px_trim.h`): each amp has a level curve over GAIN (11 points: noon at
-  -23 LUFS for every amp, +-3 dB over the knob; v35 spread 46 dB between JCM900 at 0 and full), every cabinet sits
-  with the 1x12, and every other type (knobs at noon) keeps the loudness when switched on. The 52 v35 presets
+  `tools/calib_levels.py` (writes `engine/px_trim.h`): each type (knobs at noon) keeps the loudness when switched
+  on; the built-in amps and cabinets that had level curves are gone (store format 6). The 52 v35 presets
   spanned -53 to -10 LUFS; the 24 v36 presets are all at -23.0 +-0.2 LUFS (`tools/level_presets.py`).
 - The preset LEVEL: GT block, 3rd setting "PRESET LVL" (-15..+15 dB, 0.3 dB a step). Store format 5 and the editor
   (files without `"v": 36`) set it to 0 dB on older presets.
 - Output: a soft limiter (transparent to 0.8, rounds off to 1.2) instead of the hard clip at 1.2.
 - SLOW SWELL: 2.9 ms look-ahead and a more sensitive attack detector, so a pick attack is not heard before the swell.
-- 24 factory presets round the fitted amps (near noon); 25..52: USER (clean TWIN + 1x12 + room).
+- 24 factory presets near noon; 25..52: USER.
 - Screen: PLAY (number and name large, amp / cab, the chain in colour, the selected block) and EDIT (the block on its
   colour, model, 5 settings with value + bar), new Inter fonts (26 and 58 px). `tests/uisim.c` draws every page on
   the PC and checks that each full page paints every pixel.
@@ -286,8 +282,8 @@ Driver setup: `iis_open` IIS_PORTA, channel_in = BIT(1), channel_out = BIT(0), m
   loader keeps that range (`loader/ldr_core.c`, `LDR_NAM_LO/HI`). The weights are read from the flash (SPI, with the
   audio held) when a preset picks the model.
 - Level: every model plays at the same loudness: a trim per model (-20 LUFS on `docs/nam_di.wav`, measured by the
-  editor for user models and by `tools/mk_nam_factory.py` for the factory ones), then one constant that puts NAM +
-  1x12 at GAIN noon at the fitted amps' -23 LUFS.
+  editor for user models and by `tools/mk_nam_factory.py` for the factory ones), then one constant that puts NAM at
+  GAIN noon at -23 LUFS.
 - 24 factory presets rebuilt on the 12 factory NAM models, levelled by `tools/level_presets.py`; USER slots: NAM TWIN.
 
 ## v40: the audio path in RAM, the delays at half rate (the stock firmware's way)
@@ -349,3 +345,26 @@ Driver setup: `iis_open` IIS_PORTA, channel_in = BIT(1), channel_out = BIT(0), m
   preset (within one step of the 16-bit delay memory, wherever the write index is), the lanes, the two-core pipeline,
   the ends, the cases without room, and changes at random with the stretches checked (never overlapping, free ticks
   zero) under the address sanitizer.
+
+## Store format 6 (after v42): the built-in amps and cabinets removed
+- The AMP block plays NAM only and the CAB block USER IR only: the 8 built-in amps (tube stages, tone stack, power
+  amp, sag), the 6 built-in cabinets with DI (NO CAB), and the tools and notes that fitted them to captures are gone.
+  The 4 drives keep their numbers and their code (oversampled x4, x2 before a NAM amp). Gone with them: the
+  oversampling set that a drive used when a built-in amp oversampled on its own, the integer filters that only the
+  cabinet used (`px_fx_int`, the hand loop `px_fq_asm`), and `px_engine_prepare()`, which made the cabinet's
+  normalisation outside the audio interrupt (`formal/KnobHandoff.tla` lost that step).
+- A chain of NAM, USER IR, drives and the other effects sounds as before, bit for bit: 240 runs of random presets
+  (types, settings, order, blocks on or off, knob changes while playing, the two-core pipeline and the wet lanes)
+  hash the same with this engine and the one before, the types renumbered (AMP NAM 8 -> 0, CAB USER IR 7 -> 0).
+- Saved presets (store format 1..5) are converted at boot by `px_preset_v34_set()`: a built-in amp becomes the
+  factory NAM model trained on the same amp's capture (TWIN, AC15, JCM900, JCM2000, MARK IV, SHIRLEY, PRO MOD, 5150),
+  its GAIN, BASS, MID and TREBLE kept; a built-in cabinet becomes USER IR in slot IR1 with its cuts off, on or off as
+  it was; DI on becomes the CAB block off and the preset LEVEL +9 steps (2.7 dB, DI's +2.6 dB trim). The editor does
+  the same with a preset file that names a removed type (`docs/pxedit.js`, `V34_AMPS`, `V34_CABS`).
+- The factory presets' CAB block is USER IR in IR1. While the slot is empty it passes the sound, which measured 0 to
+  6.1 dB quieter than with the built-in cabinet (`docs/nam_di.wav`, the most on DOOM and the V30 presets): each
+  preset's LEVEL is raised by that much, so out of the box every preset plays within 0.15 dB of its earlier loudness.
+  Without a cabinet the peaks are higher: on that clip KLON CRUNCH reaches +1.4 dBFS and SWEDE DEATH +0.7 dBFS (before:
+  -0.9 and -3.5), which the soft limiter allows (it rounds off towards 1.2).
+- Image: 368,608 -> 355,636 bytes. RAM code 77,564 -> 72,104 bytes (17,952 free in its window), RAM 19,944 -> 21,244
+  bytes free, the pool tail 2,048 -> 1,024 bytes. The engine's struct: 165,644 -> 164,288 bytes on the PC.

@@ -137,7 +137,7 @@ The user is told the save failed and finds it saved. Nothing is lost, and the ne
 | Model | Promise | States | Mutation that fails |
 |---|---|---|---|
 | `PresetStore.cfg` | A power cut never loses a confirmed save. | 812 | A save that writes over the copy in use (`PresetStoreOverwrite.cfg`). |
-| `KnobHandoff.cfg` | `a_kp`, the cabinet store, and the engine's preset are never read while written, and `px_engine_set` runs alone. | 124 | `audio_apply` without `a_wait` (`KnobHandoffNoWait.cfg`). |
+| `KnobHandoff.cfg` | `a_kp` and the engine's preset are never read while written, and `px_engine_set` runs alone. | 115 | `audio_apply` without `a_wait` (`KnobHandoffNoWait.cfg`). |
 | `LayerSplit.cfg` | Each ring of the NAM network belongs to one core at a time, and every layer runs every block once, in order. | 5975 | `pxn_lp_a` taking layers without reading `ld` (`LayerSplitNoCheck.cfg`). |
 | `FlashHoldFixed.cfg` | F1's fix keeps the SFC rule, and `a_collect` always ends. | 250 | A hold without `a_collect` (`FlashHoldNoCollect.cfg`). |
 | `EditorWatch.cfg` | F2's fix: the editor ends up showing the pedal's sound. | 39015 | Every answered command resets the hash (`EditorWatchNoOwed.cfg`). |
