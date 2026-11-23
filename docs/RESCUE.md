@@ -263,8 +263,8 @@ writes to the pedal's flash.
 
 **What a real pedal did.** On a BlackBox on the official V23 the recovery device appeared and answered the sync request
 `0x42`, but the bulk IN endpoint then sent 64 zero bytes in place of the hello reply and nothing after, and within
-seconds the pedal left the bus. The recovery code, read again, never composes a reply of zeros, and it has no timer: it
-ends at its first failed access to its USB controller. The helper therefore no longer sends the sync, reads the hello
+seconds the pedal left the bus. The recovery code, read again, never composes a reply of zeros, and showed no timer: it
+ended at its first failed access to its USB controller (the later runs below leave in seconds anyway). The helper therefore no longer sends the sync, reads the hello
 reply also over the control endpoint (vendor request `0x43`, which returns the reply buffer, and `0x44`, which returns
 the start of the frame buffer), and, when the pedal leaves the bus, lists the USB devices to see what it starts next.
 
