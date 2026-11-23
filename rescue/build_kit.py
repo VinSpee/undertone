@@ -35,6 +35,7 @@ FILES = {
     "LICENSE.txt": (REPO / "LICENSE", LF),
     "tools/uboot_rescue.py": (REPO / "tools/uboot_rescue.py", LF),
     "tools/pocketx_fw.py": (REPO / "tools/pocketx_fw.py", LF),
+    "tools/pd40_recovery.py": (REPO / "tools/pd40_recovery.py", LF),
     "tools/extract_flash.py": (HERE / "kit/tools/extract_flash.py", LF),
     "tools/head_fingerprint.py": (HERE / "kit/tools/head_fingerprint.py", LF),
     "firmware/README.txt": (HERE / "kit/firmware/README.txt", CRLF),

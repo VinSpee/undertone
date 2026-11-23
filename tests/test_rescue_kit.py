@@ -24,15 +24,18 @@ with zipfile.ZipFile(ZIP) as z:
     z.extractall(WORK)
 KIT = WORK / build_kit.TOP
 
-# the kit's own tools, not the repository's (uboot_sim then takes the same module)
+# the kit's own tools, not the repository's (uboot_sim and recovery_sim then take the same modules)
 sys.path.insert(0, str(KIT / "tools"))
 import uboot_rescue as ur
+import pd40_recovery as pr
 sys.path.insert(0, str(ROOT / "tests"))
 import uboot_sim
+import recovery_sim
 from fw_layouts import flash_image
 import pxpkg
 
 assert Path(ur.__file__).resolve().parent == (KIT / "tools").resolve() and uboot_sim.ur is ur, "not the kit's tool"
+assert Path(pr.__file__).resolve().parent == (KIT / "tools").resolve() and recovery_sim.pr is pr, "not the kit's helper"
 
 
 def noise(seed, n):
@@ -151,13 +154,13 @@ class Kit(unittest.TestCase):
             names = z.namelist()
             self.assertEqual(names, [f"OpenPocket-rescue-kit/{n}" for n in (
                 "README.txt", "RESCUE.bat", "extract-flash.bat", "fingerprint.bat", "LICENSE.txt", "tools/uboot_rescue.py",
-                "tools/pocketx_fw.py", "tools/extract_flash.py", "tools/head_fingerprint.py", "firmware/README.txt",
+                "tools/pocketx_fw.py", "tools/pd40_recovery.py", "tools/extract_flash.py", "tools/head_fingerprint.py", "firmware/README.txt",
                 "SHA256SUMS.txt")])
             self.assertTrue(all(i.compress_type == zipfile.ZIP_STORED and i.date_time == build_kit.STAMP for i in z.infolist()))
             for line in z.read("OpenPocket-rescue-kit/SHA256SUMS.txt").decode().splitlines():
                 digest, name = line.split("  ")
                 self.assertEqual(hashlib.sha256(z.read(f"OpenPocket-rescue-kit/{name}")).hexdigest(), digest, name)
-            for name in ("RESCUE.bat", "tools/uboot_rescue.py", "tools/pocketx_fw.py"):
+            for name in ("RESCUE.bat", "tools/uboot_rescue.py", "tools/pocketx_fw.py", "tools/pd40_recovery.py"):
                 self.assertTrue(z.read(f"OpenPocket-rescue-kit/{name}") == (ROOT / name).read_bytes(), name)
             for name, (_, eol) in build_kit.FILES.items():
                 data = z.read(f"OpenPocket-rescue-kit/{name}")
@@ -205,6 +208,23 @@ class Kit(unittest.TestCase):
         r = self.helper("tools/extract_flash.py", str(self.home / "damaged.fwsc"))
         self.assertEqual(r.returncode, 1)
         self.assertIn("CRC check failed", r.stderr)
+
+    # ---- a pedal on M-VAVE's V22 or V23 boot loader, in its recovery mode
+    def test_the_recovery_helper_probes_and_leaves_to_the_usb_boot_state(self):
+        """The two lines of the guide's V22/V23 section, typed in the kit folder, on a simulated recovery device."""
+        self.addCleanup(setattr, pr, "transport", pr.transport)
+        sim = recovery_sim.SimRecovery()
+        pr.transport = lambda: recovery_sim.SimBus(sim)
+        for argv, said in (([], "read-only probe finished: nothing was written"),
+                           (["--leave", "--accept-inferred"], "tools/uboot_rescue.py takes over")):
+            shown = io.StringIO()
+            with contextlib.redirect_stdout(shown), contextlib.redirect_stderr(shown):
+                rc = pr.main(argv)
+            self.assertEqual(rc, 0, shown.getvalue())
+            self.assertIn("CRC-32 0xb19d96a1: M-VAVE V22 or V23", shown.getvalue())
+            self.assertIn(said, shown.getvalue())
+        self.assertEqual(sim.write_attempts, [])
+        self.assertEqual([f[4] for f in sim.frames], [pr.HELLO, pr.HELLO, pr.LEAVE])
 
     # ---- the two helpers
     def test_extract_flash_gives_the_image_for_the_image_route(self):

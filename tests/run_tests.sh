@@ -33,6 +33,8 @@
 #  - release files: .github/scripts/assets.mjs assembles a release from fixture packages; site/latest.py and site/release.sh
 #    take it from a stand-in GitHub; .github/scripts/release.mjs --draft with a stand-in gh (tests/test_release_files.mjs)
 #  - rescue: tools/uboot_rescue.py (protocol, guards, resume) against a simulated UBOOT pedal, tests/uboot_sim.py
+#  - recovery helper: tools/pd40_recovery.py (probe, leave, refusal of every write, bad answers) against a simulated
+#    pedal in M-VAVE's V22/V23 recovery mode, tests/recovery_sim.py
 #  - rescue kit: rescue/build_kit.py gives the pinned bytes twice; an unzipped kit's own files restore a simulated pedal
 #    on a V20, a V22 and a V23 flash head, and refuse the file of the other head (tests/test_rescue_kit.py)
 #  - hosted simulator: tools/sim.mjs driven over HTTP (controls, held buttons, screen, flash file, SysEx, the Web MIDI shim)
@@ -105,6 +107,8 @@ echo "== release files (.github/scripts/assets.mjs, release.mjs --draft: the ass
 node tests/test_release_files.mjs > build/release_files.log || { cat build/release_files.log; exit 1; }; tail -1 build/release_files.log
 echo "== rescue tool (tools/uboot_rescue.py on a simulated UBOOT pedal)"
 python3 tests/test_uboot_rescue.py $1
+echo "== recovery helper (tools/pd40_recovery.py on a simulated V22/V23 recovery mode)"
+python3 tests/test_pd40_recovery.py
 echo "== rescue kit (rescue/build_kit.py: the pinned bytes; the unzipped kit on a simulated V20, V22 and V23 pedal)"
 python3 tests/test_rescue_kit.py
 echo "== hosted simulator (tools/sim.mjs)"
