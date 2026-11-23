@@ -3,8 +3,8 @@
 # firmware or in another firmware (docs/BASE-FIRMWARE.md, section 9). firmware/apps/NAME/release.sha256 holds their
 # SHA-256; a firmware with no such file has no pin (STARTER, the template, is never released).
 #   tests/release_pin.sh NAME [SUMS]   compare SUMS with NAME's pin. The default SUMS is what the build wrote:
-#                                      build/SHA256SUMS for OpenPocket (gamut, `tools/op.mjs package`), and
-#                                      build/apps/NAME/SHA256SUMS for another firmware (`tools/op.mjs app NAME`)
+#                                      build/apps/NAME/SHA256SUMS (`tools/op.mjs package` for OpenPocket, gamut;
+#                                      `tools/op.mjs app NAME` for another firmware)
 # The same sums mean that nothing in that firmware needs a check on a pedal. To pin a new release of it, such as a merge
 # of upstream's next OpenPocket or a change made on purpose once its own tests pass, copy the build's SHA256SUMS over
 # its release.sha256 in the same commit. OpenPocket's pin (gamut) is upstream's published v42 with the bass tuner fix,
@@ -15,8 +15,8 @@ NAME="$1"
 case "$NAME" in ""|*[!a-z0-9-]*) echo "usage: tests/release_pin.sh NAME [SUMS]   (NAME: a folder of firmware/apps)"; exit 2;; esac
 PIN="$ROOT/firmware/apps/$NAME/release.sha256"
 if [ ! -f "$PIN" ]; then echo "release pin: $NAME has no pin (firmware/apps/$NAME/release.sha256)"; exit 1; fi
-if [ "$NAME" = gamut ]; then DEF="$ROOT/build/SHA256SUMS"; BUILD=package; else DEF="$ROOT/build/apps/$NAME/SHA256SUMS"; BUILD="app $NAME"; fi
-SUMS="${2:-$DEF}"
+if [ "$NAME" = gamut ]; then BUILD=package; else BUILD="app $NAME"; fi
+SUMS="${2:-$ROOT/build/apps/$NAME/SHA256SUMS}"
 if [ ! -f "$SUMS" ]; then echo "release pin: $SUMS not found (run: node tools/op.mjs $BUILD)"; exit 1; fi
 if diff -u "$PIN" "$SUMS"; then
   echo "release pin: $NAME's image and packages are the release's, byte for byte ($(wc -l < "$SUMS" | tr -d ' ') files)"

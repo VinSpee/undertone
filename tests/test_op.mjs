@@ -74,12 +74,12 @@ assert.equal(runs[2], "OP_BUILT=1 sh tests/run_tests.sh", "all: then the tests, 
 r = op(["package"]);
 assert.equal(r.calls.filter((c) => c[0] === "run").length, 1, "package is one container run");
 assert.deepEqual(r.calls.at(-1).slice(0, -1), base(["sh", "-c"]));
-assert.match(r.calls.at(-1).at(-1), /^sh firmware\/build\.sh && .*sha256sum .*openpocket\.bin.*> build\/SHA256SUMS/);
-assert.match(r.calls.at(-1).at(-1), /> build\/SHA256SUMS && sh tests\/release_pin\.sh gamut$/, "package ends with the release pin: a changed OpenPocket image fails it");
+assert.match(r.calls.at(-1).at(-1), /^sh firmware\/build\.sh && sha256sum build\/apps\/gamut\/openpocket\.bin .*> build\/apps\/gamut\/SHA256SUMS/, "package: OpenPocket's outputs are in build/apps/gamut, as an app's are in build/apps/NAME");
+assert.match(r.calls.at(-1).at(-1), /> build\/apps\/gamut\/SHA256SUMS && sh tests\/release_pin\.sh gamut$/, "package ends with the release pin: a changed OpenPocket image fails it");
 
 r = op(["package-test"]);
 assert.equal(r.calls.filter((c) => c[0] === "run").length, 1, "package-test is one container run");
-assert.match(r.calls.at(-1).at(-1), /^OP_CHANNEL=midi-test sh firmware\/build\.sh && .*sha256sum firmware\/openpocket-midi-test\.bin docs\/firmware\/midi-test\/\*\.fwsc/);
+assert.match(r.calls.at(-1).at(-1), /^OP_CHANNEL=midi-test sh firmware\/build\.sh && .*sha256sum build\/apps\/gamut\/openpocket-midi-test\.bin build\/apps\/gamut\/midi-test\/\*\.fwsc/);
 assert.doesNotMatch(r.calls.at(-1).at(-1), /docs\/firmware\/manifest\.json/, "the test package never touches the default manifest");
 
 r = op(["shell"]);
@@ -114,12 +114,12 @@ assert.deepEqual(r.calls, []);
 touch("fm1-1.bin");
 r = op(["appimage"]);
 assert.notEqual(r.status, 0);
-assert.match(r.err, /firmware\/openpocket\.bin not found.*build/);
+assert.match(r.err, /build\/apps\/gamut\/openpocket\.bin not found.*build/);
 assert.deepEqual(r.calls, []);
-touch("firmware/openpocket.bin");
+touch("build/apps/gamut/openpocket.bin");
 r = op(["appimage"]);
 assert.equal(r.status, 0);
-assert.deepEqual(r.calls.at(-1), base(["python3", "tools/pocketx_appimage.py", "fm1-1.bin", "firmware/openpocket.bin", "fm1-300.bin"]), "appimage");
+assert.deepEqual(r.calls.at(-1), base(["python3", "tools/pocketx_appimage.py", "fm1-1.bin", "build/apps/gamut/openpocket.bin", "fm1-300.bin"]), "appimage");
 
 r = op(["build"], { env: { FAKE_DOCKER_DOWN: "1" } });
 assert.notEqual(r.status, 0);
@@ -130,7 +130,7 @@ r = op(["build"], { path: join(tmp, "empty") });
 assert.notEqual(r.status, 0);
 assert.match(r.err, /Docker is not installed or not running/, "no docker at all");
 
-for (const p of ["firmware/openpocket-midi-test.bin", "docs/firmware/midi-test/PocketX_937.fwsc", "build/x", "firmware/build/y", "firmware/build-ble/z", "firmware/openpocket-ble.bin", "docs/firmware/PocketX_900.fwsc", "docs/firmware/manifest.json", "docs/rescue/manifest.json", "firmware/apps/gamut/engine/px_render"]) touch(p);
+for (const p of ["build/apps/gamut/PocketX_943.fwsc", "firmware/openpocket-midi-test.bin", "docs/firmware/midi-test/PocketX_937.fwsc", "build/x", "firmware/build/y", "firmware/build-ble/z", "firmware/openpocket-ble.bin", "docs/firmware/PocketX_900.fwsc", "docs/firmware/manifest.json", "docs/rescue/manifest.json", "firmware/apps/gamut/engine/px_render"]) touch(p);
 touch("docs/firmware/README.md");
 touch("firmware/apps/gamut/engine/px_dsp.c");
 r = op(["clean"], { path: join(tmp, "empty") });

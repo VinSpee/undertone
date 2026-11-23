@@ -1,13 +1,13 @@
 # OpenPocket: the same commands on macOS and Linux. Every target calls tools/op.mjs (Node 18+), which holds all the
 # Docker command lines; Windows calls it from the .bat files. See docs/BUILDING.md.
 #   make doctor     check the prerequisites (Node, Docker, the image)
-#   make build      firmware/openpocket.bin, the update loader and docs/firmware/*.fwsc + manifest.json
+#   make build      build/apps/gamut/: openpocket.bin, its packages (*.fwsc) + manifest.json, the catalog release.json
 #   make ble        the Bluetooth MIDI test image: firmware/openpocket-ble.bin, build/ble/*.fwsc (docs/BLE-TEST.md)
 #   make app APP=starter   another app on the base firmware (firmware/apps/starter): build/apps/starter/ (docs/ALT-FIRMWARE.md)
 #   make all        every product (OpenPocket with its release pin, each app of firmware/apps), then the tests on what was built
 #   make test       the host tests (tests/run_tests.sh)
-#   make package    build + build/SHA256SUMS of the outputs
-#   make package-test   the MIDI test channel package (docs/firmware/midi-test/, never the installer default)
+#   make package    build + build/apps/gamut/SHA256SUMS of the outputs, then the release pin
+#   make package-test   the MIDI test channel package (build/apps/gamut/midi-test/, never the installer default)
 #   make clean      remove every build output (needs no Docker)
 #   make shell      a shell in the build container
 #   make image      (re)build the container image

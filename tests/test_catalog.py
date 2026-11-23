@@ -2,7 +2,7 @@
 """tools/catalog.py: the catalog of the firmwares a site offers (release.json), from firmware/catalog.json and the
 manifests and packages the build made. No official file needed.
   python3 tests/test_catalog.py [--built]
---built: also the catalog the build wrote (docs/firmware/release.json): every firmware of firmware/catalog.json is on
+--built: also the catalog the build wrote (build/apps/gamut/release.json): every firmware of firmware/catalog.json is on
 it, and every package it names is there with the catalog's SHA-256 (`node tools/op.mjs all` runs it so)."""
 import hashlib
 import json
@@ -75,7 +75,7 @@ with tempfile.TemporaryDirectory() as t:
     ok("needs an id" in refused(lambda: catalog.build(source, site, apps)), "an id that is a path: refused")
 
 if "--built" in sys.argv:
-    site = ROOT / "docs" / "firmware"
+    site = ROOT / "build" / "apps" / "gamut"
     want = [f["id"] for f in json.loads((ROOT / "firmware" / "catalog.json").read_text())["firmwares"]]
     cat = json.loads((site / "release.json").read_text())
     ok([f["id"] for f in cat["firmwares"]] == want, f"the build's catalog lists every firmware of the release: {', '.join(want)}")

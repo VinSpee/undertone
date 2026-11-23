@@ -6,12 +6,14 @@ one line on what each is and, when there is one, a warning to show with it ("not
 what the build made: a firmware's name and version from its manifest, and each package's size and SHA-256 from the
 package itself, which must be the manifest's.
 
-  tools/catalog.py [--source firmware/catalog.json] [--site docs/firmware] [--apps build/apps] [--out SITE/release.json]
+  tools/catalog.py [--source firmware/catalog.json] [--site build/apps/gamut] [--apps build/apps] [--out SITE/release.json]
 
-SITE holds the packages and the manifest of the first firmware, the one with no product descriptor. A firmware that is
-an app on the base firmware has its own in APPS/<id>/, which a site serves as SITE/apps/<id>/ (tools/serve.py). Every
-path in the catalog is relative to the catalog. A firmware that has not been built is left out, with a line that says
-so; firmware/build.sh runs this after every build, so the catalog always describes the packages that are there."""
+SITE holds the packages and the manifest of the first firmware, the one with no product descriptor: the build's
+build/apps/gamut/, which a site serves as its firmware/ folder. A firmware that is an app on the base firmware has its
+own in APPS/<id>/, which a site serves as firmware/apps/<id>/ (tools/serve.py). Every path in the catalog is relative
+to the catalog, which is written to SITE/release.json and served as firmware/release.json. A firmware that has not
+been built is left out, with a line that says so; firmware/build.sh runs this after every build, so the catalog always
+describes the packages that are there."""
 import argparse
 import hashlib
 import json
@@ -62,7 +64,7 @@ def build(source, site, apps):
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--source", type=Path, default=ROOT / "firmware" / "catalog.json")
-    ap.add_argument("--site", type=Path, default=ROOT / "docs" / "firmware")
+    ap.add_argument("--site", type=Path, default=ROOT / "build" / "apps" / "gamut")
     ap.add_argument("--apps", type=Path, default=ROOT / "build" / "apps")
     ap.add_argument("--out", type=Path)
     a = ap.parse_args()

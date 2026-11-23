@@ -26,15 +26,10 @@ jobs:
         with:
           name: firmware
           path: |
-            firmware/openpocket.bin
-            firmware/openpocket-midi-test.bin
-            docs/firmware/*.fwsc
-            docs/firmware/manifest.json
-            docs/firmware/release.json
-            docs/firmware/midi-test/
             docs/rescue/
-            build/SHA256SUMS
-            build/SHA256SUMS-midi-test
+            build/apps/gamut/midi-test/
+            build/apps/gamut/release.json
+            build/apps/gamut/SHA256SUMS-midi-test
             build/apps/*/*.bin
             build/apps/*/*.fwsc
             build/apps/*/manifest.json

@@ -30,7 +30,7 @@ const run = (cmd, args, env = {}) => new Promise((done) => {
 const assemble = (out, dirs = {}) => run(process.execPath, [join(ROOT, ".github/scripts/assets.mjs"), out,
   "--site", dirs.site || SITE, "--apps", dirs.apps || APPS, "--kit", dirs.kit || KIT]);
 
-// a build's outputs: the fixture packages as OpenPocket's (docs/firmware) and as the app starter's (build/apps/starter),
+// a build's outputs: the fixture packages as OpenPocket's (build/apps/gamut) and as the app starter's (build/apps/starter),
 // the catalog of the two, and the rescue kit
 const FIX = join(TMP, "fixtures"), SITE = join(TMP, "site-fw"), APPS = join(TMP, "apps"), KIT = join(TMP, "kit");
 execFileSync("python3", [join(ROOT, "tests/fixtures.py"), FIX], { stdio: ["ignore", "ignore", "inherit"] });

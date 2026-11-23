@@ -13,7 +13,7 @@ installer as OpenPocket, and OpenPocket is put back the same way.
 This document is the reference for the base. To start an alternative firmware, read
 [ALT-FIRMWARE.md](ALT-FIRMWARE.md) first. It also covers the install, the way back and the recovery.
 
-OpenPocket itself does not change when the base changes. `firmware/openpocket.bin` and both packages are the same
+OpenPocket itself does not change when the base changes. `build/apps/gamut/openpocket.bin` and both packages are the same
 bytes as the pinned release, upstream's published v42 with the bass tuner fix, trails, the editor watch fix, the flash hold fix, the built-in amps and cabinets removed and slot IR1's factory IR, numbered v43, and the build fails when they are not
 (section 9).
 
@@ -252,7 +252,7 @@ The parts can be run alone:
 
 | Command | Result |
 | --- | --- |
-| `node tools/op.mjs package` | OpenPocket: `firmware/openpocket.bin`, `docs/firmware/*.fwsc`, `manifest.json`, `build/SHA256SUMS`. It ends with the release pin. |
+| `node tools/op.mjs package` | OpenPocket: `build/apps/gamut/openpocket.bin`, `*.fwsc`, `manifest.json`, `release.json` (the catalog), `SHA256SUMS`. It ends with the release pin. |
 | `node tools/op.mjs app starter` | STARTER: `build/apps/starter/starter.bin`, `starter-PocketX_901.fwsc`, `starter-BlackBox_901.fwsc`, `manifest.json`, `SHA256SUMS`. |
 | `node tools/op.mjs test --built` | The host tests, also with those packages. |
 
@@ -274,7 +274,7 @@ so run `package` after one. A change that only moves code, or that adds lines fo
 compile, leaves the image the same bytes.
 
 To pin a new OpenPocket release after a merge of upstream's next version, compare the packages with upstream's
-published ones, then copy `build/SHA256SUMS` over `firmware/apps/gamut/release.sha256` in the same commit. A change
+published ones, then copy `build/apps/gamut/SHA256SUMS` over `firmware/apps/gamut/release.sha256` in the same commit. A change
 made to OpenPocket on purpose, such as the bass tuner fix or trails, is pinned the same way once its own tests pass.
 Another firmware's release is pinned by copying `build/apps/<name>/SHA256SUMS` over its `release.sha256`.
 

@@ -1,10 +1,12 @@
 # SPDX-License-Identifier: GPL-3.0-only
-# OpenPocket - offline installer: serves the docs\ folder (installer, editor, firmware packages) on this computer only,
+# OpenPocket - offline installer: serves the docs\ folder (installer, editor) and the firmware packages the build made
+# (firmware/ is build\apps\gamut, firmware/apps/NAME/ is build\apps\NAME, as tools/serve.py does) on this computer only,
 # at http://localhost:8765/, and opens it in Chrome or Edge. No internet needed: Web MIDI works on localhost.
 # Started by INSTALL-OFFLINE.bat. Close the window to stop it.
 param([int]$Port = 8765, [string]$Page = "install.html")
 $ErrorActionPreference = "Stop"
 $root = (Resolve-Path (Join-Path $PSScriptRoot "..\docs")).Path.TrimEnd('\')
+$apps = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot "..\build\apps")).TrimEnd('\')
 $types = @{
     ".html" = "text/html; charset=utf-8"; ".js" = "text/javascript; charset=utf-8"; ".mjs" = "text/javascript; charset=utf-8"
     ".json" = "application/json; charset=utf-8"; ".css" = "text/css; charset=utf-8"; ".md" = "text/plain; charset=utf-8"
@@ -44,8 +46,11 @@ try {
         try {
             $rel = [Uri]::UnescapeDataString($ctx.Request.Url.AbsolutePath).TrimStart('/')
             if ($rel -eq "") { $rel = $Page }
-            $full = [System.IO.Path]::GetFullPath((Join-Path $root ($rel -replace '/', '\')))
-            $inside = $full.StartsWith($root + '\', [System.StringComparison]::OrdinalIgnoreCase)
+            $base = $root; $file = $rel
+            if ($rel -like "firmware/apps/*") { $base = $apps; $file = $rel.Substring(14) }
+            elseif ($rel -like "firmware/*") { $base = Join-Path $apps "gamut"; $file = $rel.Substring(9) }
+            $full = [System.IO.Path]::GetFullPath((Join-Path $base ($file -replace '/', '\')))
+            $inside = $full.StartsWith($base + '\', [System.StringComparison]::OrdinalIgnoreCase)
             if ($inside -and (Test-Path -LiteralPath $full -PathType Leaf)) {
                 $ext = [System.IO.Path]::GetExtension($full).ToLower()
                 if ($types.ContainsKey($ext)) { $res.ContentType = $types[$ext] } else { $res.ContentType = "application/octet-stream" }

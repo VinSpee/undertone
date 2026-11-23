@@ -33,7 +33,7 @@ On Linux the MIDI library needs ALSA (`libasound2`); the pedal's USB MIDI port m
 ## 2. Build the package
 
 ```
-node tools/op.mjs package         # docs/firmware/PocketX_9NN.fwsc, BlackBox_9NN.fwsc, manifest.json, build/SHA256SUMS
+node tools/op.mjs package         # build/apps/gamut/PocketX_9NN.fwsc, BlackBox_9NN.fwsc, manifest.json, SHA256SUMS
 ```
 
 Details and failures: the `openpocket-toolchain` skill. To flash a package built elsewhere (for example a test image from

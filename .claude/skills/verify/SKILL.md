@@ -17,7 +17,7 @@ simulator when you start it (`node tools/op.mjs sim`, skill `openpocket-simulato
 
 ```
 node tools/op.mjs doctor      # Node, Docker, image (toolchain skill: .claude/skills/openpocket-toolchain)
-node tools/op.mjs package     # firmware/openpocket.bin, docs/firmware/*.fwsc, manifest.json, build/SHA256SUMS
+node tools/op.mjs package     # build/apps/gamut/: openpocket.bin, *.fwsc, manifest.json, SHA256SUMS
 node tools/op.mjs test        # engine, store, screen, simulated pedal, installer, editor (in the container)
 sh .claude/skills/verify/scripts/pages.sh   # installer + editor pages in headless Chromium
 ```
@@ -34,7 +34,7 @@ Run it first whenever anything looks off.
 
 | Feature | Command | Proof |
 | --- | --- | --- |
-| Build and packages | `node tools/op.mjs package` | `build/SHA256SUMS`: same sources give the same bytes |
+| Build and packages | `node tools/op.mjs package` | `build/apps/gamut/SHA256SUMS`: same sources give the same bytes |
 | Engine, store, screen, update protocol, editor protocol | `node tools/op.mjs test` | every section ends `ok` / `passed`; `build/ui/*.ppm` are the drawn pages |
 | Installer page, update flow | `pages.sh` (runs `tests/test_page.mjs`) | `build/page/page_1..4*.png`, last line `page test passed` |
 | Editor page | `pages.sh` (runs `tests/test_editor_page.mjs`) | `build/editor/editor_1..10*.png`, last line `editor page test passed` |

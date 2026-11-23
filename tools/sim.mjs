@@ -306,6 +306,8 @@ export async function startSim(opts = {}) {
       if (path.startsWith("/loops/")) return file(res, within(LOOPS, path.slice(7)));
       // (an alternative firmware's packages are where the build puts them: build/apps/NAME, as tools/serve.py serves them)
       if (path.startsWith("/site/firmware/apps/")) return file(res, within(join(ROOT, "build", "apps"), path.slice(20)));
+      // (OpenPocket's packages and the catalog: build/apps/gamut, the site's firmware/ folder)
+      if (path.startsWith("/site/firmware/")) return file(res, within(join(ROOT, "build", "apps", "gamut"), path.slice(15)));
       if (path.startsWith("/site/")) { const p = within(join(ROOT, "docs"), path.slice(6) || "index.html"); return file(res, p, extname(p) === ".html"); }
       throw new HttpError(404, "not found");
     } catch (e) {

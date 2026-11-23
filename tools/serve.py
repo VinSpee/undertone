@@ -3,16 +3,16 @@
 """OpenPocket offline installer: serves docs/ (installer, editor, packages) on this computer only, at
 http://localhost:8765/ (Web MIDI works on localhost). Chrome or Edge. Ctrl+C stops it.
   tools/serve.py [install.html|editor.html] [firmware-dir]
-firmware-dir (for example build/ble) replaces docs/firmware as the place the installer reads the packages from.
-The packages of an alternative firmware (an app on the base firmware, docs/ALT-FIRMWARE.md) are read from where the
+The installer reads OpenPocket's packages and the catalog from firmware/, which is where the build puts them:
+build/apps/gamut/. firmware-dir (for example build/ble) replaces it. The packages of an alternative firmware (an app on the base firmware, docs/ALT-FIRMWARE.md) are read from where the
 build puts them: firmware/apps/NAME/ is build/apps/NAME/. The page offers the ones of its catalog
-(docs/firmware/release.json, tools/catalog.py) and any other one with install.html?app=NAME."""
+(firmware/release.json, tools/catalog.py) and any other one with install.html?app=NAME."""
 import functools, http.server, os, sys, webbrowser
 
 page = sys.argv[1] if len(sys.argv) > 1 else "install.html"
 here = os.path.dirname(os.path.abspath(__file__))
 root = os.path.abspath(os.path.join(here, "..", "docs"))
-fwdir = os.path.abspath(os.path.join(here, "..", sys.argv[2])) if len(sys.argv) > 2 else None
+fwdir = os.path.abspath(os.path.join(here, "..", sys.argv[2] if len(sys.argv) > 2 else os.path.join("build", "apps", "gamut")))
 appsdir = os.path.abspath(os.path.join(here, "..", "build", "apps"))
 
 class Handler(http.server.SimpleHTTPRequestHandler):
@@ -24,7 +24,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         apps = os.path.join(prefix, "apps")
         if p.startswith(apps + os.sep):
             return os.path.join(appsdir, os.path.relpath(p, apps))
-        if fwdir and (p == prefix or p.startswith(prefix + os.sep)):
+        if p == prefix or p.startswith(prefix + os.sep):
             return os.path.join(fwdir, os.path.relpath(p, prefix))
         return p
     def end_headers(self):

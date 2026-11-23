@@ -1,6 +1,6 @@
 #!/bin/sh
-# Build OpenPocket (firmware/apps/gamut/) -> firmware/openpocket.bin (app), build/loader/ota.bin (update loader),
-#                    docs/firmware/*.fwsc (packages for the web installer)   (in the container: tools/op.mjs build)
+# Build OpenPocket (firmware/apps/gamut/) -> build/apps/gamut/: openpocket.bin (app), PocketX_9NN.fwsc, BlackBox_9NN.fwsc
+#   and manifest.json (packages for the web installer), release.json (the catalog)   (in the container: tools/op.mjs build)
 # OP_BLE=1 sh firmware/build.sh builds the Bluetooth MIDI test image instead (docs/BLE-TEST.md): the same
 #   firmware plus the JieLi controller and host (third_party/jieli-ble) -> firmware/openpocket-ble.bin and build/ble/*.fwsc.
 #   Nothing of the normal build's outputs is touched.
@@ -24,7 +24,7 @@ fi
 # link if the guard is on and those stacks are outside. OP_GUARD_STACK=1 with OP_BLE=1 is how that check is shown to fire.
 GUARD_STACK=1; [ -n "$OP_BLE" ] && GUARD_STACK="${OP_GUARD_STACK:-0}"
 if [ -n "$OP_BLE" ]; then O="$HERE/build-ble"; APP="$HERE/openpocket-ble.bin"; PKG="$HERE/../build/ble"; BLEDEF="-DOP_BLE_TEST=1 -I$HERE/apps/gamut/ble"
-else O="$HERE/build"; APP="$HERE/openpocket.bin"; PKG="$HERE/../docs/firmware"; BLEDEF=""; fi
+else O="$HERE/../build/apps/gamut/obj"; APP="$HERE/../build/apps/gamut/openpocket.bin"; PKG="$HERE/../build/apps/gamut"; BLEDEF=""; fi
 # An app on the base firmware (docs/BASE-FIRMWARE.md): OP_APP=<name> builds firmware/apps/<name>/ in place of OpenPocket,
 #   into build/apps/<name>/ (the image, its packages). Its app.sh names its C file (APP_MAIN), its engine's when that is
 #   a file of its own (APP_ENGINE), their options (APP_DEFS) and the functions that run from RAM beside the base's
@@ -54,14 +54,14 @@ if grep -q "^#define DSP_CPU1 1" "$MAIN"; then
   $CC -c "$BSP/chip/fm1_cpu1.S" -o "$O/cpu1.o"; CPU1OBJ="$O/cpu1.o"
 fi
 # A test channel build (OP_CHANNEL=midi-test): its own version number (OP_TEST_VERSION, default 37) and a boot-screen tag, its
-# own files (firmware/openpocket-midi-test.bin, docs/firmware/midi-test/). The release files are not touched.
+# own files (build/apps/gamut/openpocket-midi-test.bin, build/apps/gamut/midi-test/). The release files are not touched.
 CHAN="${OP_CHANNEL:-}"
 : > "$O/channel.h"
 if [ -n "$CHAN" ]; then
   case "$CHAN" in *[!a-z0-9-]*|"") echo "ERROR: OP_CHANNEL must be lowercase letters, digits and -"; exit 1;; esac
   TESTVER="${OP_TEST_VERSION:-42}"
   printf '#define OP_VERSION_NUM "%s"\n#define OP_TAG " %s"\n' "$TESTVER" "$(echo "$CHAN" | tr a-z- A-Z' ')" > "$O/channel.h"
-  APP="$HERE/openpocket-$CHAN.bin"; PKG="$HERE/../docs/firmware/$CHAN"
+  APP="$HERE/../build/apps/gamut/openpocket-$CHAN.bin"; PKG="$HERE/../build/apps/gamut/$CHAN"
   rm -f "$APP"
   echo "Test channel: $CHAN, version $TESTVER -> $APP, $PKG"
 fi
@@ -167,13 +167,13 @@ for ln in sys.stdin:
 
 python3 "$HERE/../tools/mkloader.py" "$L/loader.bin" "$L/ota.bin"
 
-# ---- update packages for the web installer -> docs/firmware/ (PocketX_9NN.fwsc, BlackBox_9NN.fwsc, manifest.json) ----
+# ---- update packages for the web installer -> $PKG (PocketX_9NN.fwsc, BlackBox_9NN.fwsc, manifest.json) ----
 VER=$(sed -n 's/^#define OP_VERSION_NUM "\([0-9]*\)".*/\1/p' "$MAIN")
 [ -n "$CHAN" ] && VER="$TESTVER"
 mkdir -p "$PKG"
 # (an app's packages are named after it and its manifest says which product it is: --app; OpenPocket's are as ever)
 python3 "$HERE/../tools/pxpkg.py" "$APP" "$L/ota.bin" "$PKG" --version "$VER" \
     --sdk-files "$HERE/sdk/packager" ${OP_APP:+--app "$OP_APP"}
-# ---- the catalog of the firmwares that are built -> docs/firmware/release.json, for the installer's chooser ----
+# ---- the catalog of the firmwares that are built -> build/apps/gamut/release.json, for the installer's chooser ----
 # (a test channel and the Bluetooth test image are not on it: the page reads their own manifest)
 [ -n "$CHAN$OP_BLE" ] || python3 "$HERE/../tools/catalog.py"

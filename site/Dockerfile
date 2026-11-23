@@ -26,7 +26,7 @@ RUN python3 /pin/latest.py /pin "$RELEASE_FEED" "$RELEASE_URL" && rm /pin/latest
 
 # The pages and the rescue kit, then the release's files beside them, each checked against its SHA-256 in the
 # release's list.
-# site/Dockerfile.dockerignore keeps docs/firmware/ and docs/rescue/ out: the site serves a release's packages and the
+# site/Dockerfile.dockerignore keeps docs/firmware/ (where older builds left packages) and docs/rescue/ out: the site serves a release's packages and the
 # kit built above, never what a local build left in the checkout.
 FROM caddy AS site
 COPY docs/ /site/

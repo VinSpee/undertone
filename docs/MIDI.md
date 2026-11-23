@@ -199,9 +199,9 @@ cycles. That is what [MIDI-TEST.md](MIDI-TEST.md) is for.
 
 ## The test package
 
-`node tools/op.mjs package-test` (or `make package-test`) builds **OpenPocket v37 MIDI TEST** into `docs/firmware/midi-test/`
-(`PocketX_937.fwsc`, `BlackBox_937.fwsc`, its own `manifest.json`) and `firmware/openpocket-midi-test.bin`. The boot screen and
-the editor say `v37 MIDI TEST`. The normal files (`docs/firmware/manifest.json`, v36) are not touched, and the normal installer
+`node tools/op.mjs package-test` (or `make package-test`) builds **OpenPocket v37 MIDI TEST** into `build/apps/gamut/midi-test/`
+(`PocketX_937.fwsc`, `BlackBox_937.fwsc`, its own `manifest.json`) and `build/apps/gamut/openpocket-midi-test.bin`. The boot screen and
+the editor say `v37 MIDI TEST`. The normal files (`build/apps/gamut/manifest.json`, v36) are not touched, and the normal installer
 page never offers it. To install it, open the installer with `?channel=midi-test` (a banner says it is a test build). To go back,
 open the normal page and press Install (v36), or use the official-firmware way back on the same page.
 

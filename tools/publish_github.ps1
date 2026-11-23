@@ -3,7 +3,7 @@
 #      the commits of openpocket.bundle are merged in when it is here (history), then the folder's files are
 #      committed on top. Never forced: GitHub's own history (edits made on the site) is kept underneath.
 #      The tag vNN is set on that commit.
-#   2. the release vNN: the .fwsc packages build.bat made (docs\firmware), notes from docs\WHATS-NEW-*.md
+#   2. the release vNN: the .fwsc packages build.bat made (build\apps\gamut), notes from docs\WHATS-NEW-*.md
 #   3. the web installer on GitHub Pages (branch gh-pages: docs\ with the packages)
 #   -SourceOnly: step 1 only (no build needed)
 # Uses your own Git and GitHub CLI (gh) and your own GitHub login. gh-pages is generated: it is replaced each time.
@@ -149,8 +149,8 @@ Write-Host "Source:      https://github.com/$full/tree/main   (tag $Tag)" -Foreg
 if ($SourceOnly) { Write-Host ""; Write-Host "Source only: no release, no installer update (PUBLISH-GITHUB.bat does all three)."; exit 0 }
 
 # 2. the release
-$pk = @(Get-ChildItem "docs\firmware\*.fwsc" -ErrorAction SilentlyContinue | ForEach-Object { $_.FullName })
-if ($pk.Count -eq 0) { Fail "no package in docs\firmware: run build.bat first" }
+$pk = @(Get-ChildItem "build\apps\gamut\*.fwsc" -ErrorAction SilentlyContinue | ForEach-Object { $_.FullName })
+if ($pk.Count -eq 0) { Fail "no package in build\apps\gamut: run build.bat first" }
 $notes = Join-Path $work "notes.md"
 $text = "OpenPocket $Tag`n`nInstall from the browser (Chrome / Edge): $pages`nPreset editor (v32 and newer): ${pages}editor.html`nWithout internet: INSTALL-OFFLINE.bat in the source.`n`nPackages: PocketX_9$ver.fwsc (Donner Pocket X), BlackBox_9$ver.fwsc (M-VAVE BlackBox).`nSource: https://github.com/$full/tree/$Tag"
 $wn = Get-ChildItem "docs\WHATS-NEW-*.md" -ErrorAction SilentlyContinue | Sort-Object LastWriteTime | Select-Object -Last 1
@@ -168,11 +168,13 @@ if ($LASTEXITCODE -eq 0) {
 }
 if ($LASTEXITCODE -ne 0) { Fail "the release $Tag" }
 
-# 3. GitHub Pages: the installer (docs\ with the packages)
+# 3. GitHub Pages: the installer (docs\, with the packages in its firmware\ folder)
 Step "The web installer on GitHub Pages"
 $pg = Join-Path $work "pages"
 New-Item -ItemType Directory -Force $pg | Out-Null
 Copy-Item -Recurse "docs\*" $pg
+New-Item -ItemType Directory -Force (Join-Path $pg "firmware") | Out-Null
+Copy-Item "build\apps\gamut\*.fwsc", "build\apps\gamut\manifest.json", "build\apps\gamut\release.json" (Join-Path $pg "firmware")
 New-Item -ItemType File -Force (Join-Path $pg ".nojekyll") | Out-Null
 Push-Location $pg
 git init --quiet

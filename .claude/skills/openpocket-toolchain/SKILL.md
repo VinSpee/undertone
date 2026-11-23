@@ -22,14 +22,14 @@ Run commands from the repository root.
 | Goal | Command |
 | --- | --- |
 | Build the firmware, the update loader and the installer packages | `node tools/op.mjs build` |
-| Build, then write `build/SHA256SUMS` | `node tools/op.mjs package` |
+| Build, then write `build/apps/gamut/SHA256SUMS` | `node tools/op.mjs package` |
 | Host tests (engine, preset store, screen, simulated pedal, installer, editor) | `node tools/op.mjs test` |
 | The simulated pedal on a local port (host `cc`, no Docker; skill `openpocket-simulator`) | `node tools/op.mjs sim` |
 | Remove every build output (needs no Docker) | `node tools/op.mjs clean` |
 | A shell in the container | `node tools/op.mjs shell` |
 | Dry-run or flash a built package to a connected pedal (host, USB MIDI) | `node tools/op.mjs flash`: see the `openpocket-flash` skill |
 
-Outputs: `firmware/openpocket.bin`, `docs/firmware/PocketX_9NN.fwsc`, `BlackBox_9NN.fwsc`, `manifest.json`. All of them
+Outputs, in `build/apps/gamut/`: `openpocket.bin`, `PocketX_9NN.fwsc`, `BlackBox_9NN.fwsc`, `manifest.json`, `release.json`. All of them
 are gitignored. Two clean builds give identical bytes; a changed checksum means the source or a pin changed.
 
 The simulators are C programs that run the pedal's own code on the PC; `test` builds and drives them in the
@@ -56,7 +56,7 @@ Follow `references/updating-pins.md`. Never bypass the checksum check.
   and any other write to a real pedal only on the captain's say-so, following the `openpocket-flash` skill. Builds and tests never
   touch a pedal. Hardware checks are in `docs/MIDI-TEST.md` when present.
 - **Never publish an unreviewed package as the installer default.** A test package is a separate, labelled file and is
-  not listed in the default `docs/firmware/manifest.json`. `PUBLISH-*.bat` is the maintainer's tool: do not run it.
+  not listed in the default `build/apps/gamut/manifest.json`. `PUBLISH-*.bat` is the maintainer's tool: do not run it.
 - **Keep the official-firmware analysis out of the repository.** Facts about the vendor's firmware (offsets, tables,
   disassembly, bytes) stay in the captain's private notes. Write behaviour in your own words; never commit vendor code.
 - Do not commit the JieLi toolchain or any proprietary binary; it is downloaded at image build time.

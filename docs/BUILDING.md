@@ -27,14 +27,14 @@ Apple silicon and other ARM machines Docker emulates it (Rosetta or QEMU); you c
 | Command | What it does |
 | --- | --- |
 | `make doctor` | check Node, Docker and the image, one line each (exit 1 when the build cannot work) |
-| `make build` | `firmware/build.sh` in the container: `firmware/openpocket.bin`, the update loader, `docs/firmware/PocketX_9NN.fwsc`, `BlackBox_9NN.fwsc`, `manifest.json`, and `release.json`, the catalog of the firmwares that are built, which the installer page reads (`tools/catalog.py`) |
+| `make build` | `firmware/build.sh` in the container: the update loader and, in `build/apps/gamut/`, `openpocket.bin`, `PocketX_9NN.fwsc`, `BlackBox_9NN.fwsc`, `manifest.json`, and `release.json`, the catalog of the firmwares that are built, which the installer page reads (`tools/catalog.py`) |
 | `make ble` | the Bluetooth MIDI test image (`OP_BLE=1 firmware/build.sh`): `firmware/openpocket-ble.bin`, `build/ble/*.fwsc`. Own target, own output folders; [BLE-TEST.md](BLE-TEST.md) |
 | `make app APP=starter` | another app on the base firmware, an alternative firmware (`OP_APP=starter firmware/build.sh`): `build/apps/starter/starter.bin`, its packages, its manifest and `SHA256SUMS`. The release files are not touched, and the catalog is written again; [ALT-FIRMWARE.md](ALT-FIRMWARE.md), [BASE-FIRMWARE.md](BASE-FIRMWARE.md) |
 | `make all` | every product from this tree: `package`, each app of `firmware/apps`, then `tests/run_tests.sh` with the packages just built (`node tools/op.mjs test --built`) |
 | `make serve-app APP=starter` | `make serve` with that alternative firmware offered too (`install.html?app=starter`); builds it first if missing. A firmware of `firmware/catalog.json` is offered without it |
 | `make serve-ble` | `make serve` with `build/ble/` as the installer's package folder, to flash the test image |
-| `make package` | `build`, then `build/SHA256SUMS`, then the release pin: it fails when OpenPocket's image or packages are not the bytes of `firmware/apps/gamut/release.sha256` ([BASE-FIRMWARE.md](BASE-FIRMWARE.md), section 9) |
-| `make package-test` | the MIDI test channel (`OP_CHANNEL=midi-test`): `firmware/openpocket-midi-test.bin` and `docs/firmware/midi-test/` (v37 MIDI TEST, its own `manifest.json`), with `build/SHA256SUMS-midi-test`. The release files are not touched and the installer offers it only with `?channel=midi-test` |
+| `make package` | `build`, then `build/apps/gamut/SHA256SUMS`, then the release pin: it fails when OpenPocket's image or packages are not the bytes of `firmware/apps/gamut/release.sha256` ([BASE-FIRMWARE.md](BASE-FIRMWARE.md), section 9) |
+| `make package-test` | the MIDI test channel (`OP_CHANNEL=midi-test`): `build/apps/gamut/openpocket-midi-test.bin` and `build/apps/gamut/midi-test/` (v37 MIDI TEST, its own `manifest.json`), with `build/apps/gamut/SHA256SUMS-midi-test`. The release files are not touched and the installer offers it only with `?channel=midi-test` |
 | `make test` | `tests/run_tests.sh` (engine, preset store, screen, simulated pedal, installer, editor; the browser page tests also run when Playwright is installed) |
 | `make clean` | remove every build output (on the host; needs neither Docker nor the image) |
 | `make shell` | a shell in the container (as your user) |
@@ -68,7 +68,7 @@ The `.bat` files `makeimage.bat` and `render.bat` only check that Node is instal
 
 ## Flashing from the command line
 
-`make flash ARGS="--dry-run"` (or `node tools/op.mjs flash --dry-run`) finds the pedal over USB MIDI and checks the built package without writing; `--confirm-flash` instead of `--dry-run` writes it. It runs on the host (not in the container), speaks the same update protocol as the installer page (`docs/pxota.js`, shared with the page), and checks the package against `docs/firmware/manifest.json` (size, SHA-256, identity), refuses the wrong model, stops at an official firmware newer than the newest one the installer was checked with unless `--accept-newer-official` is given (a precaution: no evidence yet shows a newer release is what left pedals unable to start), and verifies the version the pedal reports afterwards. `--package FILE --manifest FILE` flash a package built elsewhere. Install its one dependency once with `npm ci --prefix tools`. The rules for agents (dry run first, never flash without the captain's explicit instruction, recovery) are in `.claude/skills/openpocket-flash/SKILL.md`. On failure the command prints the SD-card recovery pointer (README, `flash/`). `tests/test_flash.mjs` runs it against the simulated pedal; no test touches real hardware.
+`make flash ARGS="--dry-run"` (or `node tools/op.mjs flash --dry-run`) finds the pedal over USB MIDI and checks the built package without writing; `--confirm-flash` instead of `--dry-run` writes it. It runs on the host (not in the container), speaks the same update protocol as the installer page (`docs/pxota.js`, shared with the page), and checks the package against `build/apps/gamut/manifest.json` (size, SHA-256, identity), refuses the wrong model, stops at an official firmware newer than the newest one the installer was checked with unless `--accept-newer-official` is given (a precaution: no evidence yet shows a newer release is what left pedals unable to start), and verifies the version the pedal reports afterwards. `--package FILE --manifest FILE` flash a package built elsewhere. Install its one dependency once with `npm ci --prefix tools`. The rules for agents (dry run first, never flash without the captain's explicit instruction, recovery) are in `.claude/skills/openpocket-flash/SKILL.md`. On failure the command prints the SD-card recovery pointer (README, `flash/`). `tests/test_flash.mjs` runs it against the simulated pedal; no test touches real hardware.
 
 **A pedal that restarts in a loop.** `make flash-rescue ARGS="--confirm-flash"` (or `node tools/op.mjs flash --rescue --confirm-flash [--package FILE] [--timeout SECONDS]`) is the installer page's rescue mode on the command line, and uses the same code (`Updater.rescueWithin` in `docs/pxota.js`). Start it, then plug the pedal in or let it restart. It asks every MIDI port for the pedal's identity every 100 ms; the moment one answers, it stops the pedal's sound processing (which ends the restarts) and installs the package of that pedal's model, printing `pedal answered: ...` and one line per step. If the pedal disappears before the update finished, nothing has been written yet: it waits for the pedal again, and an OpenPocket update loader left behind is finished when `--package` names the package (a loader does not report its model; without `--package` the timeout message says so). It waits 180 s by default (`--timeout`); an install that has started is never cut short. `--rescue --dry-run` only waits for the pedal and checks the model. The same refusals apply (no `--confirm-flash`, wrong model, damaged package, and the newer-official-firmware stop without `--accept-newer-official`). Only a pedal whose firmware answers the identity query for a moment is caught, as on the page; a pedal that crashes before it answers, or sits in the chip's mask-ROM boot loader (`WL80UBOOT`, USB 4C4A:8057, no MIDI), is out of reach and needs the SD-card recovery. Connect only one pedal: the first to answer is used.
 
@@ -78,7 +78,7 @@ The `.bat` files `makeimage.bat` and `render.bat` only check that Node is instal
 - The JieLi toolchain `jieli-linux-toolchains-20260730.1.tar.xz`, by URL and SHA-256 (`firmware/setup.sh`). The build fails if
   the checksum differs.
 
-To update either pin, change it in one commit, run `make clean package test`, and compare the new `build/SHA256SUMS` with the
+To update either pin, change it in one commit, run `make clean package test`, and compare the new `build/apps/gamut/SHA256SUMS` with the
 old one.
 
 ## Licence of the toolchain
@@ -93,7 +93,7 @@ redirects to). If you publish a container image, do not include the toolchain la
 The build is deterministic: two clean builds in the container give byte-identical `openpocket.bin`, `.fwsc` and
 `manifest.json` (checked on Apple silicon under emulation, SHA-256 equal). No build output is committed to the repository
 (`.gitignore`), so there is no committed binary to compare with; release packages are published as GitHub release assets,
-and `build/SHA256SUMS` of a given commit is the reference. CI (`.github/workflows/build.yml`) builds and tests every pull
+and `build/apps/gamut/SHA256SUMS` of a given commit is the reference. CI (`.github/workflows/build.yml`) builds and tests every pull
 request on a native x86-64 runner and uploads the packages with their checksums. A second job, `pages`, runs the page tests in
 headless Chromium.
 
