@@ -73,9 +73,10 @@ extract-flash.bat firmware\BlackBox_023.fwsc
 tools/pd40_recovery.py  (Mac: python3 tools/pd40_recovery.py)
     For a pedal on M-VAVE's V22 or V23 that shows RECOVERY (hold HOME, the
     right footswitch and the knob's PUSH at power-on). Reads what the pedal's
-    recovery mode reports and writes nothing. If the pedal leaves the
-    recovery mode, it watches what the pedal starts next. Run it at once
-    after RECOVERY appears and send its output back. Do not use --leave yet:
+    recovery mode reports and writes nothing. Then it watches the USB
+    devices for 60 seconds: if the pedal leaves the recovery mode, it shows
+    when, and what the pedal starts next. Run it at once after RECOVERY
+    appears and send its output back. Do not use --leave yet:
     whether it reaches the USB boot state is not known. See the guide's
     section "A pedal on M-VAVE's V22 or V23" first.
 SHA256SUMS.txt

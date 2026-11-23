@@ -12,27 +12,35 @@ that may leave it for the USB boot state. docs/RESCUE.md, "A pedal on M-VAVE's V
   tools/pd40_recovery.py                              read-only probe: the request buffers, one hello, its reply
   tools/pd40_recovery.py --sync                       the same with the sync request 0x42 before the hello
   tools/pd40_recovery.py --leave --accept-inferred    the probe, then command 6, which may leave to the USB boot state
+  tools/pd40_recovery.py --leave --accept-inferred --accept-control-reply
+                                                      the same, also when the hello reply came over the control endpoint
 
 The probe reads the frame buffer (vendor request 0x44) and the reply buffer (0x43), sends one hello, reads both again,
 then reads the reply on the bulk IN endpoint. The reply buffer gives the hello result even when the bulk IN endpoint
-sends something else: on a real pedal on V23 it sent 64 zero bytes after a sync request. The recovery mode has no timer
-but ends at its first failed access to its USB controller; when the pedal leaves the bus the probe sends nothing more
-and lists the USB devices for a while to see what the pedal starts next. Every transfer is printed with its raw bytes
-and its time in milliseconds from the moment the device was found.
+sends something else: on a real pedal on V23 it sent 64 zero bytes, then nothing. The recovery code as read has no
+timer and ends at its first failed access to its USB controller, yet on a real pedal the mode ended within seconds of a
+probe that sent no leave. So after the probe, and after the leave, the helper releases the device and lists the USB
+devices for a while, sending nothing: it logs when the pedal leaves the bus, how long after the last command it sent
+and after its first access, and whether the pedal comes back as the chip's USB boot state, the recovery mode or the
+normal pedal. Every phase and transfer is printed with its raw bytes and its time in milliseconds from the moment the
+device was found.
 
 It never writes to the pedal's flash. The protocol's write commands (2 manifest, 3 block, 4 erase and commit, 5 start
 the new app) and every vendor request but 0x42, 0x43 and 0x44 are refused before anything is sent; frames carry no
 payload. The protocol was read in the V23 boot loader's code (frames of 4608 bytes from "SBU2", 64-byte replies from
 "SBR2", CRC-32 as zlib's). Command 6 resets the processor core, not the whole chip as OpenPocket's own soft key does;
 whether the chip's ROM then enters its USB boot state is not known: --leave stops with the explanation unless
---accept-inferred is given too, and it is refused when the hello reply did not come over the bulk IN endpoint.
+--accept-inferred is given too. The pedal acts on command 6 once its reply has been read, so the leave is refused when
+the hello reply did not come over the bulk IN endpoint, unless --accept-control-reply is given as well: whether that
+endpoint then sends the leave's reply, and the pedal acts on it, is not known.
 
 One-time install (macOS): `brew install libusb`. The recovery device's interface is vendor-specific and no macOS driver
 holds it, so the probe should need no sudo. tools/uboot_rescue.py, which takes over after --leave, needs sudo. Linux and
 Windows have not been tried; on Windows set LIBUSB_PATH to libusb-1.0.dll.
-Exit codes: 0 done, 1 setup problem, no recovery device or a failed transfer, 2 refused or a bad answer (nothing more
-was sent), 3 the pedal left after --leave but the USB boot state did not appear, 4 the pedal left the recovery mode on
-its own during the probe, 130 stopped by Ctrl-C.
+Exit codes: 0 done (after a probe without the leave: the pedal stayed in the recovery mode for the whole watch), 1 setup
+problem, no recovery device or a failed transfer, 2 refused or a bad answer (nothing more was sent), 3 the pedal left
+after --leave but the USB boot state did not appear, 4 the pedal left the recovery mode on its own during the probe or
+the watch after it, 5 the pedal stayed in the recovery mode after --leave, 130 stopped by Ctrl-C.
 """
 import argparse, ctypes, struct, sys, time, zlib
 from dataclasses import dataclass
@@ -56,7 +64,8 @@ STATUS = {0: "accepted", 1: "malformed", 2: "wrong state", 4: "out of range", 5:
 LEAVE_STATES = (0, 6)                          # command 6 is accepted in these states only
 FIRST_READ_MS, SECOND_READ_MS = 1000, 300      # the bulk IN reads of a reply
 RECOVERY, UBOOT, APP = (VID, PID), (ur.VID, ur.PID), (VID, 0x7756)
-WATCHED = {UBOOT: "the chip's USB boot state", RECOVERY: "the recovery mode", APP: "the stock V23 app"}
+WATCHED = {UBOOT: "the chip's USB boot state", RECOVERY: "the recovery mode",
+           APP: "the normal pedal (the stock V23 app)"}
 AFTER_DEPARTURE = {
     UBOOT: "the chip's ROM honoured usb_update_mode after the core reset: the first evidence that --leave can work",
     RECOVERY: "the boot loader ran again and saw the three controls again",
@@ -136,12 +145,27 @@ def what_came(raw, command, tag):
 
 class Recovery:
     """The recovery protocol over a transport: dev.control_in(request, n), dev.bulk_out(data), dev.bulk_in(n, ms).
-    log prints a line with the time since the device was found."""
+    log prints a line with the time since the device was found; now is the clock that time is measured on."""
 
-    def __init__(self, dev, log):
-        self.dev, self.log, self.tag = dev, log, 0
+    def __init__(self, dev, log, now):
+        self.dev, self.log, self.now, self.tag = dev, log, now, 0
+        self.first = self.sent = None            # when the first transfer started; (command, tag, when) of the last
+                                                 # frame sent
+
+    def access(self):
+        if self.first is None:
+            self.first = self.now()
+
+    def since(self, at):
+        """How long before at the last command was sent and the first transfer started, in words."""
+        first = f"{(at - self.first) * 1000:.0f} ms after the first access"
+        if self.sent is None:
+            return f"before any command was sent, {first}"
+        command, tag, when = self.sent
+        return f"{(at - when) * 1000:.0f} ms after the last command sent (command {command}, tag {tag}) and {first}"
 
     def request(self, request, what):
+        self.access()
         got = bytes(self.dev.control_in(request, REQUESTS[request]))
         self.log(f"{what} ({request:#x}): {dump(got)}")
         return got
@@ -150,11 +174,14 @@ class Recovery:
         data = frame(command, self.tag + 1)
         self.tag += 1
         self.log(f"frame header: {data[:24].hex()} (command {command}, tag {self.tag}, length 0)")
+        self.access()
         self.dev.bulk_out(data)
+        self.sent = (command, self.tag, self.now())
         self.log(f"frame: command {command}, tag {self.tag}, {len(data)} bytes in one transfer")
 
     def read(self, ms, what):
         """One bulk IN read of exactly 64 bytes; None when nothing came within ms."""
+        self.access()
         try:
             got = bytes(self.dev.bulk_in(REPLY, ms))
         except Timeout:
@@ -180,16 +207,9 @@ class Recovery:
         self.send(HELLO)
         head = self.request(FRAME_BUFFER, "frame buffer")
         kept = self.request(REPLY_BUFFER, "reply buffer")
-        came = []
-        for ms, what in ((FIRST_READ_MS, "bulk IN read 1"), (SECOND_READ_MS, "bulk IN read 2")):
-            raw = self.read(ms, what)
-            why = what_came(raw, HELLO, self.tag)
-            if why is None:
-                return self.check(parse_reply(raw, HELLO, self.tag)), None
-            came.append(why)
-            if raw is None:
-                break                            # a second read after a timeout could only disturb the device
-        bulk = ", then ".join(came)
+        raw, bulk = self.await_reply(HELLO)
+        if raw is not None:
+            return self.check(parse_reply(raw, HELLO, self.tag)), None
         why = what_came(kept, HELLO, self.tag)
         if why is not None:
             got = ("" if any(kept) else ": the frame arrived only in part" if head == frame(HELLO, self.tag)[:24]
@@ -197,6 +217,20 @@ class Recovery:
             raise BadAnswer(f"no reply to the hello: the bulk IN endpoint sent {bulk}, and the reply buffer holds {why}"
                             + got)
         return self.check(parse_reply(kept, HELLO, self.tag)), bulk
+
+    def await_reply(self, command):
+        """Up to two bulk IN reads for the reply to command, the second only after something else came. Returns (the raw
+        reply, None), or (None, what the bulk IN endpoint sent in its place, in words)."""
+        came = []
+        for ms, what in ((FIRST_READ_MS, "bulk IN read 1"), (SECOND_READ_MS, "bulk IN read 2")):
+            raw = self.read(ms, what)
+            why = what_came(raw, command, self.tag)
+            if why is None:
+                return raw, None
+            came.append(why)
+            if raw is None:
+                break                            # a second read after a timeout could only disturb the device
+        return None, ", then ".join(came)
 
     def check(self, r):
         if r.status:
@@ -209,8 +243,9 @@ class Recovery:
             raise GuardError(f"the recovery mode is in state {hello.state}: another tool started an update, and "
                              "command 6 is refused there. Power-cycle the pedal into the recovery mode again first")
         self.send(LEAVE)
-        raw = self.read(FIRST_READ_MS, "bulk IN read")
+        raw, bulk = self.await_reply(LEAVE)
         if raw is None:
+            self.log(f"leave: the bulk IN endpoint sent {bulk} in place of its reply")
             return None
         r = parse_reply(raw, LEAVE, self.tag)
         if r.status:
@@ -246,22 +281,35 @@ Start the rescue tool first, in a second Terminal, so it is waiting when the USB
 Then run this again with --leave --accept-inferred. Nothing was sent to the pedal."""
 
 
-def watch_bus(bus, seconds, log, until=None):
+def watch_bus(bus, seconds, log, since, until=None):
     """List the USB devices every bus.POLL s for seconds and log each appearance and disappearance of the WATCHED
-    devices; stop early when until appears. Opens nothing and sends nothing. Returns the devices that appeared."""
-    log(f"watching the bus for {seconds:g} s (listing only: nothing is opened or sent)")
-    end, on, seen = bus.now() + seconds, {RECOVERY}, []
+    devices, the recovery mode's with since(the time it was seen gone); stop early when until appears. Opens nothing
+    and sends nothing. Returns (the devices that appeared, when the recovery mode was first seen gone or None)."""
+    log(f"watching the bus for {seconds:g} s (listing only: nothing is opened or sent; a listing every "
+        f"{bus.POLL * 1000:.0f} ms)")
+    end, on, seen, gone = bus.now() + seconds, {RECOVERY}, [], None
     while True:
-        now = bus.present()
+        now, at = bus.present(), bus.now()
         for d in sorted(now - on):
             log(f"{d[0]:04X}:{d[1]:04X} appeared: {WATCHED[d]}")
             seen.append(d)
         for d in sorted(on - now):
-            log(f"{d[0]:04X}:{d[1]:04X} left the bus: {WATCHED[d]}")
+            timed = f", seen gone {since(at)}" if d == RECOVERY else ""
+            log(f"{d[0]:04X}:{d[1]:04X} left the bus: {WATCHED[d]}{timed}")
+            if d == RECOVERY and gone is None:
+                gone = at
         on = now
         if until in on or bus.now() >= end:
-            return seen
+            return seen, gone
         bus.sleep(bus.POLL)
+
+
+def came_back(seen, watch, log):
+    """What the pedal started after it left the recovery mode, in words."""
+    for d in seen[:1]:
+        log(f"after leaving, the pedal came back as {d[0]:04X}:{d[1]:04X}, {WATCHED[d]}: {AFTER_DEPARTURE[d]}")
+    if not seen:
+        log(f"nothing appeared within {watch:g} s: the pedal powered off or hung")
 
 
 def left_bus(bus, error):
@@ -269,8 +317,8 @@ def left_bus(bus, error):
     return isinstance(error, DeviceGone) or RECOVERY not in bus.present()
 
 
-def run(bus, sync, leave, watch, log):
-    """The probe, then the leave when asked. Returns the exit code."""
+def run(bus, sync, leave, control_reply, watch, log):
+    """The probe, then the leave when asked, then the bus watch. Returns the exit code."""
     dev = bus.open_recovery()
     if dev is None:
         log(f"no recovery device ({VID:04X}:{PID:04X}) found. Power the pedal off, hold HOME, the right footswitch and "
@@ -278,48 +326,67 @@ def run(bus, sync, leave, watch, log):
         return 1
     found = bus.now()
     stamped = lambda m: log(f"[{(bus.now() - found) * 1000:6.0f} ms] {m}")
-    hello = None
+    session = Recovery(dev, stamped, bus.now)
+    hello = refused = None
+    sent = False
     try:
         stamped(f"found {VID:04X}:{PID:04X} {dev.manufacturer!r} {dev.product!r}, device version {dev.bcd_device:#06x}")
-        session = Recovery(dev, stamped)
         try:
             hello, bulk = session.probe(sync)
         except ScsiError as e:
             if not left_bus(bus, e):
                 raise
-            stamped(f"the pedal left the bus ({e}): the recovery mode ended on its own; nothing more is sent")
+            stamped(f"the pedal left the bus ({e}): the recovery mode ended on its own, {session.since(bus.now())}; "
+                    "nothing more is sent")
         if hello is not None:
-            describe(hello, bulk, log)
+            describe(hello, bulk, stamped)
             if not leave:
-                log("read-only probe finished: nothing was written, the pedal stays in the recovery mode")
-                return 0
-            if bulk is not None:
-                raise GuardError("the hello reply did not come over the bulk IN endpoint, and the pedal acts on command "
-                                 "6 only after its reply has been read there")
-            try:
-                r = session.leave(hello)
-            except ScsiError as e:
-                if not left_bus(bus, e):
-                    raise
-                r = None
-            stamped("leave: " + ("accepted, the pedal resets" if r else "sent; its reply did not arrive"))
+                stamped("read-only probe finished: nothing was written; the bus watch shows whether the recovery mode "
+                        "ends on its own")
+            elif bulk is not None and not control_reply:
+                refused = GuardError("the hello reply did not come over the bulk IN endpoint, and the pedal acts on "
+                                     "command 6 only after its reply has been read there")
+                stamped("leave: not sent (refused, see the end); the bus watch shows whether the recovery mode ends on "
+                        "its own")
+            else:
+                if bulk is not None:
+                    stamped("leave: sent although the hello reply came over the control endpoint only "
+                            "(--accept-control-reply); whether the bulk IN endpoint sends the leave's reply, which the "
+                            "pedal waits to have read before it acts, is not known")
+                try:
+                    r = session.leave(hello)
+                except ScsiError as e:
+                    if not left_bus(bus, e):
+                        raise
+                    stamped(f"the pedal left the bus ({e}), {session.since(bus.now())}")
+                    r = None
+                sent = True
+                stamped("leave: " + ("accepted, the pedal resets" if r else "sent; its reply did not arrive"))
     finally:
         dev.close()
-    seen = watch_bus(bus, watch, stamped, until=UBOOT if hello else None)
-    if hello is None:
-        for d in seen[:1]:
-            log(f"after leaving, the pedal came back as {d[0]:04X}:{d[1]:04X}: {AFTER_DEPARTURE[d]}")
-        if not seen:
-            log(f"nothing appeared within {watch:g} s: the pedal powered off or hung")
-        log("send this output back: it shows what ends the recovery mode and what the pedal starts next")
-        return 4
-    if UBOOT in seen:
-        log(f"the chip's USB boot state ({ur.VID:04X}:{ur.PID:04X}) appeared: tools/uboot_rescue.py takes over")
+        stamped("released the recovery device")
+    seen, gone = watch_bus(bus, watch, stamped, session.since, until=UBOOT if sent else None)
+    if gone is not None:
+        came_back(seen, watch, stamped)
+    if refused:
+        raise refused
+    if sent:
+        if UBOOT in seen:
+            stamped(f"the chip's USB boot state ({ur.VID:04X}:{ur.PID:04X}) appeared: tools/uboot_rescue.py takes over")
+            return 0
+        if gone is None:
+            stamped(f"the pedal stayed in the recovery mode for {watch:g} s after command 6: it did not act on it. "
+                    "Nothing was written; send this output back")
+            return 5
+        stamped(f"the USB boot state ({ur.VID:04X}:{ur.PID:04X}) did not appear within {watch:g} s. If the pedal "
+                "restarted into its firmware, the core reset does not reach the USB boot state: stop and write nothing "
+                "to this pedal (docs/RESCUE.md)")
+        return 3
+    if gone is None and hello is not None:
+        stamped(f"the pedal stayed in the recovery mode for the whole watch ({watch:g} s): it did not end on its own")
         return 0
-    log(f"the USB boot state ({ur.VID:04X}:{ur.PID:04X}) did not appear within {watch:g} s. If the pedal restarted into "
-        "its firmware, the core reset does not reach the USB boot state: stop and write nothing to this pedal "
-        "(docs/RESCUE.md)")
-    return 3
+    stamped("send this output back: it shows when the recovery mode ended and what the pedal starts next")
+    return 4
 
 
 # ---------------------------------------------------------------- USB: libusb through ctypes, as tools/uboot_rescue.py
@@ -458,17 +525,23 @@ def main(argv=None):
                     help="after the probe, send command 6, which may leave to the chip's USB boot state")
     ap.add_argument("--accept-inferred", action="store_true",
                     help="with --leave: send it although its result is inferred, not proven (see the text --leave prints)")
+    ap.add_argument("--accept-control-reply", action="store_true",
+                    help="with --leave --accept-inferred: send command 6 also when the hello reply came over the "
+                         "control endpoint (request 0x43) only; whether the pedal then acts on it is not known")
     ap.add_argument("--watch", type=float, default=60,
-                    help="seconds to list the USB devices after the pedal leaves the recovery mode (default 60)")
+                    help="seconds to list the USB devices after the probe or the leave, to see whether and when the "
+                         "pedal leaves the recovery mode and what it starts next (default 60)")
     a = ap.parse_args(argv)
     if a.accept_inferred and not a.leave:
         ap.error("--accept-inferred goes with --leave")
+    if a.accept_control_reply and not (a.leave and a.accept_inferred):
+        ap.error("--accept-control-reply goes with --leave --accept-inferred")
     if a.leave and not a.accept_inferred:
         print(LEAVE_TEXT)
         return 2
     log = lambda m: print(m, flush=True)
     try:
-        return run(transport(), a.sync, a.leave, a.watch, log)
+        return run(transport(), a.sync, a.leave, a.accept_control_reply, a.watch, log)
     except GuardError as e:
         print(f"\nREFUSED: {e}; nothing more was sent", file=sys.stderr)
         return 2

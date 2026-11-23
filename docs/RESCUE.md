@@ -162,7 +162,7 @@ The fingerprint is the SHA-256 of the first `0x4000` bytes of the flash. `d540d2
 `ERROR` about the file: run steps 4 and 5 with `--image BlackBox_023-flash.bin` in place of `--package ...`.
 
 **Checking the download.** The installer page shows the kit's SHA-256 beside its download button. Compare it with
-`certutil -hashfile OpenPocket-rescue-kit-4.zip SHA256` on Windows or `shasum -a 256 OpenPocket-rescue-kit-4.zip` on a
+`certutil -hashfile OpenPocket-rescue-kit-5.zip SHA256` on Windows or `shasum -a 256 OpenPocket-rescue-kit-5.zip` on a
 Mac, with your kit's number in the name.
 
 **Building it.** `node tools/op.mjs kit` (or `make kit`) writes the zip and `manifest.json` into `docs/rescue/`, where
@@ -263,10 +263,16 @@ writes to the pedal's flash.
 
 **What a real pedal did.** On a BlackBox on the official V23 the recovery device appeared and answered the sync request
 `0x42`, but the bulk IN endpoint then sent 64 zero bytes in place of the hello reply and nothing after, and within
-seconds the pedal left the bus. The recovery code, read again, never composes a reply of zeros, and it has no timer: it
-ends at its first failed access to its USB controller. The helper therefore no longer sends the sync, reads the hello
+seconds the pedal left the bus. The recovery code, read again, never composes a reply of zeros, and showed no timer: it
+ended at its first failed access to its USB controller (the later runs below leave in seconds anyway). The helper therefore no longer sends the sync, reads the hello
 reply also over the control endpoint (vendor request `0x43`, which returns the reply buffer, and `0x44`, which returns
 the start of the frame buffer), and, when the pedal leaves the bus, lists the USB devices to see what it starts next.
+
+On the same pedal the corrected probe then ran twice. Both times the hello was accepted (status 0, state 0, the boot
+area of the official V22 and V23), but its reply came over the control endpoint only: the bulk IN endpoint sent 64 zero
+bytes, then nothing, so the helper refused the leave. And both times the pedal left the recovery mode on its own within
+seconds of the probe, with no leave sent, which the code as read does not explain. The helper therefore now watches the
+bus after every probe and logs when the pedal leaves, and `--accept-control-reply` lets the leave go out in that case.
 
 1. **Enter the recovery mode.** Switch the pedal off. Hold HOME, the right footswitch and the knob's PUSH, switch it
    on, and keep holding until the screen shows `RECOVERY`. The Mac then lists `PD40 BOOT Recovery` (USB `3654:7940`)
@@ -283,9 +289,14 @@ the start of the frame buffer), and, when the pedal leaves the bus, lists the US
    came over the bulk IN endpoint or only over the control endpoint. The protocol does not report the chip key or the
    flash id.
 
-   If the pedal leaves the bus, the helper sends nothing more, lists the USB devices for 60 seconds and ends with exit
-   code 4. Its last lines say what came back: the chip's USB boot state (`4C4A:8057`), the recovery mode again, the
-   stock app (`3654:7756`), or nothing.
+   After the probe the helper releases the device and lists the USB devices for 60 seconds (`--watch` changes that); it
+   sends nothing more. If the pedal leaves the bus, during the probe or the watch, the helper logs it with the time
+   since the last command it sent and since its first access to the pedal, for example
+   `3654:7940 left the bus: the recovery mode, seen gone 2480 ms after the last command sent (command 1, tag 1) and
+   2510 ms after the first access`, and ends with exit code 4. The devices are listed every 100 ms, so that time is
+   exact to about 100 ms. Its last lines say what came back: the chip's USB boot state (`4C4A:8057`), the recovery mode
+   again, the normal pedal (the stock app, `3654:7756`), or nothing. If the pedal stays in the recovery mode for the
+   whole watch, the helper says so and ends with exit code 0.
 
    To compare, enter the recovery mode twice more and run the helper each time: once with `--sync` (it sends the sync
    request before the hello, as the first version did), then once more as above. In these two, release the three
@@ -294,8 +305,28 @@ the start of the frame buffer), and, when the pedal leaves the bus, lists the US
    What the code shows: the recovery mode acts on command 6 only after the computer has read its reply, and then resets
    the processor core, not the whole chip as OpenPocket's own soft key does. Whether the chip's ROM enters its USB boot
    state after a core reset is not known. The recovery mode leaves the same way when it fails an access to its USB
-   controller, so a probe that ends with exit code 4 shows the answer without command 6. Until then, and on any pedal
-   whose hello reply did not come over the bulk IN endpoint, do not use `--leave`; the helper refuses it in that case.
+   controller, so a probe that ends with exit code 4 shows the answer without command 6. Until then, do not use
+   `--leave`.
+
+   When the hello reply did not come over the bulk IN endpoint, `--leave --accept-inferred` is refused, with the same
+   bus watch first. To test the leave on such a pedal, add `--accept-control-reply`:
+
+   ```
+   python3 tools/pd40_recovery.py --leave --accept-inferred --accept-control-reply 2>&1 | tee recovery-leave.log
+   ```
+
+   It sends the same single command 6 and nothing else, then reads its reply over the bulk IN endpoint, a second time
+   only after something that is not the reply, and watches the bus. What the log proves:
+
+   - The pedal leaves within milliseconds of the leave's reply read (the `seen gone` line counts from command 6), and
+     the chip's USB boot state appears: command 6 works on this pedal although the hello reply came over the control
+     endpoint, and its core reset reaches the USB boot state (exit code 0).
+   - The pedal leaves within milliseconds but comes back as the normal pedal or the recovery mode (exit code 3): the
+     pedal acts on command 6, but its core reset does not reach the USB boot state.
+   - The pedal leaves seconds later, as in the probe runs without a leave: the departure is the recovery mode ending on
+     its own, not command 6. Compare the time with that of the probe runs.
+   - The pedal stays in the recovery mode for the whole watch (exit code 5): it did not act on command 6, most likely
+     because its reply was never read over the bulk IN endpoint.
 
    When the logs show that the ROM does stay in its USB boot state, first start the rescue tool's read-only run in a
    second Terminal, so that it is waiting: `sudo python3 tools/uboot_rescue.py --package firmware/BlackBox_023.fwsc` in
@@ -316,8 +347,10 @@ Without `--accept-inferred`, `--leave` prints why its result is not proven and s
 | | Status |
 | --- | --- |
 | The recovery device appears, answers the sync request, and sends 64 zero bytes in place of the hello reply after a sync; the pedal then leaves the bus | Seen on a real BlackBox on V23, with the first version of the helper |
-| The helper's probe, bus watch, leave, refusals and handling of bad answers | Verified against a simulated recovery mode that reproduces the zeros after a sync and the departure at one failed access (`tests/test_pd40_recovery.py`, and the kit's own copy in `tests/test_rescue_kit.py`) |
-| The corrected probe on a real pedal: whether the reply comes over bulk IN without the sync, and what the pedal starts after it leaves | Not tried |
+| The helper's probe, bus watch, timing of a departure, leave (also with `--accept-control-reply`), refusals and handling of bad answers | Verified against a simulated recovery mode that reproduces the zeros after a sync, the departure at one failed access and a departure on its own some seconds after the last access (`tests/test_pd40_recovery.py`, and the kit's own copy in `tests/test_rescue_kit.py`) |
+| The corrected probe on a real pedal, without the sync | Seen twice on a real BlackBox on V23: the hello accepted over the control endpoint only (64 zero bytes, then nothing, on bulk IN), and the pedal left the recovery mode on its own within seconds |
+| When, after the last command, the recovery mode ends on its own, and what the pedal starts then | Not yet measured: the helper now logs it |
+| `--accept-control-reply`: whether the pedal acts on command 6 when the hello reply came over the control endpoint only | Not tried. Verified only against the simulated recovery mode |
 | USB IDs, strings and descriptors of the recovery mode | Verified: byte for byte in the V23 boot loader |
 | The frame and reply format, the CRC-32 (zlib's), the requests `0x43` and `0x44`, command 6 and what it does: it answers, writes `usb_update_mode` to RAM, not to the flash, and resets the processor core once its reply has been read | Read in the V23 boot loader's code, not run |
 | The key combination | Read in the boot loader's code, and seen to show `RECOVERY` on a real pedal |
@@ -334,10 +367,13 @@ sent, and every vendor request but `0x42` (only with `--sync`, and never between
 `0x43` and `0x44`. It sends one hello per run and never repeats a transfer that failed: after a bulk IN read that gets
 nothing it reads nothing more there, and when the pedal leaves the bus it only lists the USB devices. It stops at the
 first answer it does not expect and sends nothing more. It sends the leave only from state 0 or 6, the states in which
-the recovery mode accepts it, and only when the hello reply came over the bulk IN endpoint.
+the recovery mode accepts it, and only when the hello reply came over the bulk IN endpoint or `--accept-control-reply`
+is given as well. That flag changes only whether the one command 6 may go out; it adds no command and no request.
 
-Exit codes: 0 done, 1 setup problem, no recovery device or a failed transfer, 2 refused or a bad answer, 3 the USB boot
-state did not appear after the leave, 4 the pedal left the recovery mode during the probe, 130 stopped by Ctrl-C.
+Exit codes: 0 done (after a probe without the leave: the pedal stayed in the recovery mode for the whole watch), 1 setup
+problem, no recovery device or a failed transfer, 2 refused or a bad answer, 3 the pedal left after the leave but the
+USB boot state did not appear, 4 the pedal left the recovery mode on its own during the probe or the watch after it, 5
+the pedal stayed in the recovery mode after the leave, 130 stopped by Ctrl-C.
 
 ## BlackBox V21 factory sounds
 

@@ -13,7 +13,10 @@ zero bytes, then nothing (in_zeros instead sends zeros in place of every reply; 
 the empty packet). And one failed access to the USB
 controller (sie_fails_at, counted in the computer's transfers) ends the mode at once: the pedal leaves the bus, as
 command 6 does once its reply has been read, and after reset_s seconds comes back as after_reset: "uboot" (the chip's
-USB boot state), "recovery", "app" (the stock V23 app) or None.
+USB boot state), "recovery", "app" (the stock V23 app) or None. Two more departures can be set: exits_after ends the
+mode on its own that many seconds after the computer's last access, as a real pedal on V23 did within seconds of a
+probe that sent no leave, and stays makes the pedal answer command 6 without ever acting on it. A bulk IN read that
+times out takes its whole timeout on the bus's clock.
 
 It keeps every transfer; the write commands 2 to 5 are also kept in write_attempts, which the tests require to stay
 empty. A fault makes it answer badly in one way; "partial" loses the frame's last packet and "deaf" takes none.
@@ -34,24 +37,27 @@ class SimRecovery:
     manufacturer, product, bcd_device = "SINCO", "PD40 BOOT Recovery", 0x0100
 
     def __init__(self, state=0, boot_crc=V23_BOOT_CRC, fault=None, in_zeros=False, swallows=True, sie_fails_at=None,
-                 after_reset="uboot", reset_s=0.5, sie_error=DeviceGone):
+                 after_reset="uboot", reset_s=0.5, sie_error=DeviceGone, exits_after=None, stays=False):
         assert fault in (None, *FAULTS) and after_reset in AFTER_RESET
         self.state, self.boot_crc, self.fault, self.in_zeros, self.swallows = state, boot_crc, fault, in_zeros, swallows
         self.sie_fails_at, self.after_reset, self.reset_s = sie_fails_at, after_reset, reset_s
         self.sie_error = sie_error                # what the computer sees of the failed access
+        self.exits_after, self.stays, self.last_access = exits_after, stays, 0.0
         self.transfers, self.frames, self.write_attempts, self.requests = [], [], [], []
         self.accumulated, self.armed, self.waiting = b"", [], False   # armed: the packets queued on bulk IN
         self.last_reply, self.frame_buffer = bytes(64), bytes(pr.FRAME)
         self.present, self.left, self.closed, self.departed_at = True, False, False, None
-        self.clock = lambda: 0.0                  # the bus's, once on one
+        self.clock, self.wait = (lambda: 0.0), (lambda s: None)   # the bus's, once on one
 
     def close(self):
         self.closed = True
 
     def access(self, kind, *what):
         """Every transfer of the computer: the pedal must be there, and one failed access ends the mode."""
+        self.tick()
         if not self.present:
             raise DeviceGone("gone")
+        self.last_access = self.clock()
         self.transfers.append((kind, *what))
         if self.sie_fails_at is not None and len(self.transfers) >= self.sie_fails_at:
             self.depart()
@@ -132,16 +138,22 @@ class SimRecovery:
     def bulk_in(self, n, ms):
         self.access("bulk in", n)
         if not self.armed:
+            self.wait(ms / 1000)
             raise pr.Timeout("timeout")           # macOS then clears the halt, which flushes an empty endpoint
         raw = self.armed.pop(0)
         self.waiting = bool(self.armed)
-        if self.left:
+        if self.left and not self.stays:
             self.depart()                         # command 6 acts once its reply has been read
         return raw[:n]
 
-    def depart(self):
+    def depart(self, at=None):
         """usb_update_mode and a core reset: off the bus, then after reset_s seconds whatever starts next."""
-        self.present, self.armed, self.departed_at = False, [], self.clock()
+        self.present, self.armed, self.departed_at = False, [], self.clock() if at is None else at
+
+    def tick(self):
+        """The mode ending on its own exits_after seconds after the computer's last access."""
+        if self.present and self.exits_after is not None and self.clock() >= self.last_access + self.exits_after:
+            self.depart(self.last_access + self.exits_after)
 
 
 class SimBus:
@@ -151,7 +163,7 @@ class SimBus:
     def __init__(self, device=None):
         self.device, self.opened, self.looked, self.t = device, 0, 0, 0.0
         if device is not None:
-            device.clock = self.now
+            device.clock, device.wait = self.now, self.sleep
 
     def now(self):
         return self.t
@@ -170,6 +182,7 @@ class SimBus:
         d = self.device
         if d is None:
             return set()
+        d.tick()
         if d.present:
             return {pr.RECOVERY}
         after = AFTER_RESET[d.after_reset]
