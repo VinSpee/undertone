@@ -112,7 +112,7 @@ await shot("editor_1_no_pedal.png");
 startSim();
 await page.waitForSelector('body[data-conn="ready"]', { timeout: 20000 });
 ok(true, "a pedal plugged in afterwards is found without another click");
-ok(/PocketX · OpenPocket v39/.test(await text("#status")), `status: ${await text("#status")}`);
+ok(/PocketX · Gamut 1\.0b1/.test(await text("#status")), `status: ${await text("#status")}`);
 ok(await page.locator("#list .row").count() === 52, "52 presets listed");
 ok(await page.inputValue("#name") === "TWIN CLEAN" && await text("#num") === "01", "header: 01 TWIN CLEAN");
 ok(await page.locator("#tiles .tile").count() === 12, "12 blocks in the chain");
@@ -377,7 +377,7 @@ const bad = join(TMP, "bad.json");
 writeFileSync(bad, "{ not json");
 await clearToasts();
 await page.setInputFiles("#file", bad);
-ok(await toast(/not an OpenPocket preset file/), "a file that is not a preset file is refused, with its name");
+ok(await toast(/not a Gamut preset file/), "a file that is not a preset file is refused, with its name");
 ok((await pedalState()).writesOk, "the flash was written only inside the preset store");
 await page.click("#revert");
 await sleep(200);
@@ -677,7 +677,7 @@ const free = (kind, slot) => page.locator(`#${kind}list .free [data-slot="${slot
 }
 
 // ---- a pedal on an alternative firmware (an app on the base firmware: the starter, from its own C files): the editor
-// says which product it is and how to get OpenPocket back, and opens again by itself once OpenPocket answers ----
+// says which product it is and how to get Gamut back, and opens again by itself once Gamut answers ----
 {
   const { compile } = await import("../tools/sim.mjs");
   sim.stdin.end();
@@ -685,15 +685,15 @@ const free = (kind, slot) => page.locator(`#${kind}list .free [data-slot="${slot
   await page.waitForSelector('body[data-conn="lost"]', { timeout: 8000 });
   startSim(compile("app", "starter"), []);
   await page.waitForSelector('body[data-conn="other"]', { timeout: 20000 });
-  ok(/This pedal runs STARTER v01/.test(await text("#gate h1")) && /not OpenPocket/.test(await text("#othernote")), `an alternative firmware answers: "${await text("#gate h1")}", and that it is not OpenPocket`);
-  ok(await page.isVisible('#gate a[href="install.html"]') && /Back to OpenPocket/.test(await text("#gate")) && await page.isHidden("#tabs"), "the way back is given (the installer, Back to OpenPocket); none of OpenPocket's screens is shown");
+  ok(/This pedal runs STARTER v01/.test(await text("#gate h1")) && /not Gamut/.test(await text("#othernote")), `an alternative firmware answers: "${await text("#gate h1")}", and that it is not OpenPocket`);
+  ok(await page.isVisible('#gate a[href="install.html"]') && /Back to Gamut/.test(await text("#gate")) && await page.isHidden("#tabs"), "the way back is given (the installer, Back to OpenPocket); none of OpenPocket's screens is shown");
   await shot("editor_11_other_firmware.png");
   sim.stdin.end();
   await page.evaluate(() => window.__simGone());
   await sleep(300);
   startSim();
   await page.waitForSelector('body[data-conn="ready"]', { timeout: 20000 });
-  ok(await page.isVisible("#tabs"), "OpenPocket again on the cable: the editor opens by itself");
+  ok(await page.isVisible("#tabs"), "Gamut again on the cable: the editor opens by itself");
   await go("sound");
 }
 

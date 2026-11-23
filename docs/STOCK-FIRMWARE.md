@@ -1,7 +1,7 @@
-# The stock firmware, read for OpenPocket (BlackBox_021)
+# The stock firmware, read for Gamut (BlackBox_021)
 
 What M-VAVE's own firmware for the BlackBox (`BlackBox_1.fwsc`, tag `BlackBox_021`) does, read from its code, and
-what OpenPocket can take from it, especially on the audio side. The firmware was unpacked with `tools/pocketx_fw.py`
+what Gamut can take from it, especially on the audio side. The firmware was unpacked with `tools/pocketx_fw.py`
 and disassembled with JieLi's own objdump (`--mcpu=r3`, which decodes the FPU instructions), with Ghidra for the
 call graph. Addresses are those of the stock image: flash code at `0x2000120`, RAM code at `0x1C00000`.
 
@@ -34,7 +34,7 @@ many cycles and a taken branch about 8, so this is where the stock firmware gets
 
 Named tasks (table at `0x208CF00`): `wet_audio`, `tuner_task`, `USB-Audio`, `bt_sbc_dec`, `midi_route`, `sys_timer`.
 
-What it means for OpenPocket's Bluetooth: in the stock firmware the radio's interrupts sit **below** the audio
+What it means for Gamut's Bluetooth: in the stock firmware the radio's interrupts sit **below** the audio
 interrupt (2 against 4) on the same core, so audio always preempts the radio and never the other way round.
 **Read (third pass, section 7):** the dry chain runs inside the audio interrupt itself; only the delay and the reverb
 run in the `wet_audio` task, one block behind. In our v37 attempt
@@ -46,7 +46,7 @@ does not run the network.
 
 **Read** (ALNK ISR `0x202A230`):
 
-- **64-frame blocks**, 24-bit samples, stereo I2S on ALNK0 (the same pins OpenPocket uses).
+- **64-frame blocks**, 24-bit samples, stereo I2S on ALNK0 (the same pins Gamut uses).
 - The input gain is applied as an integer multiply and `>> 15`; peak meters are kept per block.
 - Two counters, **early** and **late**, count blocks that arrive before or after the expected time: the stock firmware
   watches its own real-time margin the way our `LATE` counter (v37) now does.
@@ -58,8 +58,8 @@ then called with **fs = 44118** (`0x472C5600`, eleven places: the amp, gate, com
 modulation): the stock firmware takes its real rate to be 44,118 Hz, 0.04 % above 44,100 (**guess**: the audio clock is
 not an exact 44.1 kHz multiple, as 240 MHz / 5440 = 44,117.6 Hz would be). The `48000.0` seen earlier is a fast path:
 the coefficient functions accept 44,118, 44,100 or 48,000 and skip the table work when fs is 48,000. The delays and
-the reverbs run at half of it, 22,059 Hz (the constant is in their set-up). So the stock firmware and OpenPocket run at
-the same rate; the stock firmware uses 64-frame blocks (1.45 ms) where OpenPocket uses 128 (2.9 ms).
+the reverbs run at half of it, 22,059 Hz (the constant is in their set-up). So the stock firmware and Gamut run at
+the same rate; the stock firmware uses 64-frame blocks (1.45 ms) where Gamut uses 128 (2.9 ms).
 - The DMA: LEN = 128 words (64 frames, 24-bit stereo), two 1 KB buffers at `0x1C20E20` (out) and `0x1C21220` (in),
   channel 0 and 1 each set to 24-bit in CON1.
 
@@ -124,7 +124,7 @@ Where a `tanh` is needed it is a **512-entry table with linear interpolation** i
 `AM2`/`AM3` amp stage, which uses the same convolution; the cabinet's own process is `f_0202bafa`). Cabinet IRs are convolved with a uniform partitioned FFT
 convolution: 64-frame partitions, FFT of 128, overlap-save, complex multiply-accumulate in float (`f_01c0a676`, two
 loads per complex product, unrolled). The FFTs themselves run either in software (radix routines in RAM for 32, 64
-and other sizes) or **on the chip's FFT block at `0x1EE0400`** (the same block OpenPocket's NAM uses as a vector unit):
+and other sizes) or **on the chip's FFT block at `0x1EE0400`** (the same block Gamut's NAM uses as a vector unit):
 the code writes a 3-word job (`[config | 1, in, out]` at `0x1C1001C`), points `CADR` (`0x1EE0404`) at it, starts it with
 `CON = 0x101`, and later waits for bit 7 of `CON` and clears it with bit 6. The block works in fixed point, so the
 code normalises the input first (it finds the block's headroom, `f_02044de2`, clamps the shift to -24..+18) and
@@ -139,14 +139,14 @@ the model inference uses the integer kernels of the overlay window: overlay A is
 multiply-accumulate loops with three to five accumulators, one input broadcast against a row of weights read with a
 stride (`r_acc += [w ++= stride] * x`, inside hardware loops), the shape of a dense or 1-D convolution layer; the
 loader that swaps A and B is called from the model module's init (`f_02008692`). So the stock firmware runs its
-networks in **fixed point** from RAM, as OpenPocket does since v37. Its network is of the same order as A2-Lite: if
+networks in **fixed point** from RAM, as Gamut does since v37. Its network is of the same order as A2-Lite: if
 each weight is used once per sample, as in a WaveNet, 1,871 weights are about 1,871 multiply-adds per sample, against
 A2-Lite's ~1,730. **Read (fourth pass): it is A2-Lite.** The firmware holds the A2-Lite layer table at `0x2055A74`:
 kernel sizes 6 (x14), 15, 15, 6 (x7) and dilations 1, 3, 7, 17, 41, 101, 239 (twice), 1, 13, then 1..239 again,
-exactly the 23 layers OpenPocket's `firmware/apps/gamut/engine/px_nam.c` runs, and 1,871 is A2-Lite's weight count. So the stock `NAM`
-type plays Neural Amp Modeler A2-Lite captures, in fixed point, at 44.1 kHz like OpenPocket.
+exactly the 23 layers Gamut's `firmware/apps/gamut/engine/px_nam.c` runs, and 1,871 is A2-Lite's weight count. So the stock `NAM`
+type plays Neural Amp Modeler A2-Lite captures, in fixed point, at 44.1 kHz like Gamut.
 
-## 5. What OpenPocket can take from it
+## 5. What Gamut can take from it
 
 v38 has taken items 1, 3 and 5 ([WHATS-NEW-v38.md](WHATS-NEW-v38.md)). Item 2 was measured first and left out: MOD and
 DELAY cost 1 to 3 % of the NAM network, so running them at half rate would free about 1 %.
@@ -163,18 +163,18 @@ In order of value for the sound, with what it would cost.
 2. **Halve the cost of the time effects.** Run MOD, DELAY and the reverb at half rate behind a polyphase half-band
    decimator and interpolator (two all-pass sections a branch, about 6 multiply-adds per output pair). That frees CPU
    for the NAM network, which is the limit today.
-3. **Cheaper oversampling.** OpenPocket oversamples the drive and amp 4x with Butterworth biquads (two up, two down,
+3. **Cheaper oversampling.** Gamut oversamples the drive and amp 4x with Butterworth biquads (two up, two down,
    at the oversampled rate). The stock firmware gets 6x for less with polyphase all-pass half-band filters (2x) and a
    three-branch all-pass stage (3x): each all-pass section is one multiply-add, and each branch runs at the lower
    rate. The coefficients are in section 4 and can be used as they are.
 4. **Waveshapers without `tanh`.** A rational curve (one division) or the 512-entry table with linear interpolation,
    both in RAM, instead of a polynomial or a library call per oversampled sample.
-5. **Real cabinet IRs.** OpenPocket's cabinets are filters and sparse taps. The stock firmware shows that a 64-frame
+5. **Real cabinet IRs.** Gamut's cabinets are filters and sparse taps. The stock firmware shows that a 64-frame
    uniform partitioned convolution fits beside its amp, with the FFTs on the FFT block of CPU1, with block floating
-   point. OpenPocket already drives that block (`firmware/apps/gamut/engine/px_nam.c`); the FFT mode is the same `CON`/`CADR` protocol
+   point. Gamut already drives that block (`firmware/apps/gamut/engine/px_nam.c`); the FFT mode is the same `CON`/`CADR` protocol
    with a different job word. This would let the pedal load user IRs (and the `CAB` files of the stock firmware).
 6. **Sample rate 48 kHz?** Most NAM captures, TONE3000 included, are made at 48 kHz; at 44.1 kHz they play about 1.5
-   semitones low (`docs/NAM.md`). (Corrected in section 8.1: the stock firmware runs at 44.1 kHz too.) Moving OpenPocket to 48 kHz fixes the
+   semitones low (`docs/NAM.md`). (Corrected in section 8.1: the stock firmware runs at 44.1 kHz too.) Moving Gamut to 48 kHz fixes the
    user models without resampling, but costs 9% more CPU per second of audio and needs the factory models retrained
    (`tools/train_a2.py`). Worth it only together with items 1 to 3, which free more than that.
 7. **Smaller blocks later.** 64 frames at 48 kHz (1.33 ms) against our 128 at 44.1 (2.9 ms): lower latency, but the
@@ -201,9 +201,9 @@ guessed):
 | `0x1C25200` (1,172 B) | 18, 19 | the process routines of the MW-GOLD and MW-RAT drives (set up by `f_0202cbfc`, `f_0202ce20`; **corrected in the fifth pass**: these are drives, not amps, section 10.2) |
 
 Each block is one type's own routine: no test of the type inside the sample loop. **Read:** their reverbs keep their
-lines in 16 bits, as OpenPocket's do since v35.
+lines in 16 bits, as Gamut's do since v35.
 
-What OpenPocket took from it in v38: the delay and the reverb run over the block in a loop made for their type (the
+What Gamut took from it in v38: the delay and the reverb run over the block in a loop made for their type (the
 type's tests done once a block, not once a sample: on this CPU a taken branch costs about 8 cycles), with the output
 unchanged bit for bit. Moving the effects' code into RAM as well would need the engine split so that no call crosses
 between flash and RAM code (out of the CPU's call range): left for when the per-block times on the pedal (the tuner
@@ -328,7 +328,7 @@ single descriptor}`):
 The audio interrupt is above everything that does real work on CPU0 except the timers (1) and the radio (2): the
 radio interrupt is short and its work is done in tasks.
 
-### 7.7 What OpenPocket can take from this
+### 7.7 What Gamut can take from this
 
 1. **Take the delay and the reverb out of the critical path** (the largest gain for crackles; **done in v39**,
    [WHATS-NEW-v39.md](WHATS-NEW-v39.md), with a lag of two 128-frame blocks that the delay's taps make up for). Today they run inside the
@@ -346,7 +346,7 @@ radio interrupt is short and its work is done in tasks.
 ### 8.1 The sample rate
 
 44.1 kHz (fs = 44,118 in the code), not 48: section 3. This corrects section 5's item 6, which rested on the 48,000
-constant: the stock firmware plays its captures at 44.1 kHz as OpenPocket does.
+constant: the stock firmware plays its captures at 44.1 kHz as Gamut does.
 
 ### 8.2 How an effect's code gets into RAM (read)
 
@@ -379,7 +379,7 @@ ms) and run at 22,059 Hz in 16-bit lines.
 
 ### 8.3 The cabinet
 
-CAB init (`f_02009da6`): 20 models, IRs of 1,024 taps convolved in 64-frame partitions (the same sizes as OpenPocket's
+CAB init (`f_02009da6`): 20 models, IRs of 1,024 taps convolved in 64-frame partitions (the same sizes as Gamut's
 USER IR, v38), low cut from 20 Hz, high cut to 18 kHz.
 
 ### 8.4 The two overlays
@@ -438,11 +438,11 @@ low-pass, `f_01c07f22`, set by HPass and LPass):
 5. the line is written with `input x gain + feedback x gain`, scaled by 32768 and **saturated to 16 bits** (`sat16`).
 
 So the stock delays and reverbs are float DSP on 16-bit (delays) or float (reverbs) memory, at half rate, with
-every time and depth smoothed per sample and every read a cubic. OpenPocket's (v35) are of the same family: an 8-line
-Hadamard FDN at half rate, a 16-bit delay line, Hermite reads. What the stock ones do that OpenPocket's do not:
+every time and depth smoothed per sample and every read a cubic. Gamut's (v35) are of the same family: an 8-line
+Hadamard FDN at half rate, a 16-bit delay line, Hermite reads. What the stock ones do that Gamut's do not:
 
-- all eight lines modulated, each with a nested all-pass (OpenPocket: four modulated, diffusion only before the tank);
-- **stereo** reverb output (sum and difference); OpenPocket's output is mono on both channels;
+- all eight lines modulated, each with a nested all-pass (Gamut: four modulated, diffusion only before the tank);
+- **stereo** reverb output (sum and difference); Gamut's output is mono on both channels;
 - the delay's output soft-clipped by `tanh` and a modulated delay inside the feedback loop;
 - the Spring as a convolution with a real spring's impulse response, ahead of the tank.
 
@@ -720,7 +720,7 @@ low-pass each); `x 0.707`; `asinh` on both outputs; the same post as the others.
 - four CPU routines do the gates;
 - the output is converted back (`x 2^-21`).
 
-The stock firmware uses the FFT block as a matrix-vector engine **for its GRU**, the same trick as OpenPocket's NAM.
+The stock firmware uses the FFT block as a matrix-vector engine **for its GRU**, the same trick as Gamut's NAM.
 
 **The AM4/AM5 stage** (`0x1C224D0`, read): the input FIR, then the GRU per sample, then the output FIR.
 - **Warm-up after loading**: for the first 1,102 samples the GRU is fed a decaying exponential and its output is
@@ -820,7 +820,7 @@ Errors get an 8-byte reply with status 1. Only objects 4 and 5 are registered (s
 **Read.** The init (`f_02008692`, from `0x2009A1E`) takes each of the 72 floats of the trailer in threes, converts them to
 Q20, and **writes the triplet into every frame of the layer's history ring** (`[layer + 56]`, `count + 72` frames of
 12 bytes). A2-Lite's layers have 3 channels and their rings are interleaved `[time][channel]`, 12 bytes a frame, as in
-OpenPocket's `firmware/apps/gamut/engine/px_nam.c`. The `+ 72` is the runner's largest piece: `0x1C23464` runs the network in pieces of at
+Gamut's `firmware/apps/gamut/engine/px_nam.c`. The `+ 72` is the runner's largest piece: `0x1C23464` runs the network in pieces of at
 most 72 samples.
 
 So `BEND` is **each layer's output at silence, used to pre-fill its history**: 23 triplets for the 23 layers, one for
@@ -1357,9 +1357,9 @@ in 021 the hold exists in the engine but is not used.
   channel by the opacity); knobs are drawn as **anti-aliased arcs in degrees** (`f_020178ee`, 360); the screens are
   built by one function each (main `f_0200dac8`, edit `f_0200d47c`, settings `f_0200de68` / `f_0200df42`, tuner
   `f_0200ed68` / `f_0200f534`, save and swap `f_0200e59a` / `f_0200fbda`, low battery `f_0201adb0`).
-- The frame goes to the panel by SPI DMA, which OpenPocket already drives (handbook, display).
+- The frame goes to the panel by SPI DMA, which Gamut already drives (handbook, display).
 
-Nothing here changes OpenPocket: its UI is its own. The pixel code is read in 17.1.
+Nothing here changes Gamut: its UI is its own. The pixel code is read in 17.1.
 
 ### 16.6 What is left
 
@@ -1456,8 +1456,8 @@ width, height, x and y offsets; kerning records of 3 bytes: left, right, adjustm
 - the **USB-MIDI receiver** (`f_02025b12`) recognises two 8-byte packets `04 F0 22 24` + `07 35 xx F7`, the SysEx
   `F0 22 24 35 xx F7`:
   - `xx = 7D` writes `usb_update_mode` at `0x1C7FD80` and resets the chip (`f_020253d6`): **the boot loader's USB
-    update mode** (the same key OpenPocket uses, `firmware/bsp/chip/usb.c`);
-  - `xx = 7F` sets the update request flag (OpenPocket's `ota_req`, the M-UPGRADE path);
+    update mode** (the same key Gamut uses, `firmware/bsp/chip/usb.c`);
+  - `xx = 7F` sets the update request flag (Gamut's `ota_req`, the M-UPGRADE path);
 - the same reset is reached from a second handler (`f_0202710a`) on a command packet `FC 00 FE 00 00 00`
   (**likely** JieLi's PC update tool);
 - Audio Class and the rings: 15.2, 13.2, 16.3.
@@ -1613,7 +1613,7 @@ Every part of the image is now identified and the parts that matter are read. Wh
 instruction is the inside of JieLi's generic state machines (the Bluetooth controller's scheduler, LMP and link
 layer, L2CAP/AVDTP/ATT details, FAT's cluster allocation, FreeRTOS's lists, dlmalloc's bins): they are standard
 designs (FreeRTOS, dlmalloc, the Bluetooth specification) or chip-specific radio code, the same in every JieLi
-product, and OpenPocket neither uses nor replaces them line by line.
+product, and Gamut neither uses nor replaces them line by line.
 
 ## 19. Fourteenth pass: Bluetooth, read to the end
 
@@ -1659,7 +1659,7 @@ section names, and was matched against the stock image.
 - The stock copy was **linked with LTO** (the SDK's `lto-wrapper`): the configuration constants are folded in (the loop
   over the baseband's hardware entities is gone, and so is every log string). So most functions differ in detail and match
   in structure. The whole of Bluetooth, classic and LE, takes 130 KB in the stock image (`0x2060000..0x2080738`). Without
-  LTO, the LE part alone takes OpenPocket 154 KB of code and 60 KB of constants.
+  LTO, the LE part alone takes Gamut 154 KB of code and 60 KB of constants.
 - The SDK's linker script puts all of the controller's and host's code (`.ble_rf_code`, `.ble_ll_code`,
   `.bt_stack_code`, ...) **in flash**. Only the DSP library runs from RAM (8.2).
 
@@ -1738,11 +1738,11 @@ interrupt only moves buffers and plans the next event, so its time is tens of mi
   `0x3000F`, through `f_0200B7D4`). When the reading has moved by more than about 2,200 since the last calibration, it
   runs the radio calibration again (`f_0203F702` … `f_0203FC16`, the Wi-Fi/RF common library).
 
-### 19.5 What it means for OpenPocket
+### 19.5 What it means for Gamut
 
 **Read** (the stock firmware) and **likely** (the v37 diagnosis; v41 is its test).
 - The stock firmware runs some 130 KB of Bluetooth code **from flash**, through the instruction cache the two cores share,
-  and its sound does not suffer, because **its whole per-sample library runs from RAM** (8.2). In v37, OpenPocket's audio
+  and its sound does not suffer, because **its whole per-sample library runs from RAM** (8.2). In v37, Gamut's audio
   code still ran from flash. The radio's code and the DSP code pushed each other out of the cache, and the second core,
   which does no Bluetooth at all, slowed down by half. That fits the reading: about 70 % before the radio started, 150 %
   after. v37 made it worse by putting the controller's task stacks in the data cache used as RAM, which the same cache
@@ -1754,13 +1754,13 @@ interrupt only moves buffers and plans the next event, so its time is tens of mi
 
   [BLUETOOTH.md](BLUETOOTH.md) lists the choices.
 - **The supplies.** The stock firmware always runs at VDC14 1.60 V and SYSVDD 1.38 V (AUDIO-SDK.md, v30), and its radio
-  with them. OpenPocket runs at the boot loader's 1.40 V and 1.26 V (v33). On the pedal, v41's first builds with the radio
+  with them. Gamut runs at the boot loader's 1.40 V and 1.26 V (v33). On the pedal, v41's first builds with the radio
   on lost the second core to misreads (`BYP` everywhere) and crashed once on a bad pointer: the radio now starts only
   after raising the supplies to the stock levels (**likely**; the next test decides).
 
 ### 19.6 What is left
 
 - The `AE40` service's own framing, beyond "the bytes go to the SysEx receiver".
-- The radio re-calibration routine's inside (`f_0203F702` …): it belongs to the Wi-Fi/RF library OpenPocket does not
+- The radio re-calibration routine's inside (`f_0203F702` …): it belongs to the Wi-Fi/RF library Gamut does not
   link.
-- The classic A2DP path (`JL_A2DP`, `bt_sbc_dec`), which OpenPocket does not use.
+- The classic A2DP path (`JL_A2DP`, `bt_sbc_dec`), which Gamut does not use.

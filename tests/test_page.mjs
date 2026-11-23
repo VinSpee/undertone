@@ -104,9 +104,9 @@ await page.screenshot({ path: join(OUT, "page_1_start.png"), fullPage: true });
 await page.click("#connect");
 await page.waitForSelector("#devinfo:not([hidden])", { timeout: 15000 });
 const fw = await page.textContent("#d-fw");
-ok(/OpenPocket v23/.test(fw), `detected: ${fw}`);
+ok(/Gamut v23/.test(fw), `detected: ${fw}`);
 ok(await shown() === "openpocket" && /Choose a firmware/i.test(await page.textContent("#installCard h2")), "a site without a catalog: the one firmware of its manifest, in a card");
-ok(await page.isEnabled(OP) && (await page.textContent(OP)) === "Install OpenPocket v24" && await page.isVisible(`${card("openpocket")} .pill`),
+ok(await page.isEnabled(OP) && (await page.textContent(OP)) === "Install Gamut v24" && await page.isVisible(`${card("openpocket")} .pill`),
   "its button names the firmware and the version, and the card says the pedal runs this firmware");
 await page.screenshot({ path: join(OUT, "page_2_found.png"), fullPage: true });
 ok(!(await page.isVisible("#fwwhy")), "a pedal found: no reason left under the buttons");
@@ -116,12 +116,12 @@ await page.waitForFunction(() => /PocketX_924/.test(document.getElementById("msg
   document.getElementById("msg").classList.contains("err"), null, { timeout: 240000 });
 const msg = await page.textContent("#msg");
 ok(/PocketX_924/.test(msg), `result: ${msg}`);
-ok(/OpenPocket v24/.test(msg) && await page.isVisible("#next") && /WHATS-NEW-v24\.md$/.test(await page.getAttribute("#notes", "href")), "the result names the version and links the editor and the release notes");
+ok(/Gamut v24/.test(msg) && await page.isVisible("#next") && /WHATS-NEW-v24\.md$/.test(await page.getAttribute("#notes", "href")), "the result names the version and links the editor and the release notes");
 ok(await page.$$eval("#steps li", (s) => s.length > 0 && s.every((e) => e.className === "done" && /^done: /.test(e.textContent))), "every stage shows done, said in words too, none still lit");
 ok((await page.getAttribute("#progressbar", "aria-valuenow")) === "100" && (await page.getAttribute("#msg", "role")) === "status" && (await page.getAttribute("#state", "role")) === "status",
   "a screen reader hears the result and the state; the progress bar says 100");
 await page.waitForTimeout(1500);
-ok(/OpenPocket v24/.test(await page.textContent("#d-fw")) && (await page.textContent(OP)) === "Install again: OpenPocket v24", "the page now sees OpenPocket v24, and the button says Install again");
+ok(/Gamut v24/.test(await page.textContent("#d-fw")) && (await page.textContent(OP)) === "Install again: Gamut v24", "the page now sees Gamut v24, and the button says Install again");
 await page.screenshot({ path: join(OUT, "page_3_done.png"), fullPage: true });
 ok(simLog.some((l) => /step2 rc=0/.test(l)), "the simulated pedal wrote the new app");
 
@@ -231,7 +231,7 @@ sim.stdin.end(); sim = null; simLog.length = 0; buf = "";
   ok(createHash("sha256").update(Buffer.from(got)).digest("hex") === (await page.textContent("#kitsha")) && kit.sha256 === (await page.textContent("#kitsha")),
     "Rescue card: the SHA-256 shown is the downloaded kit's");
   ok(/does not hold M-VAVE's firmware/.test(await page.textContent("#kitfw")) && !(await page.isVisible("#kitnone")), "Rescue card: says the kit comes without M-VAVE's firmware");
-  ok(/do not install OpenPocket/.test(await page.textContent("[data-t=rescuev22]")), "Rescue card: warns against an install after a V22 or V23 rescue");
+  ok(/do not install Gamut or PALETTE/.test(await page.textContent("[data-t=rescuev22]")), "Rescue card: warns against an install after a V22 or V23 rescue");
   ok(!/openpocket-main|archive\/refs/.test(await page.content()), "the page no longer sends anyone to the zip of main");
   ok(!(await page.isVisible("#rescue-mac")), "rescue guide: folded until opened");
   await page.click("#rescueguide summary");
@@ -320,7 +320,7 @@ cpSync(join(FIX, "firmware", "alt"), join(FW, "apps", "starter"), { recursive: t
   const bare = await ctx.newPage();
   await bare.goto(INSTALL);
   const text = await bare.textContent("main");
-  ok(/Do not unplug the pedal/.test(text) && /do not install OpenPocket/.test(text) && /restarts in a loop/.test(text) && /black screen/.test(text) &&
+  ok(/Do not unplug the pedal/.test(text) && /do not install Gamut or PALETTE/.test(text) && /restarts in a loop/.test(text) && /black screen/.test(text) &&
      await bare.isVisible("[data-t=s2warn]") && await bare.isVisible("[data-t=rescuev22]"),
     "without its script: the install warning, the V22/V23 warning and the rescue cases are on the page");
   await ctx.close();
@@ -336,18 +336,18 @@ startSim();
 await page.waitForTimeout(300);
 await page.click("#connect");
 await page.waitForSelector("#devinfo:not([hidden])", { timeout: 15000 });
-ok(/OpenPocket v23/.test(await page.textContent("#d-fw")) && (await page.textContent(OP)) === "Install OpenPocket v24", "a pedal on OpenPocket: named so, its card's button says Install");
+ok(/Gamut v23/.test(await page.textContent("#d-fw")) && (await page.textContent(OP)) === "Install Gamut v24", "a pedal on Gamut: named so, its card's button says Install");
 ok((await page.textContent(ALT)) === "Back to STARTER v01" && !(await page.isVisible(`${card("starter")} .pill`)), "the other firmware's button says Back to, with its name");
 await page.screenshot({ path: join(OUT, "page_6_alt_offered.png"), fullPage: true });
 await page.click(ALT);
 await page.waitForFunction(() => /PocketX_901/.test(document.getElementById("msg").textContent) || document.getElementById("msg").classList.contains("err"), null, { timeout: 240000 });
 ok((await page.textContent("#msg")) === "Done: the pedal now runs STARTER v01 (PocketX_901)", `result: ${await page.textContent("#msg")}`);
-ok(!(await page.isVisible("#next")), "no editor link and no release notes for a firmware that is not OpenPocket");
+ok(!(await page.isVisible("#next")), "no editor link and no release notes for a firmware that is not Gamut");
 await page.waitForFunction(() => /STARTER/.test(document.getElementById("d-fw").textContent), null, { timeout: 15000 });
 ok((await page.textContent("#d-fw")) === "STARTER v01 (PocketX_901)", `the page now sees: ${await page.textContent("#d-fw")}`);
-ok((await page.textContent(OP)) === "Back to OpenPocket v24" && (await page.textContent(ALT)) === "Install again: STARTER v01" &&
+ok((await page.textContent(OP)) === "Back to Gamut v24" && (await page.textContent(ALT)) === "Install again: STARTER v01" &&
   await page.isVisible(`${card("starter")} .pill`) && !(await page.isVisible(`${card("openpocket")} .pill`)),
-  "the first card's button is now Back to OpenPocket; STARTER's card says the pedal runs it");
+  "the first card's button is now Back to Gamut; STARTER's card says the pedal runs it");
 ok(await page.isEnabled("#uboot"), "the UBOOT soft key is the base firmware's: offered for every product on it");
 await page.screenshot({ path: join(OUT, "page_7_alt_running.png"), fullPage: true });
 {
@@ -359,9 +359,9 @@ await page.screenshot({ path: join(OUT, "page_7_alt_running.png"), fullPage: tru
 }
 await page.click(OP);
 await page.waitForFunction(() => /PocketX_924/.test(document.getElementById("msg").textContent) || document.getElementById("msg").classList.contains("err"), null, { timeout: 240000 });
-ok(/OpenPocket v24 \(PocketX_924\)/.test(await page.textContent("#msg")), `the way back: ${await page.textContent("#msg")}`);
-await page.waitForFunction(() => /OpenPocket v24/.test(document.getElementById("d-fw").textContent), null, { timeout: 15000 });
-ok((await page.textContent(OP)) === "Install again: OpenPocket v24" && (await page.textContent(ALT)) === "Back to STARTER v01", "the pedal is on OpenPocket again, and the page says so");
+ok(/Gamut v24 \(PocketX_924\)/.test(await page.textContent("#msg")), `the way back: ${await page.textContent("#msg")}`);
+await page.waitForFunction(() => /Gamut v24/.test(document.getElementById("d-fw").textContent), null, { timeout: 15000 });
+ok((await page.textContent(OP)) === "Install again: Gamut v24" && (await page.textContent(ALT)) === "Back to STARTER v01", "the pedal is on Gamut again, and the page says so");
 ok(step2() === 2, "the simulated pedal wrote both firmwares");
 await page.screenshot({ path: join(OUT, "page_8_back_on_openpocket.png"), fullPage: true });
 {
@@ -381,7 +381,7 @@ await page.screenshot({ path: join(OUT, "page_8_back_on_openpocket.png"), fullPa
 {
   const source = join(FIX, "catalog.json");
   writeFileSync(source, JSON.stringify({ firmwares: [
-    { id: "openpocket", name: "OpenPocket", what: "The first firmware of the test site." },
+    { id: "openpocket", name: "Gamut", what: "The first firmware of the test site." },
     { id: "starter", what: "The second firmware of the test site.", note: "Not yet run on a real pedal." }] }));
   execFileSync("python3", [join(ROOT, "tools", "catalog.py"), "--source", source, "--site", FW, "--apps", join(FW, "apps")], { stdio: "inherit" });
 }
@@ -390,7 +390,7 @@ await page.goto(INSTALL);
 await page.waitForSelector(card("starter"), { timeout: 5000 });
 ok(await shown() === "openpocket,starter", "a site with a catalog: one card per firmware, in the catalog's order, with no link");
 ok(/The first firmware of the test site\./.test(await page.textContent(card("openpocket"))) && /The second firmware of the test site\./.test(await page.textContent(card("starter"))) &&
-  /STARTER\s+v01/.test(await page.textContent(`${card("starter")} h3`)) && /OpenPocket\s+v24/.test(await page.textContent(`${card("openpocket")} h3`)),
+  /STARTER\s+v01/.test(await page.textContent(`${card("starter")} h3`)) && /Gamut\s+v24/.test(await page.textContent(`${card("openpocket")} h3`)),
   "each card has the firmware's name, its version and the catalog's line on what it is");
 ok(!/by this link only/.test(await page.textContent("#fws")), "a firmware of the catalog is not marked as offered by a link");
 ok((await page.textContent(`${card("starter")} .warnbox`)) === "Not yet run on a real pedal." && !(await page.$(`${card("openpocket")} .warnbox`)), "a firmware's warning in the catalog is shown in its card, and only there");
@@ -404,13 +404,13 @@ await page.click(ALT);
 await page.waitForFunction(() => /PocketX_901/.test(document.getElementById("msg").textContent) || document.getElementById("msg").classList.contains("err"), null, { timeout: 240000 });
 ok((await page.textContent("#msg")) === "Done: the pedal now runs STARTER v01 (PocketX_901)", `chooser, the second firmware installed: ${await page.textContent("#msg")}`);
 await page.waitForSelector(`${OP}:enabled`, { timeout: 15000 });
-ok((await page.textContent(OP)) === "Back to OpenPocket v24" && await page.isVisible(`${card("starter")} .pill`), "chooser: the first firmware's button now says Back to, and names it");
+ok((await page.textContent(OP)) === "Back to Gamut v24" && await page.isVisible(`${card("starter")} .pill`), "chooser: the first firmware's button now says Back to, and names it");
 await page.screenshot({ path: join(OUT, "page_10_chooser_switched.png"), fullPage: true });
 await page.click(OP);
 await page.waitForFunction(() => /PocketX_924/.test(document.getElementById("msg").textContent) || document.getElementById("msg").classList.contains("err"), null, { timeout: 240000 });
-ok((await page.textContent("#msg")) === "Done: the pedal now runs OpenPocket v24 (PocketX_924)" && await page.isVisible("#next"), `chooser, switched to the first firmware: ${await page.textContent("#msg")}`);
+ok((await page.textContent("#msg")) === "Done: the pedal now runs Gamut v24 (PocketX_924)" && await page.isVisible("#next"), `chooser, switched to the first firmware: ${await page.textContent("#msg")}`);
 await page.waitForSelector(`${ALT}:enabled`, { timeout: 15000 });
-ok((await page.textContent(ALT)) === "Back to STARTER v01" && (await page.textContent(OP)) === "Install again: OpenPocket v24", "chooser: the second firmware's button says Back to");
+ok((await page.textContent(ALT)) === "Back to STARTER v01" && (await page.textContent(OP)) === "Install again: Gamut v24", "chooser: the second firmware's button says Back to");
 await page.click(ALT);
 await page.waitForFunction(() => /PocketX_901/.test(document.getElementById("msg").textContent) || document.getElementById("msg").classList.contains("err"), null, { timeout: 240000 });
 await page.waitForFunction(() => /STARTER/.test(document.getElementById("d-fw").textContent), null, { timeout: 15000 });

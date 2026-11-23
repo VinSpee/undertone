@@ -1,6 +1,6 @@
-# Formal models of OpenPocket's concurrent parts
+# Formal models of Undertone's concurrent parts
 
-This folder holds five TLA+ models of the places in OpenPocket where steps can happen in more than one order.
+This folder holds five TLA+ models of the places in Undertone where steps can happen in more than one order.
 The places are the flash and the second core, the editor's watch, the preset store, the hand-over of a change of settings to the audio side, and the NAM network on two cores.
 [everystate](https://github.com/mattzcarey/everystate) checks every reachable state of each model.
 

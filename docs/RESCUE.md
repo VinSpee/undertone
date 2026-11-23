@@ -6,8 +6,8 @@ Use this when the pedal shows a black screen or keeps restarting, and the instal
 USB cable and a Mac or a Windows PC. The first run only checks the pedal and saves a backup. Nothing is written until the
 second run.
 
-> **Warning.** Do not install OpenPocket on a pedal that ran M-VAVE V22 or V23, not even after a successful rescue.
-> OpenPocket's installer writes from `0x4000`, over the end of the V22/V23 boot loader, and the pedal goes dark again.
+> **Warning.** Do not install Gamut on a pedal that ran M-VAVE V22 or V23, not even after a successful rescue.
+> Undertone's installer writes from `0x4000`, over the end of the V22/V23 boot loader, and the pedal goes dark again.
 > This project's installer page, `node tools/op.mjs flash` and the update loader in its packages now refuse such a pedal
 > and write nothing; older installers, upstream's among them, do not. Wait for an installer that supports V22 and V23.
 > It is not released yet.
@@ -15,19 +15,19 @@ second run.
 > **Status.** Path A's tool has restored one real pedal, from a Mac. Path B (V22 and V23) is verified in simulation
 > only: the kit's files were run against a simulated pedal with M-VAVE's real V22 and V23 packages, and the pedal ended
 > on the exact official image. This matches one community report of a real pedal restored this way
-> ([issue 31](https://github.com/isod89/openpocket/issues/31)). The OpenPocket team has not run path B on a real pedal,
+> ([issue 31](https://github.com/isod89/openpocket/issues/31)). The Undertone team has not run path B on a real pedal,
 > and has not run the Windows launcher on a real pedal.
 
 ### 1. Find your path
 
 The rescue writes M-VAVE's official firmware back, and the firmware file must match the firmware the pedal had before
-OpenPocket. Ask one question: did this pedal ever run M-VAVE V22 or V23? It did if you updated it with M-VAVE's own
+Gamut. Ask one question: did this pedal ever run M-VAVE V22 or V23? It did if you updated it with M-VAVE's own
 updater after July 2026, or if it came with V22 or V23.
 
 | Path | The pedal had | Firmware file | The pedal ends on |
 | --- | --- | --- | --- |
 | A | V16, V17 or V20, and never V22 or V23 | `BlackBox_020.fwsc` | Official V20 |
-| B | V22 or V23 at any time, or you are not sure | `BlackBox_023.fwsc` | Official V23. No OpenPocket yet |
+| B | V22 or V23 at any time, or you are not sure | `BlackBox_023.fwsc` | Official V23. No Gamut yet |
 | C | Something else: both files are refused | None | Stop. Keep the backup |
 
 The check in step 4 is the test, and it writes nothing. With the right file it prints
@@ -115,7 +115,7 @@ Unplug the cable. Switch the pedal off, wait 5 seconds, switch it on. The pedal 
 firmware: V20 after path A, V23 after path B. Settings saved on the pedal may be reset. The backup holds what was there
 before.
 
-**Path B: stop here. Do not install OpenPocket on this pedal yet.** It would go dark again, for the reason in the
+**Path B: stop here. Do not install Gamut on this pedal yet.** It would go dark again, for the reason in the
 warning at the top of this page.
 
 ### If it does not work
@@ -226,7 +226,7 @@ compares the pedal's head `[0, 0x4000)` with the image's, reports how many secto
 backup: it is the only copy of what the pedal held before the rescue.
 
 On Windows, open a Command Prompt as administrator (press the Windows key, type `cmd`, right-click "Command Prompt",
-"Run as administrator"; not PowerShell), go to the OpenPocket folder and run the same tool through `RESCUE.bat`:
+"Run as administrator"; not PowerShell), go to the Undertone folder and run the same tool through `RESCUE.bat`:
 
 ```
 cd /d C:\path\to\openpocket
@@ -255,7 +255,7 @@ Exit codes: 0 done, 1 setup problem (libusb, root, files), 2 refused by a safety
 ## BlackBox V21 factory sounds
 
 The official BlackBox V21 download installs the firmware but contains no sound bank.
-OpenPocket's NAM, preset and loader storage overlap parts of the stock sound bank.
+Gamut's NAM, preset and loader storage overlap parts of the stock sound bank.
 V21 checks all 20 amp and 20 cabinet records at startup and disables the sound bank
 when any of them are invalid. In that state M-EFCS cannot restore it one model at a time.
 
@@ -266,7 +266,7 @@ If the check fails, use the steps below on a Mac with M-EFCS, Python 3 and libus
 The recovery port uses USB Mass Storage, which [WebUSB protects](https://wicg.github.io/webusb/#has-a-protected-interface-class).
 The installer can enter recovery mode over MIDI, and the Terminal tool handles the flash transfer.
 
-1. In Terminal, from the OpenPocket repository, start the read-only check with the same V21 file.
+1. In Terminal, from the Undertone repository, start the read-only check with the same V21 file.
    Replace the example path with the location of your download.
 
    ```sh

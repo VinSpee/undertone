@@ -20,7 +20,7 @@ export const OUR_LOADER = (id) => /^ota-OpenPocket_9\d\d$/i.test(id.text);
 // a firmware built on the OpenPocket base (identity Model_9NN): OpenPocket itself, or an alternative firmware. Which
 // one, the firmware says in its INFO reply (parseInfo, Updater.identify: `product`), never its identity
 export const IS_OPENPOCKET = (id) => MODELS.includes(id.model) && id.version >= 900;
-export const OPENPOCKET = "openpocket";               // product.app of OpenPocket itself
+export const OPENPOCKET = "openpocket";               // product.app of the primary firmware, Gamut (formerly OpenPocket)
 export const APP_CAPS = ["stereo", "usb-audio", "midi", "store"];   // firmware/base/product.h OP_CAP_*, bit 0 first
 export const IS_ALT = (product) => Boolean(product) && product.app !== OPENPOCKET;
 export const IS_OFFICIAL = (id) => MODELS.includes(id.model) && id.version < 900;
@@ -91,7 +91,7 @@ export function parseIdentity(pkt) {
   return m ? { text: txt, model: m[1], version: parseInt(m[2], 10) } : null;
 }
 
-// The INFO reply of a firmware on the base: which product it is. OpenPocket answers with its editor protocol (1 and up)
+// The INFO reply of a firmware on the base: which product it is. The primary firmware answers with its editor protocol (1 and up)
 // and its 12-block layout; an alternative firmware answers with protocol 0, then its id, its name, what it can do
 // (firmware/base/product.h). null: not an INFO reply.
 export function parseInfo(pkt) {
@@ -102,7 +102,7 @@ export function parseInfo(pkt) {
   const s = () => { let t = ""; for (;;) { const c = b(); if (!c) return t; t += String.fromCharCode(c); } };
   try {
     const proto = b(), version = s(), identity = s();
-    if (proto) return { app: OPENPOCKET, name: "OpenPocket", version, identity, proto, caps: [], editor: proto };
+    if (proto) return { app: OPENPOCKET, name: "Gamut", version, identity, proto, caps: [], editor: proto };
     const app = s(), name = s(), caps = b(), editor = b();
     if (!/^[a-z0-9-]{1,15}$/.test(app) || app === OPENPOCKET || !name) return null;
     return { app, name, version, identity, proto: 0, caps: APP_CAPS.filter((_, k) => caps >> k & 1), editor };
@@ -142,7 +142,7 @@ export function newerOfficialWarning(id) {
 export function firmwareName(id, product) {
   if (IS_OTA(id)) return "update mode";
   if (IS_ALT(product)) return `${product.name} ${product.version}, an alternative firmware`;
-  if (IS_OPENPOCKET(id)) return `OpenPocket v${id.version - 900}`;
+  if (IS_OPENPOCKET(id)) return product ? `${product.name} ${product.version}` : `Gamut v${id.version - 900}`;
   return `the official firmware ${String(id.version).padStart(3, "0")}`;
 }
 

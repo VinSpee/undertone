@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
-// OpenPocket web editor: the current sound. Its name and what can be done with it, the signal chain (the order, what is
+// Gamut web editor: the current sound. Its name and what can be done with it, the signal chain (the order, what is
 // on), and the block editor (type, settings). Every change plays at once on the pedal; a change made on the pedal shows here.
 
 import { app, $, h, icon, on, emit, blk, typeOf, choices, act, menu, slotName } from "./edcore.js";
@@ -74,7 +74,7 @@ function renderHeader() {
   $("compare").disabled = !st.dirty && !cmp;
   $("compare").setAttribute("aria-pressed", cmp ? "true" : "false");
   $("compare").textContent = cmp ? "Back to my changes" : "Compare";
-  document.title = `${st.dirty ? "• " : ""}${slotName(st.slot)} ${st.preset.name} · OpenPocket Editor`;
+  document.title = `${st.dirty ? "• " : ""}${slotName(st.slot)} ${st.preset.name} · Gamut Editor`;
   $("view-sound").classList.toggle("comparing", cmp);
   for (const id of ["tiles", "block"]) $(id).inert = cmp;
   $("hint").textContent = cmp ? "This is the preset as it is saved. Press “Back to my changes” to go on editing."

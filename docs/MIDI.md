@@ -1,11 +1,11 @@
-# OpenPocket MIDI over USB-C
+# Gamut MIDI over USB-C
 
-OpenPocket answers MIDI Program Change and Control Change from a computer, a DAW or a controller over the USB-C cable,
+Gamut answers MIDI Program Change and Control Change from a computer, a DAW or a controller over the USB-C cable,
 and tells the computer when you change the sound on the pedal. This page is the design and the reference. The hardware
 checklist for the first test is [MIDI-TEST.md](MIDI-TEST.md).
 
 **Status.** Written and tested on a PC (host simulators, see "How it was checked"). Not yet tried on a real pedal. It ships
-as a separate test package (OpenPocket v37 MIDI TEST), not in the normal installer. **Bluetooth MIDI is only in the separate
+as a separate test package (Gamut v37 MIDI TEST), not in the normal installer. **Bluetooth MIDI is only in the separate
 Bluetooth test image** ([BLE-TEST.md](BLE-TEST.md)).
 
 ## What the pedal does
@@ -199,7 +199,7 @@ cycles. That is what [MIDI-TEST.md](MIDI-TEST.md) is for.
 
 ## The test package
 
-`node tools/op.mjs package-test` (or `make package-test`) builds **OpenPocket v37 MIDI TEST** into `build/apps/gamut/midi-test/`
+`node tools/op.mjs package-test` (or `make package-test`) builds **Gamut v37 MIDI TEST** into `build/apps/gamut/midi-test/`
 (`PocketX_937.fwsc`, `BlackBox_937.fwsc`, its own `manifest.json`) and `build/apps/gamut/openpocket-midi-test.bin`. The boot screen and
 the editor say `v37 MIDI TEST`. The normal files (`build/apps/gamut/manifest.json`, v36) are not touched, and the normal installer
 page never offers it. To install it, open the installer with `?channel=midi-test` (a banner says it is a test build). To go back,
@@ -208,5 +208,5 @@ open the normal page and press Install (v36), or use the official-firmware way b
 ## Licences and references
 
 The USB code is felucca-bsp's (MPL-2.0, see [NOTICE.md](../NOTICE.md)); the MIDI code here is GPL-3.0-only like the rest of
-OpenPocket. The CC map is OpenPocket's own. Facts about the official firmware come from a private analysis of the captain's
+Undertone. The CC map is Gamut's own. Facts about the official firmware come from a private analysis of the captain's
 own device, used only to learn how it behaves, and no vendor code, bytes or tables are reproduced.

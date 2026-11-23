@@ -1,6 +1,6 @@
 # MIDI over USB-C: hardware test plan
 
-For the first run of **OpenPocket v37 MIDI TEST** on a real pedal. Nothing here was tried on hardware yet: the pedal is the only
+For the first run of **Gamut v37 MIDI TEST** on a real pedal. Nothing here was tried on hardware yet: the pedal is the only
 way to check the USB behaviour and the sound. The design is in [MIDI.md](MIDI.md). Takes about 45 minutes. Tick as you go and
 send back the "report" block at the end.
 

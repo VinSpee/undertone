@@ -1,4 +1,6 @@
-# OpenPocket
+# Gamut
+
+Gamut is the guitar firmware formerly called OpenPocket, and part of [Undertone](https://undertone.vinspee.me/), the kit it is built on.
 
 !!! THIS PROJECT IS A PROOF OF CONCEPT, DONT EXPECT FULL FUNCTION AND SOUND QUALITY !!!
 
@@ -8,7 +10,7 @@ NEW WEB EDITOR: https://isod89.github.io/openpocket/editor.html · **v42: a new 
 **Open-source guitar multi-effects firmware for the Donner Pocket X and the M-VAVE BlackBox.**
 Written from scratch for the pedal's own chip (JieLi AC791N, two cores), installable from the browser.
 
-![OpenPocket screens](docs/ui-v36.png)
+![Gamut screens](docs/ui-v36.png)
 
 ## What it does
 
@@ -32,7 +34,7 @@ Written from scratch for the pedal's own chip (JieLi AC791N, two cores), install
 - **USB audio over USB-C (v42)**: with the USB AUDIO setting on (off by default: the MIDI page's fourth row, or the web
   editor), the pedal is also a class-compliant USB sound card, 16-bit stereo at 44.1 kHz, no driver: the computer records
   the pedal's sound and plays through its output, beside MIDI. [docs/USB-AUDIO.md](docs/USB-AUDIO.md)
-- What changed: [v42](docs/WHATS-NEW-v42.md), [v41](docs/WHATS-NEW-v41.md), [v40](docs/WHATS-NEW-v40.md), [v39](docs/WHATS-NEW-v39.md), [v38](docs/WHATS-NEW-v38.md), [v37](docs/WHATS-NEW-v37.md), [since v33](docs/WHATS-NEW-v34-v36.md)
+- What changed: [Gamut 1.0b1](docs/WHATS-NEW-1.0b1.md), [v42](docs/WHATS-NEW-v42.md), [v41](docs/WHATS-NEW-v41.md), [v40](docs/WHATS-NEW-v40.md), [v39](docs/WHATS-NEW-v39.md), [v38](docs/WHATS-NEW-v38.md), [v37](docs/WHATS-NEW-v37.md), [since v33](docs/WHATS-NEW-v34-v36.md)
 - **New screen (v36)**: a PLAY page readable from a distance (preset number and name, amp, chain in colour) and an EDIT
   page with big values and bars
 - **8 reverbs rebuilt in v35**: an 8-line feedback delay network with early reflections and moving lines (no
@@ -49,11 +51,11 @@ Full list of models, presets and controls: [docs/SOUNDS-AND-CONTROLS.md](docs/SO
 Development notes (how the audio path was found, what changed in each version): [docs/AUDIO-SDK.md](docs/AUDIO-SDK.md).
 Everything learnt about the AC791N chip (CPU, memory, flash, second core, audio, FFT block, Bluetooth), for anyone
 building on it (FM-1 included): [docs/HARDWARE-HANDBOOK.md](docs/HARDWARE-HANDBOOK.md). To build a firmware of your own
-on the same base as OpenPocket, with your own engine and memory layout: [docs/ALT-FIRMWARE.md](docs/ALT-FIRMWARE.md) is
+on Undertone's base, the one Gamut is built on, with your own engine and memory layout: [docs/ALT-FIRMWARE.md](docs/ALT-FIRMWARE.md) is
 the how-to, with a starter to copy, and [docs/BASE-FIRMWARE.md](docs/BASE-FIRMWARE.md) is the reference.
 PALETTE, a four-module stereo instrument, is an alternative firmware built that way: [docs/PALETTE.md](docs/PALETTE.md),
 with a user's guide to open in a browser, [docs/palette-guide.html](docs/palette-guide.html).
-What the stock BlackBox firmware does on the audio side, and what OpenPocket can take from it:
+What the stock BlackBox firmware does on the audio side, and what Gamut can take from it:
 [docs/STOCK-FIRMWARE.md](docs/STOCK-FIRMWARE.md).
 
 ## Install
@@ -62,10 +64,10 @@ Open the installer page (GitHub Pages of this repository) in **Chrome or Edge** 
 USB, press **Connect**, then **Install**. The page also takes the pedal back to the official firmware: pick the
 official `.fwsc` from the maker, it is checked in the browser.
 
-On the **Donner Pocket X** the page works: updating OpenPocket → a newer OpenPocket is tested (2026-11-02, your saved
-presets are kept), and other Pocket X owners have installed it from the page. On the **M-VAVE BlackBox**, OpenPocket up to v30 restarted every ~4.3 s after
+On the **Donner Pocket X** the page works: updating Gamut → a newer Gamut is tested (2026-11-02, your saved
+presets are kept), and other Pocket X owners have installed it from the page. On the **M-VAVE BlackBox**, Gamut (then called OpenPocket) up to v30 restarted every ~4.3 s after
 the pedal was switched off and on ([issue #1](https://github.com/isod89/openpocket/issues/1)). M-VAVE's firmware
-turns the chip's **long-press reset** off as its very first step (P33 `PINR_CON = 0`); OpenPocket did not, and on the
+turns the chip's **long-press reset** off as its very first step (P33 `PINR_CON = 0`); it did not, and on the
 BlackBox a pin sits at its active level, so the chip reset itself 4 s after each start. Right after an install the
 setting was still the official firmware's (it survives a warm reset), so the pedal worked until the next power cycle.
 **v31 turns it off at start** (confirmed on the BlackBox). The boot screen shows `RST <reset source> PINR <value found>`.
@@ -156,7 +158,7 @@ proposed upstream.
 | | |
 | --- | --- |
 | `firmware/` | the base every firmware is built on: board support (`bsp/`, felucca-bsp), controls, audio (I2S), USB, the build |
-| `firmware/apps/` | one folder per firmware: `gamut/` (OpenPocket: its main file, screens (`ui.h`), presets, editor, MIDI, and its sound engine `engine/px_dsp.c`, portable C, float), `palette/`, `starter/` |
+| `firmware/apps/` | one folder per firmware: `gamut/` (Gamut: its main file, screens (`ui.h`), presets, editor, MIDI, and its sound engine `engine/px_dsp.c`, portable C, float), `palette/`, `starter/` |
 | `loader/` | the update loader (runs from RAM, writes the app area) |
 | `docs/` | the web installer (GitHub Pages) and documentation |
 | `tools/` | package builder, loader wrapper, font converter, flash image tools |

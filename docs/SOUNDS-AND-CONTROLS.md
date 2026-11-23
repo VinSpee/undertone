@@ -1,6 +1,6 @@
-# OpenPocket — sounds and controls (v37)
+# Gamut — sounds and controls (v37)
 
-![OpenPocket screens](ui-v23.png)
+![Gamut screens](ui-v23.png)
 
 ## The chain (12 blocks, 64 models)
 Default order: `GT → CMP → PIT → SFX → SYN → DRV → AMP → CAB → EQ → MOD → DLY → REV`
@@ -193,7 +193,7 @@ CC 7 is the MASTER volume. Details, the clock sync and the limits: [MIDI.md](MID
 - A sound saved to another slot keeps its name: rename it in the web editor.
 - The pedal starts on the slot saved last.
 - Sounds are kept in flash (0xF0000–0xF4000, two copies): a power cut during a save leaves the previous version,
-  never a damaged slot. They **survive OpenPocket updates** (the update loader only writes the app area). The sound
+  never a damaged slot. They **survive Gamut updates** (the update loader only writes the app area). The sound
   is muted for about 0.1 s while saving. The block order is saved too. Sounds saved with v25–v28 are converted at
   the first start of v29 (the SYN block off, the default order).
 

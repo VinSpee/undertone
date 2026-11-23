@@ -64,7 +64,7 @@ node tools/op.mjs flash --confirm-flash [--package FILE] [--manifest FILE]
 ```
 
 Same checks as the dry run, then: the pedal stages its update loader (step 1), the loader writes the app area (step 2), the
-pedal restarts, and the command reads the version it reports. `done: the pedal reports PocketX_924 (OpenPocket v24).` is
+pedal restarts, and the command reads the version it reports. `done: the pedal reports PocketX_950 (Gamut).` is
 success (exit 0); a version or a product that differs from the package is a failure. It takes about a minute. Report the full
 output to the captain.
 

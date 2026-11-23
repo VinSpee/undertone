@@ -68,10 +68,10 @@ second.
   sends them over both.
 - **Pairing is not remembered** across a power cycle. Devices that connect without pairing (the Chocolate, a Mac) do not
   notice. One that insists on its bond may need to forget `OpenPocket` and connect again.
-- Every OpenPocket pedal has the same Bluetooth address: two of them in one room get in each other's way.
+- Every Gamut pedal has the same Bluetooth address: two of them in one room get in each other's way.
 - Switching it off takes effect at the next power-on.
-- The stock firmware's second service (JieLi's `AE40`, used by the M-VAVE app) is not offered. OpenPocket's editor uses USB.
-- The stock firmware re-calibrates the radio every 3 s when the chip's temperature drifts. OpenPocket calibrates it once,
+- The stock firmware's second service (JieLi's `AE40`, used by the M-VAVE app) is not offered. Gamut's editor uses USB.
+- The stock firmware re-calibrates the radio every 3 s when the chip's temperature drifts. Gamut calibrates it once,
   at start-up: a very long session in a hot place may lose range.
 
 ## Please report
@@ -94,7 +94,7 @@ does no radio work at all, lost its time to cache misses: 70 % before the radio 
 v37 also placed the controller's task stacks in the data cache used as RAM, which the same cache controller serves.
 
 The stock firmware has the same radio code in flash and never suffers from it, because **its whole audio path runs from
-RAM**. v40 did the same for OpenPocket (`tools/ramcode.py`), and v41 builds on it:
+RAM**. v40 did the same for Gamut (then called OpenPocket; `tools/ramcode.py`), and v41 builds on it:
 
 | | v37 | stock firmware | v41 |
 | --- | --- | --- | --- |
@@ -111,7 +111,7 @@ RAM**. v40 did the same for OpenPocket (`tools/ramcode.py`), and v41 builds on i
 
 - **JieLi's own Bluetooth LE controller and host** (Apache-2.0, LLVM bitcode from the AC79 SDK, `third_party/jieli-ble/`):
   the same library family the stock firmware links (section 19.2 of STOCK-FIRMWARE.md compares them function by function).
-  OpenPocket's code around it:
+  Gamut's code around it:
   - `firmware/apps/gamut/ble/ble_os.c`: a small cooperative scheduler for its tasks, its message queues, semaphores, timers and heap;
   - `firmware/apps/gamut/ble/ble_rf.c`: the radio start-up, replayed from the stock firmware's;
   - `firmware/apps/gamut/ble/ble_midi.c`: the GATT table, the advertising, the link's parameters;
@@ -138,7 +138,7 @@ RAM**. v40 did the same for OpenPocket (`tools/ramcode.py`), and v41 builds on i
      error (`DBG 00100000`): an SRAM address with bit 21 set, the exact misread pattern the FM-1 projects documented
      (`0x00200000` read where RAM holds 0).
 
-  All three fit one cause better than the priority: **the core supplies**. OpenPocket runs on the boot loader's levels
+  All three fit one cause better than the priority: **the core supplies**. Gamut runs on the boot loader's levels
   (VDC14 1.40 V, SYSVDD 1.26 V; v33), where some units read RAM wrong under load, "both cores, or the radio" (the FM-1
   projects found it with WiFi, `fm1_sys.h`). The stock firmware always runs at VDC14 1.60 V and SYSVDD 1.38 V, on the DC-DC. A bad read
   on the second core makes it refuse its job: it is retired, every preset runs on one core, and the load doubles (`BYP`).
@@ -167,8 +167,8 @@ RAM**. v40 did the same for OpenPocket (`tools/ramcode.py`), and v41 builds on i
   `V 0 0 0`: **no stored radio record found**. The test BlackBox that a Mac saw had all four (`V F BD B0B`). Without them
   the replay wrote zeros into the crystal trim (VM 106: the oscillator, so every channel, off its frequency) and the
   radio trims (VM 107). The cause, found in the user's own backup (`fm1-1.bin`): that Pocket X keeps its VM at `0xA1000`,
-  not `0xA3000`. The scan started too high, and in any case the area lies inside OpenPocket's application area
-  (`[0x4000, 0xA3000)`), so the first OpenPocket install overwrote it. The backup still has it: VM 106 `0B 0B` (the test
+  not `0xA3000`. The scan started too high, and in any case the area lies inside Gamut's application area
+  (`[0x4000, 0xA3000)`), so the first Gamut install overwrote it. The backup still has it: VM 106 `0B 0B` (the test
   BlackBox's too), 107 `01 07 04 07 0B 01 07`, 108 zeros, 187 the unit's calibration.
   - The scan now starts at `0xA1000`.
   - A missing 106 or 107 gets those values (`ble_rf.c`); a missing 187 is measured, as before. The `V` mask says which
@@ -192,7 +192,7 @@ RAM**. v40 did the same for OpenPocket (`tools/ramcode.py`), and v41 builds on i
 | the library's zeroed data (its named `.*_bss` and its objects' plain `.bss`, renamed `.btram.lib` by `build.sh`), the tasks' queues, and the heap: all the rest, 19.1 KB (one link and the audio driver take about 17 KB of it; the first v41 build had 16 KB, too little, and the radio never started) | `BTRAM`, `0x01C00000..0x01C08000` | 32 KB |
 | the three task stacks (4 KB each) | `BTSTK`, `0x01C71000..0x01C74000`, right below the main stacks | 12 KB |
 | the library's initialised data | `RAM` (`.data`) | 2.3 KB |
-| the library's code | flash, right after OpenPocket's code, within the RAM code's call range (`_ecode`) | 154 KB |
+| the library's code | flash, right after Gamut's code, within the RAM code's call range (`_ecode`) | 154 KB |
 | the library's constants and strings | flash, after the read-only data | 60 KB |
 
 The RAM code window (`RAMTEXT`) went from 88 KB to 76 KB to make room for `BTSTK`; the audio path uses 74 KB of it. The data

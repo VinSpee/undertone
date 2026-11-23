@@ -11,7 +11,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#0b0b0a">
 <title>Install Gamut or PALETTE on a Pocket X or BlackBox</title>
-<meta name="description" content="Install Gamut (the OpenPocket firmware) or PALETTE on a Donner Pocket X or M-VAVE BlackBox from Chrome or Edge, over USB, and rescue a pedal that will not start.">
+<meta name="description" content="Install Gamut (formerly OpenPocket) or PALETTE on a Donner Pocket X or M-VAVE BlackBox from Chrome or Edge, over USB, and rescue a pedal that will not start.">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -218,7 +218,7 @@ code{font:500 14px var(--mono);background:var(--ink);color:var(--lime);padding:1
     <div class="row"><a class="go" id="kit" hidden></a></div>
     <p class="note" id="kitinfo" hidden><span id="kitfw"></span> SHA-256: <code id="kitsha"></code></p>
     <p class="note" id="kitnone" hidden><span data-t="kitnone">The rescue kit is not on this copy of the page. How to get or build it:</span> <a href="https://github.com/VinSpee/undertone/blob/main/docs/RESCUE.md#the-rescue-kit">the rescue guide</a></p>
-    <p class="note warnbox" data-t="rescuev22">After the rescue of a pedal that ran M-VAVE V22 or V23, do not install OpenPocket on it. Installing writes over the end of the V22/V23 boot loader, and the pedal goes dark again. This installer refuses such a pedal and writes nothing, but older installers do not. Wait for an installer that supports V22 and V23.</p>
+    <p class="note warnbox" data-t="rescuev22">After the rescue of a pedal that ran M-VAVE V22 or V23, do not install Gamut or PALETTE on it. Installing writes over the end of the V22/V23 boot loader, and the pedal goes dark again. This installer refuses such a pedal and writes nothing, but older installers do not. Wait for an installer that supports V22 and V23.</p>
     <details class="guide" id="rescueguide">
       <summary>How to run the rescue on your computer</summary>
       <p class="note">Unzip the kit. It makes one folder, <code>OpenPocket-rescue-kit</code>. The tool writes M-VAVE's official firmware back, and the firmware file must match the firmware the pedal had. The first run only checks the pedal and saves a backup. Nothing is written until the second run.</p>
@@ -272,7 +272,7 @@ code{font:500 14px var(--mono);background:var(--ink);color:var(--lime);padding:1
   <section class="card">
     <details>
       <summary data-t="advanced">Advanced options</summary>
-      <p class="note" data-t="ubootnote">The button below puts a pedal running OpenPocket into the chip's UBOOT mode, the state the rescue kit and the SD-card recovery (fm1buddy) work in.</p>
+      <p class="note" data-t="ubootnote">The button below puts a pedal running Gamut or PALETTE into the chip's UBOOT mode, the state the rescue kit and the SD-card recovery (fm1buddy) work in.</p>
       <p class="note" data-t="rescuedocs">The SD-card route (fm1buddy, flash/) is the second choice.</p>
       <div class="row"><button class="alt" id="uboot" disabled data-t="uboot">Enter UBOOT mode</button></div>
     </details>
@@ -296,7 +296,7 @@ import { BLACKBOX_V21, verifyFactorySounds } from "./pxfactory.js";
 const T = {
   en: {
     searching: "searching…", found: "pedal found", none: "no pedal", busy: "working…",
-    official: "official", opfw: "OpenPocket", loader: "update mode (loader)",
+    official: "official", opfw: "Gamut", loader: "update mode (loader)",
     install: "Install ", again: "Install again: ", back: "Back to ", onpedal: "on the pedal",
     unlisted: "Offered by this link only: it is not on this site's list.",
     nosuch: "No firmware by this name on this site: ",
@@ -463,7 +463,7 @@ function showDev(d) {
   const ota = IS_OTA(id);
   $("d-model").textContent = ota ? "—" : (id.model === "PocketX" ? "Donner Pocket X" : "M-VAVE BlackBox");
   $("d-fw").textContent = ota ? `${t("loader")} (${id.text})` : alt ? `${alt.name} ${alt.version} (${id.text})`
-    : IS_OPENPOCKET(id) ? `${t("opfw")} v${id.version - 900} (${id.text})` : `${t("official")} ${String(id.version).padStart(3, "0")} (${id.text})`;
+    : IS_OPENPOCKET(id) ? `${d.product ? `${d.product.name} ${d.product.version}` : `${t("opfw")} v${id.version - 900}`} (${id.text})` : `${t("official")} ${String(id.version).padStart(3, "0")} (${id.text})`;
   $("d-port").textContent = d.name;
   const bb = id.model === "BlackBox";               /* not supported yet: boot loop (issue #1) */
   $("bbwarn").hidden = !bb;

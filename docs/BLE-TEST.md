@@ -1,6 +1,6 @@
 # Bluetooth test image (BLE MIDI peripheral)
 
-An optional build of OpenPocket that turns the pedal's Bluetooth radio on and makes it a connectable BLE MIDI peripheral named
+An optional build of Gamut that turns the pedal's Bluetooth radio on and makes it a connectable BLE MIDI peripheral named
 **`OpenPocket`**. A Mac, a phone or a Chocolate Plus connects to it, and Program Change and Control Change then do what they do over
 USB ([MIDI.md](MIDI.md)). USB MIDI is not changed.
 
@@ -31,7 +31,7 @@ are `firmware/build-ble/` and `build/ble/`; `make clean` removes them.
 ## Flash it
 
 This is the pedal's normal update path, with the test packages instead of the release ones. Your pedal must already run
-OpenPocket (the stock-firmware scan was skipped on purpose).
+Gamut (the stock-firmware scan was skipped on purpose).
 
 1. `make serve-ble` builds the test packages if they are missing and opens the offline installer on
    `http://localhost:8765/` with `build/ble/` as its package folder. (Chrome or Edge, USB cable to the pedal.)
@@ -60,7 +60,7 @@ H connects by itself within seconds of the pedal starting. To reach the pedal fr
 `tools/chocolate/README.md` sets its footswitches up to switch the effects.
 
 If the screen reads `FAILED`, or nothing appears within a few seconds, please report the screen text, the pedal model,
-what the scanner shows and whether the pedal still works as a normal OpenPocket (audio, screen, USB MIDI).
+what the scanner shows and whether the pedal still works as a normal Gamut (audio, screen, USB MIDI).
 
 ## The link
 
@@ -170,7 +170,7 @@ third_party/jieli-ble/      JieLi's controller, as published (Apache-2.0): see i
 * **The controller is JieLi's**, from the Apache-2.0 SDK libraries (`btctrler.a`, 33 of its objects plus 3 helpers from
   `cpu.a`): HCI front end, link layer, advertising, the LE radio driver. Only the objects the image reaches are linked.
   The LE part of the host stack (`btstack.a`) runs as its own task; the classic profiles are stand-ins.
-  The OpenPocket code around it is small and separate from the vendor objects (`firmware/apps/gamut/ble/`), which are kept
+  The Gamut code around it is small and separate from the vendor objects (`firmware/apps/gamut/ble/`), which are kept
   unmodified under `third_party/jieli-ble/` with the licence text and the source URL.
 * **No RTOS.** The library expects tasks, queues, semaphores and timers. `ble_os.c` provides a cooperative scheduler:
   the controller's one task runs from `ble_poll()` in the main loop, switches only where it waits (queue, semaphore,

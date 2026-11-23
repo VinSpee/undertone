@@ -103,8 +103,8 @@ export function judge(readings, scan) {
     return { result: "unknown", reason: IS_OTA(now.id)
       ? `The pedal is in update mode (${now.id.text}), not running firmware. Finish or restart the update; there is no status to read.`
       : IS_ALT(now.product)
-        ? `${now.id.text} runs ${now.product.name} ${now.product.version}, an alternative firmware, not OpenPocket. This tool reads OpenPocket's status only. To put OpenPocket back: node tools/op.mjs flash --confirm-flash.`
-        : `${now.id.text} answers only the identity query: it is not OpenPocket firmware. There is no status to read.` };
+        ? `${now.id.text} runs ${now.product.name} ${now.product.version}, an alternative firmware, not Gamut. This tool reads Gamut's status only. To put Gamut back: node tools/op.mjs flash --confirm-flash.`
+        : `${now.id.text} answers only the identity query: it is not Gamut. There is no status to read.` };
   }
   if (now.level === "info") {
     return { result: "unknown", reason: `${now.info.identity} ${now.info.version} runs and answers MIDI (DSP load ${now.ping.load}%), but it has no log channel: only the Bluetooth test image built with DIAG has one. Bluetooth state, counters and last-boot report cannot be read; use the screen.` };

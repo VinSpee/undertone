@@ -188,4 +188,4 @@ Credits: the captures are from the Neural Amp Modeler community collection
 [pelennor2170/NAM_models](https://github.com/pelennor2170/NAM_models) (GNU GPL v3), by the authors named in the
 table; the DI guitar is from [Alec-Wright/Automated-GuitarAmpModelling](https://github.com/Alec-Wright/Automated-GuitarAmpModelling)
 (GNU GPL v3). The A2 architecture is Steven Atkinson's (Neural Amp Modeler, MIT); the pedal's code is written for
-OpenPocket from the published architecture.
+Gamut from the published architecture.

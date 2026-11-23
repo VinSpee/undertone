@@ -1,5 +1,5 @@
 #!/bin/sh
-# Build OpenPocket (firmware/apps/gamut/) -> build/apps/gamut/: openpocket.bin (app), PocketX_9NN.fwsc, BlackBox_9NN.fwsc
+# Build Gamut (firmware/apps/gamut/) -> build/apps/gamut/: openpocket.bin (app), PocketX_9NN.fwsc, BlackBox_9NN.fwsc
 #   and manifest.json (packages for the web installer), release.json (the catalog)   (in the container: tools/op.mjs build)
 # OP_BLE=1 sh firmware/build.sh builds the Bluetooth MIDI test image instead (docs/BLE-TEST.md): the same
 #   firmware plus the JieLi controller and host (third_party/jieli-ble) -> firmware/openpocket-ble.bin and build/ble/*.fwsc.
@@ -60,7 +60,7 @@ CHAN="${OP_CHANNEL:-}"
 if [ -n "$CHAN" ]; then
   case "$CHAN" in *[!a-z0-9-]*|"") echo "ERROR: OP_CHANNEL must be lowercase letters, digits and -"; exit 1;; esac
   TESTVER="${OP_TEST_VERSION:-42}"
-  printf '#define OP_VERSION_NUM "%s"\n#define OP_TAG " %s"\n' "$TESTVER" "$(echo "$CHAN" | tr a-z- A-Z' ')" > "$O/channel.h"
+  printf '#define OP_VERSION_NUM "%s"\n#define OP_VERSION_TEXT "v%s"\n#define OP_TAG " %s"\n' "$TESTVER" "$TESTVER" "$(echo "$CHAN" | tr a-z- A-Z' ')" > "$O/channel.h"
   APP="$HERE/../build/apps/gamut/openpocket-$CHAN.bin"; PKG="$HERE/../build/apps/gamut/$CHAN"
   rm -f "$APP"
   echo "Test channel: $CHAN, version $TESTVER -> $APP, $PKG"

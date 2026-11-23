@@ -69,7 +69,7 @@ footer { color: var(--dim); font-size: 0.9em; padding-block: calc(var(--gap) * 2
 <a class="skip" href="#content">Skip to the guide</a>
 <header>
   <h1>PALETTE: user's guide</h1>
-  <p class="lead">Four effect modules in a row, one of five effects in each, in any order. PALETTE is an alternative firmware for the Donner Pocket X and the M-VAVE BlackBox, built from this repository. It is not OpenPocket: the pedal runs one or the other.</p>
+  <p class="lead">Four effect modules in a row, one of five effects in each, in any order. PALETTE is an alternative firmware for the Donner Pocket X and the M-VAVE BlackBox, built from this repository. It is not Gamut: the pedal runs one or the other.</p>
   <p class="note"><strong>Read this first.</strong> PALETTE has not run on a pedal yet. This guide describes the firmware as it runs in the simulator on a computer, with the pedal's own code. The pictures are that simulator's screen. Before a first install, read <a href="PALETTE-REPORT.md">the checks on a pedal</a>.</p>
   <nav aria-label="Contents">
     <ul>
@@ -282,7 +282,7 @@ footer { color: var(--dim); font-size: 0.9em; padding-block: calc(var(--gap) * 2
 <figure class="gif"><img src="recordings/palette-controls.gif" width="480" height="548" alt="An animation of 25 steps through the controls, each with a caption under the screen"><figcaption>The controls in sequence, 25 steps. Each frame has its caption.</figcaption></figure>
 
 <h2 id="presets">6. Presets</h2>
-<p>There are 80 slots in four banks of twenty, A to D. The first twenty have factory sounds until you save over them. A slot that was never saved and has no factory sound is EMPTY. A sound saved to an empty slot gets the name USER and the slot's number. Saving does not touch OpenPocket's presets, and OpenPocket does not touch these.</p>
+<p>There are 80 slots in four banks of twenty, A to D. The first twenty have factory sounds until you save over them. A slot that was never saved and has no factory sound is EMPTY. A sound saved to an empty slot gets the name USER and the slot's number. Saving does not touch Gamut's presets, and Gamut does not touch these.</p>
 <div class="scroll" role="region" aria-label="The twenty factory presets" tabindex="0">
 <table>
 <thead><tr><th scope="col">Slot</th><th scope="col">Name</th><th scope="col">What is on, in the chain's order</th></tr></thead>
@@ -355,8 +355,8 @@ footer { color: var(--dim); font-size: 0.9em; padding-block: calc(var(--gap) * 2
 <h2 id="safe">9. Safe mode and the way back</h2>
 <ul>
   <li><strong>Overload.</strong> If the sound stays above 85 % load, the pedal bypasses it and the last line says OVERLOAD. The guitar passes.</li>
-  <li><strong>Safe mode.</strong> After a crash, or a start that did not finish, the next start is in safe mode: the last line says SAFE MODE, the effects stay off, the guitar passes, and USB answers. From there, install again or go back to OpenPocket.</li>
-  <li><strong>Back to OpenPocket.</strong> Run <code>node tools/op.mjs flash --confirm-flash</code>, or open the installer page and press "Back to OpenPocket". OpenPocket's presets, amp models and cabinets are still there, and PALETTE's presets stay for the next time.</li>
+  <li><strong>Safe mode.</strong> After a crash, or a start that did not finish, the next start is in safe mode: the last line says SAFE MODE, the effects stay off, the guitar passes, and USB answers. From there, install again or go back to Gamut.</li>
+  <li><strong>Back to Gamut.</strong> Run <code>node tools/op.mjs flash --confirm-flash</code>, or open the installer page and press "Back to Gamut". Gamut's presets, amp models and cabinets are still there, and PALETTE's presets stay for the next time.</li>
   <li><strong>Everything else about install and recovery</strong> is in <a href="ALT-FIRMWARE.md">ALT-FIRMWARE.md</a>. STARTER, the other alternative firmware, keeps its data in the same part of the flash as PALETTE, so a save on one replaces the other's sounds. Going back to the official firmware is its section 5.</li>
 </ul>
 

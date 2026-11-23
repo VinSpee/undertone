@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
-// OpenPocket web editor: the Models section. The pedal's 16 NAM user slots and 8 cabinet IR slots, the library of
+// Gamut web editor: the Models section. The pedal's 16 NAM user slots and 8 cabinet IR slots, the library of
 // files this browser keeps for them (docs/pxlib.js), and TONE3000 (docs/pxt3k.js). The two kinds of slot share
 // everything here but how a file is read and sent.
 
@@ -413,7 +413,7 @@ function renderT3k() {
   if (!t3kSignedIn()) {
     fill(el,
       h("div", { class: "card-head" }, logo()),
-      h("p", { class: "t3k-pitch", text: "Amp, pedal and full-rig captures shared by players, free to use. OpenPocket plays their NAM A2 captures." }),
+      h("p", { class: "t3k-pitch", text: "Amp, pedal and full-rig captures shared by players, free to use. Gamut plays their NAM A2 captures." }),
       h("p", { class: "dim", text: "TONE3000 opens in its own window: sign in there, search and listen, and choose a tone. It comes back here with its captures, ready for a slot." }),
       h("button", { type: "button", class: "btn primary", id: "t3kbrowse", disabled: t3k.busy, onclick: browse }, t3k.busy ? "Waiting for the TONE3000 window…" : "Browse TONE3000"),
       t3k.error && h("p", { class: "warn", role: "alert" }, icon("alert"), ` TONE3000: ${t3k.error}`),

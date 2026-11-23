@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: GPL-3.0-only
- * OpenPocket X — Milestone 1 (boot + screen) — Donner Pocket X.
+ * Gamut (formerly OpenPocket) — Milestone 1 (boot + screen) — Donner Pocket X.
  * SCREEN (reverse-engineered from the stock firmware): SOFTWARE SPI on PORT B
  *   CS = PB1, D/C = PB5, CLK = PB6, DO = PB7   (PC7 is not the screen's: the button lights' enable, px_leds.h)
  * (the FM-1 used port C: that was the cause of the black screen.)
@@ -9,7 +9,7 @@
 #include <stdint.h>
 #define AUDIO_PROBE 0      /* 1 = audio test (find IN/OUT on the I2S) instead of the UI */
 #define DSP_CPU1 1         /* 1 = DSP engine on the 2nd core (automatic fallback to CPU0 on trouble) */
-#define OP_NAME "OPENPOCKET"            /* the name on the boot screen (base/boot_screens.h) */
+#define OP_NAME "Gamut"                 /* the name on the boot screen (base/boot_screens.h) */
 #define OP_RAM_CODE px_block_label      /* the engine's RAM code: a crash report gives its place (base/boot_screens.h) */
 #include "base/board.h"               /* the chip, the pins, the screen and its text (docs/BASE-FIRMWARE.md) */
 /* ---- preset: the v2 engine's struct (firmware/apps/gamut/engine/px_dsp.h), edited directly by the UI ---- */
@@ -23,8 +23,9 @@ static void st_get(uint32_t k, px_preset_t *p);   /* px_store.h: the saved prese
 static uint8_t preset_new;                             /* v40.3: a preset was loaded: the sound follows at once */
 static void load_preset(uint32_t i) { st_get(i, &PRESET); preset_new = 1; }
 
-#ifndef OP_VERSION_NUM                  /* a test channel build (firmware/build.sh, OP_CHANNEL) sets its own number and tag */
-#define OP_VERSION_NUM "43"
+#ifndef OP_VERSION_NUM                  /* a test channel build (firmware/build.sh, OP_CHANNEL) sets its own number, text and tag */
+#define OP_VERSION_NUM "50"             /* the package identity: PocketX_950, BlackBox_950 (tools/pxpkg.py) */
+#define OP_VERSION_TEXT "1.0b1"         /* the version people read: the boot screen, the editor's INFO reply */
 #endif
 #ifndef OP_TAG
 #define OP_TAG ""
@@ -32,7 +33,7 @@ static void load_preset(uint32_t i) { st_get(i, &PRESET); preset_new = 1; }
 #ifndef OP_GUARD_STACK      /* hardware stack-limit guard (fm1_guard.h). build.sh turns it off for the Bluetooth test image, */
 #define OP_GUARD_STACK 1    /* whose task stacks (ble_os.c) lie outside [_ustack_lo, _sstack_top]; app.ld checks this at link time */
 #endif
-#define OP_VERSION "v" OP_VERSION_NUM OP_TAG   /* shown at boot: changes with every released build */
+#define OP_VERSION OP_VERSION_TEXT OP_TAG   /* shown at boot: changes with every released build */
 #define PROBE 0            /* 1 = GPIO diagnostic: shows the pins that change at the bottom */
 #define ADC_PROBE 0        /* 1 = ADC diagnostic: shows the channels that move at the bottom (C2:512) */
 #define LED_PROBE 0        /* 1 = LED map (issue #8, led_probe.h): the knob picks a bit of the lights' 595, it blinks; no sound */

@@ -18,7 +18,7 @@ node tools/op.mjs sim --app starter      # an alternative firmware of firmware/a
 | `--flash FILE` | the pedal's flash, kept between runs (default `build/sim/flash.bin`) |
 | `--reset` | delete the flash file first: factory presets only |
 | `--update FILE` | run the update flow on this 1 MiB flash image (it is never written), see "The installer" |
-| `--app NAME` | run the app `firmware/apps/NAME` in place of OpenPocket, see "An app on the base firmware". Its flash is `build/sim/flash-NAME.bin` |
+| `--app NAME` | run the app `firmware/apps/NAME` in place of Gamut, see "An app on the base firmware". Its flash is `build/sim/flash-NAME.bin` |
 | `--failed-start` | with `--app`: the start before did not finish, so the app starts in safe mode |
 
 ## What runs
@@ -221,7 +221,7 @@ fake packages for a try.
 ## An app on the base firmware
 
 `node tools/op.mjs sim --app starter` runs an alternative firmware ([ALT-FIRMWARE.md](ALT-FIRMWARE.md)) in place of
-OpenPocket. The program is the app's own C file and its engine (`app.sh` names them), compiled for this computer with
+Gamut. The program is the app's own C file and its engine (`app.sh` names them), compiled for this computer with
 `tests/host` as the chip. Three files are stood in for: `base/board.h` (the chip, the screen, the time), `px_usb.h` (USB,
 the flash), and `base/start.h` (the program's start, and the commands of this simulator). Every other part of the base
 firmware is the pedal's own code: the start and the main loop, the controls from the pins up, the audio stages, the store,
@@ -245,7 +245,7 @@ The API is the one above, with these differences:
 | `POST /api/clock/N/MS` | `N` MIDI clocks, `MS` + 1 milliseconds apart, with the even timing a test needs |
 | `POST /api/midi` | SysEx reaches the update code's handshake, INFO and the app's own requests; any other message goes through the MIDI ring to the app's map |
 
-`battery`, `tuner`, `load`, and `bypass` are the OpenPocket simulator's only.
+`battery`, `tuner`, `load`, and `bypass` are the Gamut simulator's only.
 
 **The app's sound.** The page's Listen button plays the chosen guitar loop through the app. The sound is made by the
 app's own C code in the simulator program, not by a WebAssembly engine: the page asks for a quarter of a second at a

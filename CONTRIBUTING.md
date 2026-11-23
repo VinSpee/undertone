@@ -33,7 +33,7 @@ notes. A change that touches two units names both in one changeset and appears u
 
 | Unit | Section in the notes | Its files |
 | --- | --- | --- |
-| `openpocket` | OpenPocket firmware | `firmware/apps/gamut/` (`openpocket.c`, its headers, `ble/`, `engine/`), the web editor (`docs/editor.html` and its scripts) |
+| `openpocket` | Gamut firmware | `firmware/apps/gamut/` (`openpocket.c`, its headers, `ble/`, `engine/`), the web editor (`docs/editor.html` and its scripts) |
 | `palette` | PALETTE firmware | `firmware/apps/palette/`, `docs/PALETTE*.md` |
 | `base` | Base firmware | `firmware/base/`, `firmware/bsp/`, `firmware/sdk/`, `firmware/apps/starter/`, `firmware/build.sh`, `loader/`, the packager (`tools/pxpkg.py`) |
 | `tools` | Installer, rescue and tools | the web installer (`docs/install.html` and its scripts), `tools/flash.mjs`, the rescue tool, `tools/log.mjs`, the simulator, `tools/op.mjs` |

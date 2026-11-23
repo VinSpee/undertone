@@ -1,7 +1,7 @@
-# OpenPocket editor protocol (SysEx over USB-MIDI)
+# Gamut editor protocol (SysEx over USB-MIDI)
 
 The web editor (`docs/editor.html`, `docs/pxedit.js`) talks to the pedal with this protocol. The firmware side is
-`firmware/apps/gamut/px_editor.h`; `tests/edsim.c` runs the same code on a PC for the tests. Protocol version 5 (OpenPocket v43: slot IR1's factory IR, `IR_LIST` present 2; version 4: v42, `USB_AUDIO`, command 28; version 3: v38, the cabinet IR commands 24..27; version 2: v37, without them;
+`firmware/apps/gamut/px_editor.h`; `tests/edsim.c` runs the same code on a PC for the tests. Protocol version 5 (Gamut 1.0b1, formerly v43: slot IR1's factory IR, `IR_LIST` present 2; version 4: v42, `USB_AUDIO`, command 28; version 3: v38, the cabinet IR commands 24..27; version 2: v37, without them;
 version 1: v32 to v36, also without the NAM commands 19..22). A later version only adds commands: an editor written for
 an earlier one works unchanged.
 
@@ -26,7 +26,7 @@ The 12 blocks, by index: 0 GATE, 1 COMP, 2 PITCH, 3 SFX, 4 DRIVE, 5 AMP, 6 CAB, 
 
 | cmd | Request args | Reply args |
 | --- | --- | --- |
-| 1 INFO | — | protocol (1), firmware string ("v32"), identity string ("PocketX_932"), blocks (12), parameters per block (5), slots (52), name length (13). An image that is not OpenPocket answers protocol 0 and other fields: see "Another product" below |
+| 1 INFO | — | protocol (1), firmware string ("1.0b1"), identity string ("PocketX_950"), blocks (12), parameters per block (5), slots (52), name length (13). An image that is not Gamut answers protocol 0 and other fields: see "Another product" below |
 | 2 CAT_BLOCK | block | block, label string ("AMP"), name string ("AMPLIFIER"), types, color |
 | 3 CAT_TYPE | block, type | block, type, name string, parameters n, text mask (bit k: parameter k has its own value texts, see `TEXTS`), then n parameter-name strings |
 | 4 TEXTS | block, type, k | block, type, k, then 101 strings: the text the pedal shows for values 0..100 ("" = the number itself) |
@@ -57,7 +57,7 @@ The 12 blocks, by index: 0 GATE, 1 COMP, 2 PITCH, 3 SFX, 4 DRIVE, 5 AMP, 6 CAB, 
 
 ### Another product (protocol 0)
 
-OpenPocket's protocol number is 1 or more. An alternative firmware built on the same base
+Gamut's protocol number is 1 or more. An alternative firmware built on the same base
 ([ALT-FIRMWARE.md](ALT-FIRMWARE.md), `firmware/base/product.h`) answers `INFO` with protocol 0, and then says which
 product it is:
 
@@ -66,8 +66,8 @@ product it is:
 | 0, firmware string ("v01"), identity string ("PocketX_901"), id string ("starter": lowercase letters, digits, "-"), name string ("STARTER"), capabilities (bit 0 stereo sound, bit 1 USB audio, bit 2 a MIDI map, bit 3 its own data in flash), its own editor protocol (0 = none) |
 
 It answers none of the other commands of this document. With an editor protocol of its own it answers its own
-commands in the same framing, which that product documents. An editor written for OpenPocket takes protocol 0 as
-"not OpenPocket" and does not open: `docs/pxedit.js` reports the product, and the page says how to put OpenPocket back.
+commands in the same framing, which that product documents. An editor written for Gamut takes protocol 0 as
+"not Gamut" and does not open: `docs/pxedit.js` reports the product, and the page says how to put Gamut back.
 
 ### NAM models (protocol 2)
 
