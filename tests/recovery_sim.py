@@ -34,10 +34,11 @@ class SimRecovery:
     manufacturer, product, bcd_device = "SINCO", "PD40 BOOT Recovery", 0x0100
 
     def __init__(self, state=0, boot_crc=V23_BOOT_CRC, fault=None, in_zeros=False, swallows=True, sie_fails_at=None,
-                 after_reset="uboot", reset_s=0.5):
+                 after_reset="uboot", reset_s=0.5, sie_error=DeviceGone):
         assert fault in (None, *FAULTS) and after_reset in AFTER_RESET
         self.state, self.boot_crc, self.fault, self.in_zeros, self.swallows = state, boot_crc, fault, in_zeros, swallows
         self.sie_fails_at, self.after_reset, self.reset_s = sie_fails_at, after_reset, reset_s
+        self.sie_error = sie_error                # what the computer sees of the failed access
         self.transfers, self.frames, self.write_attempts, self.requests = [], [], [], []
         self.accumulated, self.armed, self.waiting = b"", [], False   # armed: the packets queued on bulk IN
         self.last_reply, self.frame_buffer = bytes(64), bytes(pr.FRAME)
@@ -54,7 +55,7 @@ class SimRecovery:
         self.transfers.append((kind, *what))
         if self.sie_fails_at is not None and len(self.transfers) >= self.sie_fails_at:
             self.depart()
-            raise DeviceGone("gone")
+            raise self.sie_error("gone")
 
     def control_in(self, request, n):
         self.access("control", request, n)

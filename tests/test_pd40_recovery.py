@@ -180,6 +180,28 @@ class Pd40Recovery(unittest.TestCase):
                 self.assertIn("send this output back", shown)
                 self.assertGreaterEqual(bus.t, 60, "the watch runs its whole time")
 
+    def test_the_leaves_transfer_failing_as_the_pedal_leaves_starts_the_bus_watch(self):
+        for at in (7, 8):                                # the leave's send, then the read of its reply
+            with self.subTest(at=at):
+                sim = SimRecovery(sie_fails_at=at, sie_error=pr.ScsiError)
+                bus = SimBus(sim)
+                rc, shown = self.run_tool(bus, "--leave", "--accept-inferred")
+                self.assertEqual(rc, 0, shown)
+                self.assertIn("its reply did not arrive", shown)
+                self.assertIn("watching the bus for 60 s", shown)
+                self.assertIn("4C4A:8057 appeared", shown)
+
+    def test_the_frame_header_is_printed_before_the_send(self):
+        header = pr.frame(pr.HELLO, 1)[:24].hex()
+        for error in (pr.DeviceGone, pr.ScsiError):
+            with self.subTest(error=error.__name__):
+                sim = SimRecovery(sie_fails_at=3, sie_error=error)   # the hello's bulk OUT
+                rc, shown = self.run_tool(SimBus(sim))
+                self.assertEqual(rc, 4, shown)
+                self.assertEqual(len(sim.frames), 0)
+                self.assertRegex(shown, rf"\[ *\d+ ms\] frame header: {header} \(command 1, tag 1, length 0\)")
+                self.assertLess(shown.index("frame header"), shown.index("the pedal left the bus"))
+
     def test_a_failed_transfer_with_the_pedal_still_there(self):
         sim = SimRecovery(fault="stall")
         rc, shown = self.run_tool(SimBus(sim))

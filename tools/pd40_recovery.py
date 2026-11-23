@@ -149,6 +149,7 @@ class Recovery:
     def send(self, command):
         data = frame(command, self.tag + 1)
         self.tag += 1
+        self.log(f"frame header: {data[:24].hex()} (command {command}, tag {self.tag}, length 0)")
         self.dev.bulk_out(data)
         self.log(f"frame: command {command}, tag {self.tag}, {len(data)} bytes in one transfer")
 
@@ -207,11 +208,8 @@ class Recovery:
         if hello.state not in LEAVE_STATES:
             raise GuardError(f"the recovery mode is in state {hello.state}: another tool started an update, and "
                              "command 6 is refused there. Power-cycle the pedal into the recovery mode again first")
-        try:
-            self.send(LEAVE)
-            raw = self.read(FIRST_READ_MS, "bulk IN read")
-        except DeviceGone:
-            return None
+        self.send(LEAVE)
+        raw = self.read(FIRST_READ_MS, "bulk IN read")
         if raw is None:
             return None
         r = parse_reply(raw, LEAVE, self.tag)
@@ -298,7 +296,12 @@ def run(bus, sync, leave, watch, log):
             if bulk is not None:
                 raise GuardError("the hello reply did not come over the bulk IN endpoint, and the pedal acts on command "
                                  "6 only after its reply has been read there")
-            r = session.leave(hello)
+            try:
+                r = session.leave(hello)
+            except ScsiError as e:
+                if not left_bus(bus, e):
+                    raise
+                r = None
             stamped("leave: " + ("accepted, the pedal resets" if r else "sent; its reply did not arrive"))
     finally:
         dev.close()
