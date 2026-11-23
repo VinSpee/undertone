@@ -87,7 +87,9 @@ class Pd40Recovery(unittest.TestCase):
                      "CRC-32 0xb19d96a1: M-VAVE V22 or V23", "write range [0x6000, 0x9f000)",
                      "protocol constants 0x07910040 0x00020000", "erase started 0x0, last flash error 0x0",
                      "not reported by the protocol: the chip key and the flash id",
-                     "read-only probe finished: nothing was written"):
+                     "read-only probe finished: nothing was written",
+                     "watching the bus for 60 s (listing only", "the pedal stayed in the recovery mode for the whole "
+                     "watch (60 s): it did not end on its own"):
             self.assertIn(line, shown)
         self.assertNotIn("bulk IN read 2", shown)
         self.assertNotIn("buffers are not empty", shown)
@@ -161,7 +163,7 @@ class Pd40Recovery(unittest.TestCase):
     def test_the_pedal_leaving_ends_the_probe_and_starts_the_bus_watch(self):
         for after, said in (("uboot", "4C4A:8057 appeared: the chip's USB boot state"),
                             ("recovery", "3654:7940 appeared: the recovery mode"),
-                            ("app", "3654:7756 appeared: the stock V23 app"),
+                            ("app", "3654:7756 appeared: the normal pedal (the stock V23 app)"),
                             (None, "nothing appeared within 60 s: the pedal powered off or hung")):
             with self.subTest(after=after):
                 sim = SimRecovery(sie_fails_at=5, after_reset=after)
@@ -246,7 +248,7 @@ class Pd40Recovery(unittest.TestCase):
         rc, shown = self.run_tool(SimBus(sim), "--leave", "--accept-inferred", "--watch", "2")
         self.assertEqual(rc, 3, shown)
         self.assertTrue(sim.left)
-        self.assertIn("3654:7756 appeared: the stock V23 app", shown)
+        self.assertIn("3654:7756 appeared: the normal pedal (the stock V23 app)", shown)
         self.assertIn("did not appear within 2 s", shown)
         self.assertIn("stop and write nothing to this pedal", shown)
 
@@ -261,7 +263,7 @@ class Pd40Recovery(unittest.TestCase):
         rc, shown = self.run_tool(SimBus(SimRecovery(state=6)), "--leave", "--accept-inferred")
         self.assertEqual(rc, 0, shown)
 
-    def test_a_hello_read_from_the_reply_buffer_never_allows_the_leave(self):
+    def test_a_hello_read_from_the_reply_buffer_refuses_the_leave_and_watches_the_bus(self):
         for sim, argv in ((SimRecovery(), ["--sync"]), (SimRecovery(in_zeros=True), []),
                           (SimRecovery(fault="silent"), []), (SimRecovery(fault="short"), [])):
             with self.subTest(argv=argv, zeros=sim.in_zeros, fault=sim.fault):
@@ -269,14 +271,109 @@ class Pd40Recovery(unittest.TestCase):
                 rc, shown = self.run_tool(bus, *argv, "--leave", "--accept-inferred")
                 self.assertEqual(rc, 2, shown)
                 self.assertIn(TO_CONTROL, shown)
-                self.assertIn("REFUSED: the hello reply did not come over the bulk IN endpoint", shown)
+                self.assertIn("leave: not sent (refused, see the end)", shown)
+                self.assertTrue(shown.endswith("REFUSED: the hello reply did not come over the bulk IN endpoint, and "
+                                               "the pedal acts on command 6 only after its reply has been read there; "
+                                               "nothing more was sent\n"), shown)
                 self.assertEqual(self.commands(sim), [pr.HELLO])
-                self.assertEqual((sim.left, bus.looked), (False, 0))
+                self.assertFalse(sim.left)
+                self.assertGreaterEqual(bus.t, 60, "the bus is watched before the refusal")
+        self.assertIn(f"{TO_CONTROL} the reply is 32 bytes, not 64", shown)
+
+    def test_control_reply_goes_only_with_the_accepted_leave(self):
+        for argv in (["--accept-control-reply"], ["--leave", "--accept-control-reply"],
+                     ["--accept-inferred", "--accept-control-reply"]):
+            with self.subTest(argv=argv):
+                shown = io.StringIO()
+                with self.assertRaises(SystemExit) as stop, contextlib.redirect_stderr(shown):
+                    pr.main(argv)
+                self.assertEqual(stop.exception.code, 2)
+                self.assertIn("goes with --leave", shown.getvalue())
+
+    def test_a_hello_read_from_the_reply_buffer_allows_the_leave_with_its_own_flag(self):
+        """--accept-control-reply lets the one command 6 go out after a hello read over the control endpoint only."""
+        for sim, argv in ((SimRecovery(), ["--sync"]), (SimRecovery(in_zeros=True), [])):
+            with self.subTest(argv=argv, zeros=sim.in_zeros):
+                bus = SimBus(sim)
+                rc, shown = self.run_tool(bus, *argv, "--leave", "--accept-inferred", "--accept-control-reply")
+                self.assertEqual(rc, 0, shown)
+                self.assertIn(TO_CONTROL, shown)
+                self.assertIn("leave: sent although the hello reply came over the control endpoint only", shown)
+                self.assertEqual(self.commands(sim), [pr.HELLO, pr.LEAVE])
+                self.assert_no_write(sim)
+                self.assertTrue(sim.left)
+                self.assertIn("4C4A:8057 appeared: the chip's USB boot state", shown)
+                self.assertIn("after leaving, the pedal came back as 4C4A:8057, the chip's USB boot state", shown)
+                self.assertNotIn("REFUSED", shown)
+        # the bulk IN endpoint that sent zeros for the hello sends zeros for the leave too, and the pedal acts on it
+        self.assertIn("frame: command 6, tag 2, 4608 bytes in one transfer\n[   300 ms] bulk IN read 1: 64 B all zero\n"
+                      "[   300 ms] the pedal left the bus (gone), 0 ms after the last command sent (command 6, tag 2) "
+                      "and 300 ms after the first access\n[   300 ms] leave: sent; its reply did not arrive", shown)
+
+    def test_the_flag_changes_nothing_when_the_hello_came_over_bulk_in(self):
+        sim = SimRecovery()
+        rc, shown = self.run_tool(SimBus(sim), "--leave", "--accept-inferred", "--accept-control-reply")
+        self.assertEqual(rc, 0, shown)
+        self.assertEqual(self.commands(sim), [pr.HELLO, pr.LEAVE])
+        self.assertNotIn("sent although", shown)
+
+    def test_a_leave_the_pedal_does_not_take_is_not_repeated(self):
+        """After a bulk IN timeout the hello reply still waits, and the pedal takes no frame: the leave fails, once."""
+        sim = SimRecovery(fault="silent")
+        rc, shown = self.run_tool(SimBus(sim), "--leave", "--accept-inferred", "--accept-control-reply")
+        self.assertEqual(rc, 1, shown)
+        self.assertIn("stopped answering", shown)
+        self.assertEqual([t for t in sim.transfers if t[0] == "bulk out"], [("bulk out", pr.FRAME)] * 2)
+        self.assertEqual(self.commands(sim), [pr.HELLO])
+        self.assertFalse(sim.left)
+
+    def test_a_pedal_that_stays_after_the_leave(self):
+        sim = SimRecovery(stays=True)
+        bus = SimBus(sim)
+        rc, shown = self.run_tool(bus, "--leave", "--accept-inferred", "--watch", "5")
+        self.assertEqual(rc, 5, shown)
+        self.assertEqual(self.commands(sim), [pr.HELLO, pr.LEAVE])
+        self.assertIn("leave: accepted, the pedal resets", shown)
+        self.assertIn("the pedal stayed in the recovery mode for 5 s after command 6: it did not act on it", shown)
+        self.assertNotIn("left the bus", shown)
+        self.assertGreaterEqual(bus.t, 5)
+
+    # ---- when the pedal leaves: the time since the last command sent and since the first access
+    def test_the_recovery_mode_ending_on_its_own_after_the_probe_is_timed(self):
+        """What a real pedal on V23 did: the mode ended within seconds of a probe that sent no leave."""
+        for after, back in (("uboot", "4C4A:8057, the chip's USB boot state"),
+                            ("app", "3654:7756, the normal pedal (the stock V23 app)")):
+            with self.subTest(after=after):
+                sim = SimRecovery(exits_after=2.5, after_reset=after)
+                bus = SimBus(sim)
+                rc, shown = self.run_tool(bus)
+                self.assertEqual(rc, 4, shown)
+                self.assertEqual(self.commands(sim), [pr.HELLO], "the watch sends nothing")
+                self.assertIn("[  2500 ms] 3654:7940 left the bus: the recovery mode, seen gone 2500 ms after the last "
+                              "command sent (command 1, tag 1) and 2500 ms after the first access", shown)
+                self.assertIn(f"after leaving, the pedal came back as {back}", shown)
+                self.assertIn("send this output back: it shows when the recovery mode ended", shown)
+                self.assertGreaterEqual(bus.t, 60, "the watch runs its whole time")
+
+    def test_the_departure_after_a_leave_is_timed_from_the_leave(self):
+        sim = SimRecovery()                              # with the sync: bulk IN read 2 times out after 300 ms
+        rc, shown = self.run_tool(SimBus(sim), "--sync", "--leave", "--accept-inferred", "--accept-control-reply")
+        self.assertEqual(rc, 0, shown)
+        self.assertIn("[   300 ms] 3654:7940 left the bus: the recovery mode, seen gone 0 ms after the last command "
+                      "sent (command 6, tag 2) and 300 ms after the first access", shown)
+
+    def test_every_phase_carries_its_time(self):
+        for argv in ([], ["--leave", "--accept-inferred"]):
+            with self.subTest(argv=argv):
+                rc, shown = self.run_tool(SimBus(SimRecovery()), *argv)
+                self.assertEqual(rc, 0, shown)
+                for line in shown.splitlines():
+                    self.assertRegex(line, r"^\[ *\d+ ms\] ")
 
     # ---- the refusals
     def test_every_write_command_is_refused_before_anything_is_sent(self):
         sim = SimRecovery()
-        session = Recovery(sim, lambda m: None)
+        session = Recovery(sim, lambda m: None, lambda: 0.0)
         for command in (pr.MANIFEST, pr.BLOCK, pr.COMMIT, pr.START_APP):
             with self.subTest(command=command):
                 with self.assertRaisesRegex(GuardError, "belongs to a write to the flash"):
@@ -304,7 +401,7 @@ class Pd40Recovery(unittest.TestCase):
 
     # ---- bad answers: the tool stops, and nothing more is sent (no leave even when asked)
     def test_bad_answers_stop_the_tool(self):
-        expected = {"sync": "sync request answered", "short": "32 bytes", "magic": "not 'SBR2'", "crc": "CRC-32",
+        expected = {"sync": "sync request answered", "magic": "not 'SBR2'", "crc": "CRC-32",
                     "tag": "tag 2", "command": "command 9", "constants": "another recovery version",
                     "status": "hello was answered with status 1"}
         for fault, why in expected.items():
