@@ -184,6 +184,7 @@ class Session(pr.Recovery):
     def __init__(self, dev, log, now):
         super().__init__(dev, log, now)
         self.erased = False
+        self.committed = False
 
     def send(self, command, arg=0, payload=b"", quiet=False):
         self.tag += 1
@@ -220,6 +221,8 @@ class Session(pr.Recovery):
                 raise BadAnswer(f"after {what} the pedal expects offset {r.next_offset:#x}, not {want:#x}")
         if state is not None and r.state != state:
             raise BadAnswer(f"after {what} the pedal is in state {r.state}, not {state}")
+        if command == COMMIT and arg == COMMIT_ARG:
+            self.committed = True
         if not quiet:
             self.log(f"{what}: accepted, state {r.state}, next offset {r.next_offset:#x}, image length "
                      f"{r.image_length:#x}")
@@ -265,6 +268,18 @@ The app area is erased or half written: the pedal starts no firmware until an in
 or from 0x9F000 up was touched. Switch the pedal off, hold HOME, the right footswitch and the knob's PUSH, switch it on
 until the screen shows RECOVERY, and run this again with --write: this image, or M-VAVE's BlackBox_023.fwsc to put the
 official firmware back."""
+
+COMMITTED = """\
+The new image is written and committed; only the start of the app was not confirmed. Power-cycle the pedal. If it
+starts no firmware, enter the recovery mode (hold HOME, the right footswitch and the knob's PUSH while switching on)
+and run this again with --write."""
+
+
+def report_interrupted(session, log):
+    if session.committed:
+        log(COMMITTED)
+    elif session.erased:
+        log(ERASED)
 
 
 def run(bus, image, mode, watch, log):
@@ -315,13 +330,11 @@ def run(bus, image, mode, watch, log):
                 raise
             if not started:
                 stamped(f"the pedal left the bus ({e}): the recovery mode ended on its own; nothing more is sent")
-                if session.erased:
-                    log(ERASED)
+                report_interrupted(session, log)
                 return 4
             stamped("start the app: sent; its reply did not arrive")   # it acts once its reply is read: it was
     except (GuardError, ScsiError):
-        if session.erased:
-            log(ERASED)
+        report_interrupted(session, log)
         raise
     finally:
         dev.close()

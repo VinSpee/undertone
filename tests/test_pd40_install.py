@@ -177,6 +177,18 @@ class Pd40Install(unittest.TestCase):
                 self.assertIn(device, shown)
                 self.assert_outside_untouched(again)
 
+    def test_a_failed_start_after_the_commit_is_not_reported_as_an_erased_area(self):
+        class Refuses(SimRecovery):
+            def start(self, arg, payload):
+                return 2
+        sim = Refuses(flash=PEDAL)
+        rc, shown = self.run_tool(SimBus(sim), GAMUT_BIN, "--write")
+        self.assertNotEqual(rc, 0, shown)
+        self.assertEqual(self.commands(sim)[-1][0], 5)
+        self.assertNotIn("erased or half written", shown)
+        self.assertIn("The new image is written and committed; only the start of the app was not confirmed", shown)
+        self.assertEqual(v23_boot(sim.flash), (BASE, 0x02000120))
+
     def test_the_pedal_leaving_during_the_session(self):
         for at, erased in ((20, False), (400, True)):    # a transfer of the first pass, then of the second
             with self.subTest(at=at):
