@@ -80,6 +80,7 @@ with tempfile.TemporaryDirectory() as t:
 gamut = next(f for f in json.loads((ROOT / "firmware" / "catalog.json").read_text())["firmwares"] if f["id"] == catalog.PRIMARY)
 text = re.search(r'#define OP_VERSION_TEXT "([^"]+)"', (ROOT / "firmware" / "apps" / "gamut" / "openpocket.c").read_text())
 ok(text and gamut.get("version") == text[1], f"firmware/catalog.json gives Gamut the version text of its source ({text and text[1]})")
+ok((ROOT / "docs" / f"WHATS-NEW-{gamut['version']}.md").is_file(), f"docs/WHATS-NEW-{gamut['version']}.md exists: the release-notes link the installer builds for Gamut")
 
 if "--built" in sys.argv:
     site = ROOT / "build" / "apps" / "gamut"

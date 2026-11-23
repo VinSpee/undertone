@@ -89,7 +89,7 @@ async function loadPackage(args, { file, model }) {
   try { return { ...(await verifyPackage(bytes, entry)), path, sha256: entry.sha256, app }; } catch (e) { throw refuse(`${basename(path)}: ${e.message}`); }
 }
 // what a package is, in words, and the product the pedal must say it runs once the package is on it
-const pkgName = (p) => `${p.product} (${p.app ? `${p.app.name} ${p.app.version}, an alternative firmware` : "Gamut"})`   // (a manifest of Gamut holds no version text);
+const pkgName = (p) => `${p.product} (${p.app ? `${p.app.name} ${p.app.version}, an alternative firmware` : "Gamut"})`;   // (a manifest of Gamut holds no version text)
 const devName = (d) => `${d.id.text} (${firmwareName(d.id, d.product)})`;
 const pkgApp = (p) => (p.app ? p.app.id : OPENPOCKET);
 const wayBack = (p, say) => { if (p.app) say("To go back to Gamut: node tools/op.mjs flash --confirm-flash (your Gamut presets, NAM models and IRs were not touched)."); };
