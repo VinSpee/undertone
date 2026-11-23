@@ -112,7 +112,7 @@ try {
   const good = [[sum("manifest.json"), "firmware/manifest.json", "manifest.json"], [sum("PocketX_924.fwsc"), "firmware/PocketX_924.fwsc", "PocketX_924.fwsc"],
     [sum("BlackBox_924.fwsc"), "firmware/BlackBox_924.fwsc", "BlackBox_924.fwsc"], [sum("starter-manifest.json"), "firmware/apps/starter/manifest.json", "starter-manifest.json"]];
   const CONTEXT = join(TMP, "context");
-  for (const part of ["docs", "site", "rescue", "tools/uboot_rescue.py", "tools/pocketx_fw.py", "RESCUE.bat", "LICENSE"])
+  for (const part of ["docs", "site", "rescue", "tools/uboot_rescue.py", "tools/pocketx_fw.py", "tools/pd40_recovery.py", "RESCUE.bat", "LICENSE"])
     cpSync(join(ROOT, part), join(CONTEXT, part), { recursive: true });
   const withPin = (name, pinTag, pinLines, ...args) => {
     writeFileSync(join(CONTEXT, "site", "RELEASE"), pinTag + "\n");
