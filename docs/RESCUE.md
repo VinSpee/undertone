@@ -140,7 +140,7 @@ The kit is one zip that unpacks to one folder, `OpenPocket-rescue-kit`. Its numb
 | File | What it is |
 | --- | --- |
 | `RESCUE.bat`, `tools/uboot_rescue.py`, `tools/pocketx_fw.py` | The rescue tool of this repository, unchanged |
-| `tools/pd40_recovery.py` | Reads M-VAVE's recovery mode on a V22 or V23 pedal and can send it to the USB boot state ([below](#a-pedal-on-m-vaves-v22-or-v23)) |
+| `tools/pd40_recovery.py` | Reads M-VAVE's recovery mode on a V22 or V23 pedal ([below](#a-pedal-on-m-vaves-v22-or-v23)) |
 | `fingerprint.bat`, `tools/head_fingerprint.py` | Says which firmware a backup or a firmware file belongs to |
 | `extract-flash.bat`, `tools/extract_flash.py` | Takes `flash.bin` out of a package, for `--image` |
 | `firmware/README.txt` | The three file names, their SHA-256, and where to get the files |
@@ -162,7 +162,7 @@ The fingerprint is the SHA-256 of the first `0x4000` bytes of the flash. `d540d2
 `ERROR` about the file: run steps 4 and 5 with `--image BlackBox_023-flash.bin` in place of `--package ...`.
 
 **Checking the download.** The installer page shows the kit's SHA-256 beside its download button. Compare it with
-`certutil -hashfile OpenPocket-rescue-kit-3.zip SHA256` on Windows or `shasum -a 256 OpenPocket-rescue-kit-3.zip` on a
+`certutil -hashfile OpenPocket-rescue-kit-4.zip SHA256` on Windows or `shasum -a 256 OpenPocket-rescue-kit-4.zip` on a
 Mac, with your kit's number in the name.
 
 **Building it.** `node tools/op.mjs kit` (or `make kit`) writes the zip and `manifest.json` into `docs/rescue/`, where
@@ -258,23 +258,48 @@ Exit codes: 0 done, 1 setup problem (libusb, root, files), 2 refused by a safety
 Use this for a BlackBox whose V22 or V23 boot loader is intact: a pedal that runs the official V22 or V23, or one whose app
 no longer starts but which still shows `RECOVERY` with the key combination of step 1. On such a pedal nothing else in this repository reaches the
 chip's USB boot state, so `uboot_rescue.py` cannot start. M-VAVE's boot loader has a recovery mode of its own, and
-`tools/pd40_recovery.py` uses it to get there. The helper never writes to the pedal's flash.
+`tools/pd40_recovery.py` reads it. Whether that mode can lead to the USB boot state is not yet known. The helper never
+writes to the pedal's flash.
+
+**What a real pedal did.** On a BlackBox on the official V23 the recovery device appeared and answered the sync request
+`0x42`, but the bulk IN endpoint then sent 64 zero bytes in place of the hello reply and nothing after, and within
+seconds the pedal left the bus. The recovery code, read again, never composes a reply of zeros, and it has no timer: it
+ends at its first failed access to its USB controller. The helper therefore no longer sends the sync, reads the hello
+reply also over the control endpoint (vendor request `0x43`, which returns the reply buffer, and `0x44`, which returns
+the start of the frame buffer), and, when the pedal leaves the bus, lists the USB devices to see what it starts next.
 
 1. **Enter the recovery mode.** Switch the pedal off. Hold HOME, the right footswitch and the knob's PUSH, switch it
    on, and keep holding until the screen shows `RECOVERY`. The Mac then lists `PD40 BOOT Recovery` (USB `3654:7940`)
    in `ioreg -p IOUSB` or in System Information.
-2. **Read it.** Nothing is written.
+2. **Read it.** Nothing is written. Run the helper at once: the recovery mode can end within seconds.
 
    ```
-   python3 tools/pd40_recovery.py 2>&1 | tee recovery-probe.log
+   python3 tools/pd40_recovery.py 2>&1 | tee recovery-probe-1.log
    ```
 
-   Expect `hello: status 0 (accepted), state 0`, the write range `[0x6000, 0x9f000)`, and the boot area's CRC-32
-   `0xb19d96a1`, which is the head of the official V22 and V23. Any other CRC means the pedal's head is not that head:
-   stop. The protocol does not report the chip key or the flash id; `uboot_rescue.py` prints both after the next step.
-3. **Leave to the USB boot state.** First start the rescue tool's read-only run in a second Terminal, so that it is
-   waiting: `sudo python3 tools/uboot_rescue.py --package firmware/BlackBox_023.fwsc` in the kit folder, or
-   `make rescue ARGS="--package BlackBox_023.fwsc"` in the repository. Then:
+   Every transfer is printed with its bytes and its time in milliseconds. Expect `hello: status 0 (accepted), state 0`,
+   the write range `[0x6000, 0x9f000)`, and the boot area's CRC-32 `0xb19d96a1`, which is the head of the official V22
+   and V23. Any other CRC means the pedal's head is not that head: stop. The line under `hello` says whether the reply
+   came over the bulk IN endpoint or only over the control endpoint. The protocol does not report the chip key or the
+   flash id.
+
+   If the pedal leaves the bus, the helper sends nothing more, lists the USB devices for 60 seconds and ends with exit
+   code 4. Its last lines say what came back: the chip's USB boot state (`4C4A:8057`), the recovery mode again, the
+   stock app (`3654:7756`), or nothing.
+
+   To compare, enter the recovery mode twice more and run the helper each time: once with `--sync` (it sends the sync
+   request before the hello, as the first version did), then once more as above. In these two, release the three
+   controls as soon as the screen shows `RECOVERY`. Send the three logs back.
+3. **Do not send the leave yet.** `--leave --accept-inferred` sends command 6, which may lead to the USB boot state.
+   What the code shows: the recovery mode acts on command 6 only after the computer has read its reply, and then resets
+   the processor core, not the whole chip as OpenPocket's own soft key does. Whether the chip's ROM enters its USB boot
+   state after a core reset is not known. The recovery mode leaves the same way when it fails an access to its USB
+   controller, so a probe that ends with exit code 4 shows the answer without command 6. Until then, and on any pedal
+   whose hello reply did not come over the bulk IN endpoint, do not use `--leave`; the helper refuses it in that case.
+
+   When the logs show that the ROM does stay in its USB boot state, first start the rescue tool's read-only run in a
+   second Terminal, so that it is waiting: `sudo python3 tools/uboot_rescue.py --package firmware/BlackBox_023.fwsc` in
+   the kit folder, or `make rescue ARGS="--package BlackBox_023.fwsc"` in the repository. Then:
 
    ```
    python3 tools/pd40_recovery.py --leave --accept-inferred 2>&1 | tee recovery-leave.log
@@ -290,24 +315,29 @@ Without `--accept-inferred`, `--leave` prints why its result is not proven and s
 
 | | Status |
 | --- | --- |
-| The helper's probe, leave, refusals and handling of bad answers | Verified against a simulated recovery mode (`tests/test_pd40_recovery.py`, and the kit's own copy in `tests/test_rescue_kit.py`) |
+| The recovery device appears, answers the sync request, and sends 64 zero bytes in place of the hello reply after a sync; the pedal then leaves the bus | Seen on a real BlackBox on V23, with the first version of the helper |
+| The helper's probe, bus watch, leave, refusals and handling of bad answers | Verified against a simulated recovery mode that reproduces the zeros after a sync and the departure at one failed access (`tests/test_pd40_recovery.py`, and the kit's own copy in `tests/test_rescue_kit.py`) |
+| The corrected probe on a real pedal: whether the reply comes over bulk IN without the sync, and what the pedal starts after it leaves | Not tried |
 | USB IDs, strings and descriptors of the recovery mode | Verified: byte for byte in the V23 boot loader |
-| The frame and reply format, the CRC-32 (zlib's), command 6 and what it does: it answers, writes `usb_update_mode` to RAM, not to the flash, and resets the chip | Read in the V23 boot loader's code, not run |
-| The key combination | Read in the boot loader's code, not tried |
-| That the chip's ROM then stays in its USB boot state | Inferred, not proven. Step 3 settles it, and writes nothing either way |
-| The helper on a real pedal, on Linux, on Windows | Not tried. On Windows, set `LIBUSB_PATH` to `libusb-1.0.dll` |
+| The frame and reply format, the CRC-32 (zlib's), the requests `0x43` and `0x44`, command 6 and what it does: it answers, writes `usb_update_mode` to RAM, not to the flash, and resets the processor core once its reply has been read | Read in the V23 boot loader's code, not run |
+| The key combination | Read in the boot loader's code, and seen to show `RECOVERY` on a real pedal |
+| That the chip's ROM enters its USB boot state after that core reset | Not known. A probe that ends with exit code 4 settles it without command 6 |
+| The helper on Linux or Windows | Not tried. On Windows, set `LIBUSB_PATH` to `libusb-1.0.dll` |
 
 **Administrator rights.** The recovery mode's interface is vendor-specific and no macOS driver holds it, so the helper
-should run without `sudo`; this has not been tried on a real pedal. `uboot_rescue.py` needs `sudo` on a Mac and an
-administrator's Command Prompt on Windows, as above.
+should run without `sudo`. `uboot_rescue.py` needs `sudo` on a Mac and an administrator's Command Prompt on Windows, as
+above.
 
 **Safety rules.** The helper sends two commands only: 1 (hello) and 6 (leave), with no data. It refuses the
 protocol's write commands, 2 (manifest), 3 (block), 4 (erase and commit) and 5 (start the new app), before anything is
-sent, and every vendor request but the sync request `0x42`. It stops at the first answer it does not expect and sends
-nothing more. It sends the leave only from state 0 or 6, the states in which the recovery mode accepts it.
+sent, and every vendor request but `0x42` (only with `--sync`, and never between the hello and the reads of its reply),
+`0x43` and `0x44`. It sends one hello per run and never repeats a transfer that failed: after a bulk IN read that gets
+nothing it reads nothing more there, and when the pedal leaves the bus it only lists the USB devices. It stops at the
+first answer it does not expect and sends nothing more. It sends the leave only from state 0 or 6, the states in which
+the recovery mode accepts it, and only when the hello reply came over the bulk IN endpoint.
 
-Exit codes: 0 done, 1 setup problem or no recovery device, 2 refused or a bad answer, 3 the USB boot state did not
-appear after the leave, 130 stopped by Ctrl-C.
+Exit codes: 0 done, 1 setup problem, no recovery device or a failed transfer, 2 refused or a bad answer, 3 the USB boot
+state did not appear after the leave, 4 the pedal left the recovery mode during the probe, 130 stopped by Ctrl-C.
 
 ## BlackBox V21 factory sounds
 

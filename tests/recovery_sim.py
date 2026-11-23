@@ -1,11 +1,22 @@
 # SPDX-License-Identifier: GPL-3.0-only
 """A simulated BlackBox in M-VAVE's recovery mode (USB 3654:7940), for tests/test_pd40_recovery.py (no hardware).
 
-It answers as the V23 boot loader's recovery code was read to answer: the sync request 0x42, frames of exactly 4608
-bytes from "SBU2" on the bulk OUT endpoint, a 64-byte reply from "SBR2" with a CRC-32 over its first 60 bytes. Command 6
-in state 0 or 6 replies, then the pedal leaves the bus and the chip's USB boot state appears (or not, with
-rom_ignores_mark). It keeps every frame it took; the write commands 2 to 5 are also kept in write_attempts, which the
-tests require to stay empty. A fault makes it answer badly in one way.
+It answers as the V23 boot loader's recovery code was read to answer, packet by packet. The bulk OUT endpoint takes
+packets of 1 to 64 bytes into a 4608-byte frame from "SBU2"; a zero-length packet drops the partial frame, and no packet
+is taken while a reply waits unread. A complete frame composes a 64-byte reply from "SBR2", with a CRC-32 over its first
+60 bytes, into the reply buffer and arms the bulk IN endpoint with it, unless a packet is armed there already. The
+vendor requests are 0x42 (sync), 0x43 (the reply buffer) and 0x44 (the first 24 bytes of the frame buffer).
+
+Two behaviours of the real pedal on V23 are reproduced by default. The sync request's flush of the idle IN endpoint
+leaves an empty 64-byte packet armed, so the reply to the next frame is never sent: the old probe's sync and hello get 64
+zero bytes, then nothing (in_zeros instead sends zeros in place of every reply; swallows=False sends the reply after
+the empty packet). And one failed access to the USB
+controller (sie_fails_at, counted in the computer's transfers) ends the mode at once: the pedal leaves the bus, as
+command 6 does once its reply has been read, and after reset_s seconds comes back as after_reset: "uboot" (the chip's
+USB boot state), "recovery", "app" (the stock V23 app) or None.
+
+It keeps every transfer; the write commands 2 to 5 are also kept in write_attempts, which the tests require to stay
+empty. A fault makes it answer badly in one way; "partial" loses the frame's last packet and "deaf" takes none.
 """
 import struct, sys, zlib
 from pathlib import Path
@@ -15,44 +26,72 @@ import pd40_recovery as pr
 from uboot_rescue import DeviceGone, ScsiError
 
 V23_BOOT_CRC = 0xB19D96A1
-FAULTS = ("sync", "silent", "short", "magic", "crc", "tag", "command", "constants", "status")
+FAULTS = ("sync", "silent", "short", "magic", "crc", "tag", "command", "constants", "status", "stall", "partial", "deaf")
+AFTER_RESET = {"uboot": pr.UBOOT, "recovery": pr.RECOVERY, "app": pr.APP, None: None}
 
 
 class SimRecovery:
     manufacturer, product, bcd_device = "SINCO", "PD40 BOOT Recovery", 0x0100
 
-    def __init__(self, state=0, boot_crc=V23_BOOT_CRC, fault=None, rom_ignores_mark=False, reply_to_leave=True):
-        assert fault in (None, *FAULTS)
-        self.state, self.boot_crc, self.fault = state, boot_crc, fault
-        self.rom_ignores_mark, self.reply_to_leave = rom_ignores_mark, reply_to_leave
-        self.frames, self.write_attempts, self.requests = [], [], []
-        self.pending, self.last_reply, self.last_frame = None, bytes(64), bytes(24)
-        self.present, self.left, self.uboot, self.closed = True, False, False, False
+    def __init__(self, state=0, boot_crc=V23_BOOT_CRC, fault=None, in_zeros=False, swallows=True, sie_fails_at=None,
+                 after_reset="uboot", reset_s=0.5, sie_error=DeviceGone):
+        assert fault in (None, *FAULTS) and after_reset in AFTER_RESET
+        self.state, self.boot_crc, self.fault, self.in_zeros, self.swallows = state, boot_crc, fault, in_zeros, swallows
+        self.sie_fails_at, self.after_reset, self.reset_s = sie_fails_at, after_reset, reset_s
+        self.sie_error = sie_error                # what the computer sees of the failed access
+        self.transfers, self.frames, self.write_attempts, self.requests = [], [], [], []
+        self.accumulated, self.armed, self.waiting = b"", [], False   # armed: the packets queued on bulk IN
+        self.last_reply, self.frame_buffer = bytes(64), bytes(pr.FRAME)
+        self.present, self.left, self.closed, self.departed_at = True, False, False, None
+        self.clock = lambda: 0.0                  # the bus's, once on one
 
     def close(self):
         self.closed = True
 
-    def control_in(self, request, n):
+    def access(self, kind, *what):
+        """Every transfer of the computer: the pedal must be there, and one failed access ends the mode."""
         if not self.present:
             raise DeviceGone("gone")
+        self.transfers.append((kind, *what))
+        if self.sie_fails_at is not None and len(self.transfers) >= self.sie_fails_at:
+            self.depart()
+            raise self.sie_error("gone")
+
+    def control_in(self, request, n):
+        self.access("control", request, n)
         self.requests.append(request)
-        if request == 0x42:
-            self.pending = None                    # restarts the endpoints
+        if self.fault == "stall":
+            raise ScsiError("stall")
+        if request == 0x42 and n == 4:
+            self.accumulated, self.waiting = b"", False
+            if not self.armed:
+                self.armed = [bytes(64)]          # the flush of an idle endpoint arms an empty packet
             return b"SBUX" if self.fault == "sync" else b"SBU2"
-        if request == 0x43:
-            return self.last_reply[:n]
-        if request == 0x44:
-            return self.last_frame[:n]
+        if request == 0x43 and n == 64:
+            return self.last_reply
+        if request == 0x44 and n == 24:
+            return self.frame_buffer[:24]
         raise ScsiError("stall")
 
     def bulk_out(self, data):
-        if not self.present:
-            raise DeviceGone("gone")
         data = bytes(data)
-        self.frames.append(data)
-        self.last_frame = data[:24]
-        if len(data) != pr.FRAME:
-            return                                 # not a frame: no reply
+        self.access("bulk out", len(data))
+        if self.waiting:
+            raise pr.Timeout("frame: the pedal takes no packet while a reply waits")
+        if not data:
+            self.accumulated = b""                # a zero-length packet drops the partial frame
+            return
+        if self.fault == "deaf":
+            return
+        for i in range(0, len(data) - (64 if self.fault == "partial" else 0), 64):
+            self.accumulated += data[i:i + 64]
+            self.frame_buffer = self.accumulated + self.frame_buffer[len(self.accumulated):]
+            if len(self.accumulated) == pr.FRAME:
+                self.frames.append(self.accumulated)
+                self.accumulated = b""
+                self.handle(self.frames[-1])
+
+    def handle(self, data):
         magic, command, tag, arg, length, crc = struct.unpack("<4sIIIII", data[:24])
         if magic != b"SBU2":
             return self.reply(0, 0, 1)
@@ -69,7 +108,7 @@ class SimRecovery:
             if self.state not in (0, 6):
                 return self.reply(command, tag, 2)
             self.left = True
-            return self.reply(command, tag, 0) if self.reply_to_leave else self.leave_now()
+            return self.reply(command, tag, 0)
         return self.reply(command, tag, 1)
 
     def reply(self, command, tag, status):
@@ -86,31 +125,39 @@ class SimRecovery:
         if self.fault == "magic":
             raw = b"SBR3" + raw[4:]
         raw += struct.pack("<I", zlib.crc32(raw) ^ (1 if self.fault == "crc" else 0))
-        self.last_reply = raw
-        self.pending = raw[:32] if self.fault == "short" else raw
+        self.last_reply, self.waiting = raw, True
+        if (not self.armed or not self.swallows) and self.fault != "silent":
+            self.armed.append(bytes(64) if self.in_zeros else raw[:32] if self.fault == "short" else raw)
 
-    def leave_now(self):
-        """The recovery code writes usb_update_mode to RAM and resets: off the bus, then the ROM's USB boot state."""
-        self.present, self.pending = False, None
-        self.uboot = not self.rom_ignores_mark
-
-    def bulk_in(self, n):
-        if not self.present:
-            raise DeviceGone("gone")
-        if self.pending is None or self.fault == "silent":
-            raise ScsiError("timeout")
-        raw, self.pending = self.pending, None
+    def bulk_in(self, n, ms):
+        self.access("bulk in", n)
+        if not self.armed:
+            raise pr.Timeout("timeout")           # macOS then clears the halt, which flushes an empty endpoint
+        raw = self.armed.pop(0)
+        self.waiting = bool(self.armed)
         if self.left:
-            self.leave_now()
+            self.depart()                         # command 6 acts once its reply has been read
         return raw[:n]
+
+    def depart(self):
+        """usb_update_mode and a core reset: off the bus, then after reset_s seconds whatever starts next."""
+        self.present, self.armed, self.departed_at = False, [], self.clock()
 
 
 class SimBus:
-    """The computer's USB bus with the pedal on it, or nothing (device None)."""
-    POLL = 0
+    """The computer's USB bus with the pedal on it, or nothing (device None). Its clock moves only when it sleeps."""
+    POLL = 0.1
 
     def __init__(self, device=None):
-        self.device, self.opened, self.looked = device, 0, 0
+        self.device, self.opened, self.looked, self.t = device, 0, 0, 0.0
+        if device is not None:
+            device.clock = self.now
+
+    def now(self):
+        return self.t
+
+    def sleep(self, s):
+        self.t += s
 
     def open_recovery(self):
         if self.device is None or not self.device.present:
@@ -118,6 +165,12 @@ class SimBus:
         self.opened += 1
         return self.device
 
-    def uboot_present(self):
+    def present(self):
         self.looked += 1
-        return bool(self.device and self.device.uboot)
+        d = self.device
+        if d is None:
+            return set()
+        if d.present:
+            return {pr.RECOVERY}
+        after = AFTER_RESET[d.after_reset]
+        return {after} if after and self.t >= d.departed_at + d.reset_s else set()
