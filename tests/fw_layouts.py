@@ -7,6 +7,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "tools"))
 import pocketx_fw as fw  # noqa: E402
+import pxpkg  # noqa: E402
 
 FLASH_LEN = 0x9F000
 APP = bytes(range(256)) * 40
@@ -38,3 +39,10 @@ def flash_image(base, app=APP, length=FLASH_LEN):
     area[0x80:0xA0] = entry("PRCT", 0, length, 0x92, 0xFFFF)
     area[0:0x20] = entry("app_area_head", 0x2000120, end, 0x83, fw.crc16(area[0x20:end]))
     return bytes(head) + fw.sfc(bytes(area), 0)
+
+
+def bootable_flash(base, app=APP, length=FLASH_LEN):
+    """flash_image with a flash header the boot loader accepts (PocketX_016's), as an official flash.bin has."""
+    flash = bytearray(flash_image(base, app, length))
+    flash[:32] = fw.enc(struct.pack("<H", fw.crc16(pxpkg.FLASH_HDR)) + pxpkg.FLASH_HDR)
+    return bytes(flash)

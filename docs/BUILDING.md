@@ -45,6 +45,7 @@ Apple silicon and other ARM machines Docker emulates it (Rosetta or QEMU); you c
 | `make render IN=guitar.wav [OUT=..] [PRESET=1]` | a DI recording through the engine |
 | `make appimage DUMP=fm1-1.bin` | `fm1-300.bin` for the SD-card recovery |
 | `make rescue` / `make rescue-write` | restore a looping BlackBox from its UBOOT state from a Mac (read-only first; asks for sudo; `ARGS="--package FILE"` for options); on Windows `RESCUE.bat` in an administrator Command Prompt: `docs/RESCUE.md` |
+| `make usb-install` | install Gamut on a BlackBox, or put M-VAVE's firmware or a backup back, through the chip's USB boot state, on both flash layouts (a dry run first; `ARGS="--write"` writes; asks for sudo): `docs/RESCUE.md`, "Gamut on a BlackBox with V22 or V23" |
 | `make kit` | the rescue kit a user downloads, `docs/rescue/OpenPocket-rescue-kit-N.zip` and its `manifest.json` (`rescue/README.md`); the same bytes on every computer; needs only Python 3 |
 | `make rescue-check` | the UBOOT rescue tool (`tools/uboot_rescue.py`, see `docs/RESCUE.md`) against a simulated pedal; needs only Python 3 |
 

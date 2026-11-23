@@ -297,21 +297,30 @@ def attach(dev, loader, log):
     return Chip(key, flash_id, size, io)
 
 
-def rescue_pass(dev, loader, image, write, save_backup, log):
-    """One try at steps 1 to 6 on an open device. Returns the number of sectors that differ (and were written)."""
+def whole_image(image):
+    """The plan of this tool: the flash should hold image from 0, and [0x4000, its end) may be written."""
+    window = Window.for_image(len(image))
+    return lambda chip, flash: (image, window)
+
+
+def rescue_pass(dev, loader, plan, write, save_backup, log):
+    """One try at steps 1 to 6 on an open device. plan(chip, flash) gives the image the flash should hold from 0 and the
+    only window that may be written, or refuses this pedal with GuardError. Returns the number of sectors that differ
+    (and were written)."""
     chip = attach(dev, loader, log)
     flash = dev.read_range(0, chip.size, chip.io)
     log(f"flash read: {len(flash) // 1024} KiB")
     save_backup(flash)
     dev.keepalive()
-    if flash[:WRITE_FROM] != image[:WRITE_FROM]:
-        raise GuardError("the flash head [0, 0x4000) is not the image's head: this package belongs to another layout; "
-                         "nothing was written")
-    log("head [0, 0x4000) matches the image")
-    window = dev.window or Window.for_image(len(image))
+    image, window = plan(chip, flash)
+    if flash[:window.lo] != image[:window.lo]:
+        raise GuardError(f"the flash head [0, {window.lo:#x}) is not the image's head: this package belongs to another "
+                         "layout; nothing was written")
+    log(f"head [0, {window.lo:#x}) matches the image")
     todo = [a for a in range(window.lo, window.hi, SECTOR) if flash[a:a + SECTOR] != image[a:a + SECTOR]]
     log(f"{len(todo)} of {(window.hi - window.lo) // SECTOR} sectors in [{window.lo:#x}, {window.hi:#x}) differ")
     if write:
+        dev.window = window
         for n, addr in enumerate(todo, 1):
             dev.write_sector(addr, image[addr:addr + SECTOR])
             if n % 16 == 0 or n == len(todo):
@@ -321,7 +330,7 @@ def rescue_pass(dev, loader, image, write, save_backup, log):
     return len(todo)
 
 
-def rescue(open_device, loader, image, write, backup_dir, attempts, log, clock=time.monotonic):
+def rescue(open_device, loader, plan, write, backup_dir, attempts, log, clock=time.monotonic):
     """Run the passes until one completes (each pass is safe to repeat: only differing sectors are written)."""
     saved = []
 
@@ -340,11 +349,10 @@ def rescue(open_device, loader, image, write, backup_dir, attempts, log, clock=t
         saved.append(path)
         log(f"backup saved: {path}")
 
-    window = Window.for_image(len(image)) if write else None
     for attempt in range(1, attempts + 1):
         msc = open_device()
         try:
-            return rescue_pass(Uboot(msc, window, clock), loader, image, write, save_backup, log), saved
+            return rescue_pass(Uboot(msc, None, clock), loader, plan, write, save_backup, log), saved
         except ScsiError as e:
             log(f"the pedal went away or stopped answering ({e}); waiting for it again ({attempt}/{attempts})")
         finally:
@@ -763,7 +771,8 @@ def main(argv=None):
             log("pedal found")
             return msc
 
-        n, saved = rescue(open_device, loader, image, a.write, Path(a.backup_dir).expanduser(), a.attempts, log)
+        n, saved = rescue(open_device, loader, whole_image(image), a.write, Path(a.backup_dir).expanduser(), a.attempts,
+                          log)
     except GuardError as e:
         print(f"\nREFUSED: {e}", file=sys.stderr)
         return 2

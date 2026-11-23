@@ -83,7 +83,7 @@ with tempfile.TemporaryDirectory() as t:
         if "BlackBox" in pkg.name:
             v23 = pkg.with_name(pkg.name.replace(".fwsc", "-v23.bin"))
             ok(v23.is_file() and v23.read_bytes() == fl[0x4000:],
-               f"{v23.name}: the package's app area, for the V22/V23 recovery mode (tools/pd40_install.py)")
+               f"{v23.name}: the package's app area, for the install through the USB boot state (tools/uboot_install.py)")
         for name, head in heads:
             bad = problems(head, fl[0x4000:])
             ok(not bad, f"{pkg.name} on the {name}" + (f": {', '.join(bad)}" if bad else ""))

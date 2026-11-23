@@ -7,19 +7,22 @@ device, USB 3654:7940 "PD40 BOOT Recovery". It starts when the three controls HO
 PUSH are held at power-on, when the stock V23 app receives the SysEx F0 22 24 35 7D F7, or when an app returns to the
 boot loader. On such a pedal the chip's USB boot state (4C4A:8057), where tools/uboot_rescue.py works, is no longer
 reached the old way. This tool reads what the recovery mode says about the pedal and, when asked, sends the one command
-that may leave it for the USB boot state. docs/RESCUE.md, "A pedal on M-VAVE's V22 or V23", has the steps.
+that leaves it for the USB boot state. The repository's tools/uboot_install.py sends the same hello and leave and then
+installs or restores in one run; this helper is the way to look at a pedal without writing. docs/RESCUE.md, "A pedal
+on M-VAVE's V22 or V23", has the steps.
 
   tools/pd40_recovery.py                              read-only probe: the request buffers, one hello, its reply
   tools/pd40_recovery.py --sync                       the same with the sync request 0x42 before the hello
-  tools/pd40_recovery.py --leave --accept-inferred    the probe, then command 6, which may leave to the USB boot state
+  tools/pd40_recovery.py --leave --accept-inferred    the probe, then command 6, the leave to the USB boot state
   tools/pd40_recovery.py --leave --accept-inferred --accept-control-reply
                                                       the same, also when the hello reply came over the control endpoint
 
 The probe reads the frame buffer (vendor request 0x44) and the reply buffer (0x43), sends one hello, reads both again,
 then reads the reply on the bulk IN endpoint. The reply buffer gives the hello result even when the bulk IN endpoint
 sends something else: on a real pedal on V23 it sent 64 zero bytes, then nothing. The recovery code as read has no
-timer and ends at its first failed access to its USB controller, yet on a real pedal the mode ended within seconds of a
-probe that sent no leave. So after the probe, and after the leave, the helper releases the device and lists the USB
+timer and ends at its first failed access to its USB controller, yet on a real pedal the mode ended about 4 s after
+power-on whatever the computer did: the chip's long-press reset, which the recovery code never turns off, is the likely
+cause (inferred). So after the probe, and after the leave, the helper releases the device and lists the USB
 devices for a while, sending nothing: it logs when the pedal leaves the bus, how long after the last command it sent
 and after its first access, and whether the pedal comes back as the chip's USB boot state, the recovery mode or the
 normal pedal. Every phase and transfer is printed with its raw bytes and its time in milliseconds from the moment the
@@ -28,14 +31,16 @@ device was found.
 It never writes to the pedal's flash. The protocol's write commands (2 manifest, 3 block, 4 erase and commit, 5 start
 the new app) and every vendor request but 0x42, 0x43 and 0x44 are refused before anything is sent; frames carry no
 payload. The protocol was read in the V23 boot loader's code (frames of 4608 bytes from "SBU2", 64-byte replies from
-"SBR2", CRC-32 as zlib's). Command 6 resets the processor core, not the whole chip as OpenPocket's own soft key does;
-whether the chip's ROM then enters its USB boot state is not known: --leave stops with the explanation unless
---accept-inferred is given too. The pedal acts on command 6 once its reply has been read, so the leave is refused when
-the hello reply did not come over the bulk IN endpoint, unless --accept-control-reply is given as well: whether that
-endpoint then sends the leave's reply, and the pedal acts on it, is not known.
+"SBR2", CRC-32 as zlib's). Command 6 resets the processor core, not the whole chip as OpenPocket's own soft key does.
+On the one real pedal tried, a BlackBox on V23, the chip's ROM then entered its USB boot state: the pedal left the bus
+about 275 ms after the leave and came back as 4C4A:8057 about 500 ms later. No other pedal has been tried, so --leave
+stops with the explanation unless --accept-inferred is given too. The pedal acts on command 6 once its reply has been
+read, so the leave is refused when the hello reply did not come over the bulk IN endpoint, unless
+--accept-control-reply is given as well: that pedal answered the hello over the control endpoint only and acted on the
+leave all the same.
 
 One-time install (macOS): `brew install libusb`. The recovery device's interface is vendor-specific and no macOS driver
-holds it, so the probe should need no sudo. tools/uboot_rescue.py, which takes over after --leave, needs sudo. Linux and
+holds it, so the probe needs no sudo. tools/uboot_rescue.py, which takes over after --leave, needs sudo. Linux and
 Windows have not been tried; on Windows set LIBUSB_PATH to libusb-1.0.dll.
 Exit codes: 0 done (after a probe without the leave: the pedal stayed in the recovery mode for the whole watch), 1 setup
 problem, no recovery device or a failed transfer, 2 refused or a bad answer (nothing more was sent), 3 the pedal left
@@ -67,7 +72,7 @@ RECOVERY, UBOOT, APP = (VID, PID), (ur.VID, ur.PID), (VID, 0x7756)
 WATCHED = {UBOOT: "the chip's USB boot state", RECOVERY: "the recovery mode",
            APP: "the normal pedal (the stock V23 app)"}
 AFTER_DEPARTURE = {
-    UBOOT: "the chip's ROM honoured usb_update_mode after the core reset: the first evidence that --leave can work",
+    UBOOT: "the chip's ROM honoured usb_update_mode after the core reset",
     RECOVERY: "the boot loader ran again and saw the three controls again",
     APP: "the boot loader ran, did not see the three controls, and started the app"}
 
@@ -269,14 +274,15 @@ def describe(r, bulk, log):
 
 LEAVE_TEXT = """\
 --leave sends command 6. What is read in the V23 boot loader's code: the recovery mode answers, and once the computer
-has read that answer it writes the word usb_update_mode to RAM (not to the flash) and resets the processor core. That is
-not the chip reset that OpenPocket's own soft key uses to reach the USB boot state, and whether the chip's ROM enters
-its USB boot state (4C4A:8057) after a core reset is not known. Nobody has run it on a real pedal. The recovery mode
-leaves the same way when it fails an access to its USB controller, so a probe that ends with the pedal leaving the bus
-shows what the ROM does without command 6: run the probe first. If the ROM does not stay, the pedal simply restarts;
-nothing is written either way. Then there is no way from this pedal to the USB boot state: stop and write nothing to it.
+has read that answer it writes the word usb_update_mode to RAM (not to the flash) and resets the processor core. On the
+one real pedal tried, a BlackBox on V23, the chip's ROM then entered its USB boot state (4C4A:8057): the pedal left the
+bus about 275 ms after the leave and came back about 500 ms later. No other pedal has been tried. If the ROM does not
+stay there, the pedal simply restarts; nothing is written either way.
 
-Start the rescue tool first, in a second Terminal, so it is waiting when the USB boot state appears:
+The USB boot state lasts only seconds while nothing talks to it, so a tool must be waiting for it. To install Gamut or
+put M-VAVE's firmware back from the repository, run its tools/uboot_install.py instead (the rescue kit does not hold
+it): it sends this same leave and goes on by itself. To use this helper, start the rescue tool first, in a second
+Terminal:
     sudo python3 tools/uboot_rescue.py --package firmware/BlackBox_023.fwsc
 Then run this again with --leave --accept-inferred. Nothing was sent to the pedal."""
 
@@ -351,8 +357,7 @@ def run(bus, sync, leave, control_reply, watch, log):
             else:
                 if bulk is not None:
                     stamped("leave: sent although the hello reply came over the control endpoint only "
-                            "(--accept-control-reply); whether the bulk IN endpoint sends the leave's reply, which the "
-                            "pedal waits to have read before it acts, is not known")
+                            "(--accept-control-reply); the one real pedal tried acted on it all the same")
                 try:
                     r = session.leave(hello)
                 except ScsiError as e:
@@ -522,12 +527,13 @@ def main(argv=None):
     ap.add_argument("--sync", action="store_true",
                     help="send the sync request 0x42 before the hello (the second entry of a probe session)")
     ap.add_argument("--leave", action="store_true",
-                    help="after the probe, send command 6, which may leave to the chip's USB boot state")
+                    help="after the probe, send command 6, the leave to the chip's USB boot state")
     ap.add_argument("--accept-inferred", action="store_true",
-                    help="with --leave: send it although its result is inferred, not proven (see the text --leave prints)")
+                    help="with --leave: send it although its result is proven on one pedal only (see the text --leave "
+                         "prints)")
     ap.add_argument("--accept-control-reply", action="store_true",
                     help="with --leave --accept-inferred: send command 6 also when the hello reply came over the "
-                         "control endpoint (request 0x43) only; whether the pedal then acts on it is not known")
+                         "control endpoint (request 0x43) only, as the one real pedal tried did")
     ap.add_argument("--watch", type=float, default=60,
                     help="seconds to list the USB devices after the probe or the leave, to see whether and when the "
                          "pedal leaves the recovery mode and what it starts next (default 60)")

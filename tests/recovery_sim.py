@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: GPL-3.0-only
-"""A simulated BlackBox in M-VAVE's recovery mode (USB 3654:7940), for tests/test_pd40_recovery.py and
-tests/test_pd40_install.py (no hardware).
+"""A simulated BlackBox in M-VAVE's recovery mode (USB 3654:7940), for tests/test_pd40_recovery.py,
+tests/test_pd40_install.py and tests/test_uboot_install.py (no hardware).
 
 It answers as the V23 boot loader's recovery code was read to answer, packet by packet. The bulk OUT endpoint takes
 packets of 1 to 64 bytes into a 4608-byte frame from "SBU2"; a zero-length packet drops the partial frame, and no packet
@@ -10,8 +10,9 @@ vendor requests are 0x42 (sync), 0x43 (the reply buffer) and 0x44 (the first 24 
 
 Two behaviours of the real pedal on V23 are reproduced by default. The sync request's flush of the idle IN endpoint
 leaves an empty 64-byte packet armed, so the reply to the next frame is never sent: the old probe's sync and hello get 64
-zero bytes, then nothing (in_zeros instead sends zeros in place of every reply; swallows=False sends the reply after
-the empty packet). And one failed access to the USB
+zero bytes, then nothing (in_zeros instead sends zeros in place of every reply, and zeros_for in place of the replies
+to those commands, while the reply buffer holds the real reply, as on the real pedal; reading the zeros counts as
+reading the reply; swallows=False sends the reply after the empty packet). And one failed access to the USB
 controller (sie_fails_at, counted in the computer's transfers) ends the mode at once: the pedal leaves the bus, as
 command 6 does once its reply has been read, and after reset_s seconds comes back as after_reset: "uboot" (the chip's
 USB boot state), "recovery", "app" (the stock V23 app), "gamut" or None. Two more departures can be set: exits_after
@@ -28,7 +29,9 @@ flash: 2 the manifest, 3 a block (only checked in state 1; erased, programmed an
 kept in RAM), 4 with argument 2 the erase of the sector at 0x6000 and with argument 4 the commit (block 0 written last),
 5 the start of the new app. Its flash driver refuses every erase and program outside [0x6000, 0x9F000). After command 5
 the pedal comes back as whatever v23_boot finds on the flash: the app's own USB device, or nothing when the boot loader
-would not start it. Without a flash the write commands are answered "wrong state" and change nothing.
+would not start it. Without a flash the write commands are answered "wrong state" and change nothing. No tool of this
+repository sends the commands that write (a block after the erase, 4, 5): the tests require that the flash stays as
+it was.
 """
 import struct, sys, zlib
 from pathlib import Path
@@ -70,12 +73,13 @@ class SimRecovery:
 
     def __init__(self, state=0, boot_crc=None, fault=None, in_zeros=False, swallows=True, sie_fails_at=None,
                  after_reset="uboot", reset_s=0.5, sie_error=DeviceGone, flash=None, fails_at=None,
-                 exits_after=None, stays=False):
+                 exits_after=None, stays=False, zeros_for=()):
         assert fault in (None, *FAULTS) and after_reset in AFTER_RESET
         self.flash = None if flash is None else bytearray(bytes(flash).ljust(FLASH_SIZE, b"\xFF"))
         if boot_crc is None:                      # computed over the flash at entry, as read
             boot_crc = V23_BOOT_CRC if flash is None else zlib.crc32(self.flash[:BASE])
         self.state, self.boot_crc, self.fault, self.in_zeros, self.swallows = state, boot_crc, fault, in_zeros, swallows
+        self.zeros_for = frozenset(zeros_for)     # the commands whose replies come as zeros on bulk IN
         self.sie_fails_at, self.after_reset, self.reset_s = sie_fails_at, after_reset, reset_s
         self.sie_error = sie_error                # what the computer sees of the failed access
         self.fails_at = fails_at                  # a flash address whose program fails (status 7)
@@ -308,7 +312,8 @@ class SimRecovery:
         raw += struct.pack("<I", zlib.crc32(raw) ^ (1 if self.fault == "crc" else 0))
         self.last_reply, self.waiting = raw, True
         if (not self.armed or not self.swallows) and self.fault != "silent":
-            self.armed.append(bytes(64) if self.in_zeros else raw[:32] if self.fault == "short" else raw)
+            zeros = self.in_zeros or command in self.zeros_for
+            self.armed.append(bytes(64) if zeros else raw[:32] if self.fault == "short" else raw)
 
     def bulk_in(self, n, ms):
         self.access("bulk in", n)

@@ -14,6 +14,8 @@
 //   node tools/op.mjs render in.wav [out.wav] [preset]   |   node tools/op.mjs appimage [fm1-1.bin]
 //   node tools/op.mjs rescue [--write] [options]   (restore a looping BlackBox from its UBOOT state; read-only without --write; docs/RESCUE.md)
 //   node tools/op.mjs rescue-check   (the UBOOT rescue tool against a simulated pedal: Python 3 only, no Docker)
+//   node tools/op.mjs usb-install [--write] [--official FILE.fwsc | --restore DUMP.bin]   (Gamut, or M-VAVE's firmware back, on a
+//                                BlackBox through the chip's USB boot state, on both flash layouts; a dry run without --write; docs/RESCUE.md)
 //   node tools/op.mjs kit [--official DIR]   the rescue kit a user downloads -> docs/rescue/ (rescue/README.md; Python 3 only, no Docker)
 //   node tools/op.mjs sim [--port 8766] [--flash FILE] [--reset] | --update FLASH.bin | --app NAME   the hosted simulated pedal
 //   node tools/op.mjs wasm   the engine as WebAssembly for the simulated pedal's sound (tools/sim/px_engine.wasm)
@@ -75,6 +77,9 @@ function inside(path) {
 const apps = () => { const d = resolve(root, "firmware/apps"); return existsSync(d) ? readdirSync(d).filter((n) => existsSync(resolve(d, n, "app.sh"))).sort() : []; };
 // a firmware with a release pin (firmware/apps/NAME/release.sha256): its build fails when its bytes are not the pin's
 const pinned = (name) => existsSync(resolve(root, "firmware/apps", name, "release.sha256"));
+// the tools that take the pedal in its UBOOT state need root on macOS, to take it from the system's own mass-storage driver,
+// and an administrator's Command Prompt on Windows (the tools say so)
+const asRoot = () => process.platform === "win32" || (typeof process.getuid === "function" && process.getuid() === 0);
 
 const commands = {
   doctor() {                                   // prerequisites, one line each; exit 1 when the build cannot work
@@ -151,12 +156,15 @@ const commands = {
     if (r.error) fail("Python 3 is needed to serve the installer offline (python.org).");
     return r.status ?? 0;
   },
-  rescue(args) {                               // read-only unless --write; macOS needs root to take the pedal from its own driver,
-                                               // Windows an administrator's Command Prompt (the tool says so; RESCUE.bat)
-    const root_ = process.platform === "win32" || (typeof process.getuid === "function" && process.getuid() === 0);
-    const cmd = root_ || args.includes("--check") ? python : ["sudo", ...python];
+  rescue(args) {                               // read-only unless --write (RESCUE.bat on Windows)
+    const cmd = asRoot() || args.includes("--check") ? python : ["sudo", ...python];
     if (cmd[0] === "sudo") console.log(`rescue: ${args.includes("--write") ? "WRITE" : "read-only"} run; sudo asks for your password, then the tool waits for the pedal in its UBOOT state`);
     return exec(cmd[0], [...cmd.slice(1), "tools/uboot_rescue.py", ...args]);
+  },
+  "usb-install"(args) {                        // a dry run unless --write; start it before the pedal is switched on
+    const cmd = asRoot() ? python : ["sudo", ...python];
+    if (cmd[0] === "sudo") console.log(`usb-install: ${args.includes("--write") ? "WRITE" : "dry"} run; sudo asks for your password, then the tool waits for the pedal`);
+    return exec(cmd[0], [...cmd.slice(1), "tools/uboot_install.py", ...args]);
   },
   "rescue-check"() {
     const r = spawnSync(python[0], [...python.slice(1), "tests/test_uboot_rescue.py"], { stdio: "inherit", cwd: root });
