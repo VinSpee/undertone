@@ -15,6 +15,8 @@ the way back. docs/RESCUE.md, "Gamut on a BlackBox with V22 or V23", has the ste
                                            and the whole image against its own head, and writes nothing
   tools/pd40_install.py IMAGE --write      the install: the first pass, then the erase, the second pass that writes,
                                            the commit (block 0, the area head, last) and the start of the new app
+  ... --verify or --write --accept-control-reply
+                                           the same, also when the pedal answers over the control endpoint only
 
 IMAGE is one of:
   build/apps/gamut/BlackBox_950-v23.bin    Gamut's app area (node tools/op.mjs package)
@@ -29,10 +31,22 @@ CRC-32 per 4 KiB block); 3 a block, in order: in state 1 only checked, in state 
 block 0 kept in RAM; 4 with argument 2 the erase of the sector at 0x6000 (from here the pedal starts no app until the
 commit), with argument 4 the commit, which checks the whole image, writes block 0 and checks again; 5 the start of the
 new app. Every frame and reply is printed with its time in milliseconds from the moment the device was found, as
-tools/pd40_recovery.py prints them.
+tools/pd40_recovery.py prints them, with the time each phase took; when the pedal leaves the bus, the log says after
+which frame and how long after it was sent.
 
-Before anything is erased the tool requires: a hello answered over the bulk IN endpoint in state 0, a pedal head this
-tool knows (the official V22/V23 head), and the pedal's own first pass completed (state 2). It refuses an image that is
+The replies. The pedal takes the next frame once the bulk IN endpoint's packet for the last one has been read, and that
+packet should be the reply. On the one real V23 pedal tried it was 64 zero bytes, while the reply buffer (vendor request
+0x43) held the real reply; the pedal still acted on the command whose zeros were read (tools/pd40_recovery.py's leave).
+So the tool reads every reply over the bulk IN endpoint first and, when that endpoint sends 64 zero bytes in its place
+and --accept-control-reply is given, reads it from the reply buffer and checks it the same way: "SBR2", the command and
+tag of this frame, the CRC-32, the protocol's constants and write range, status 0, then the state and the next offset.
+Without the flag such a pedal is refused at the hello, or at the first reply that comes as zeros, before anything more
+is sent. The frames go out back to back: the recovery mode ends on its own within seconds when the computer stops
+talking to it.
+
+Before anything is erased the tool requires: a hello answered in state 0 (over the bulk IN endpoint, or over the control
+endpoint with --accept-control-reply), a pedal head this tool knows (the official V22/V23 head), and the pedal's own
+first pass completed (state 2). It refuses an image that is
 not a whole number of 4 KiB blocks, longer than the write range, whose area head fails its CRC under the chip key, whose
 entry is not 0x02000120, whose files fail their CRCs, a Pocket X image, and an official package for another head.
 
@@ -167,24 +181,32 @@ def frame(command, tag, arg=0, payload=b""):
 
 
 def plan(image, boot_crc, write):
-    """The frames of a session after the hello, in order: (command, argument, payload, the state after it, what)."""
-    p = [(MANIFEST, 0, manifest(image, boot_crc), 1, "the manifest")]
-    blocks = [(BLOCK_CMD, o, image.area[o:o + BLOCK], None, f"block {o // BLOCK}") for o in range(0, len(image.area), BLOCK)]
-    p += blocks                                # the first pass: checked, not written
+    """The frames of a session after the hello, in order: (command, argument, payload, the state after it, what, the
+    phase it belongs to)."""
+    p = [(MANIFEST, 0, manifest(image, boot_crc), 1, "the manifest", "the manifest")]
+    last = len(image.area) - BLOCK
+    blocks = lambda state, part: [(BLOCK_CMD, o, image.area[o:o + BLOCK], state + (o == last), f"block {o // BLOCK}",
+                                   part) for o in range(0, len(image.area), BLOCK)]
+    p += blocks(1, "the first pass")                       # checked, not written; state 2 after the last
     if write:
-        p += [(COMMIT, ERASE_ARG, b"", 3, "the erase of the sector at 0x6000")]
-        p += blocks                            # the second pass: written, block 0 kept in RAM
-        p += [(COMMIT, COMMIT_ARG, b"", 5, "the commit"), (START_APP, 0, b"", None, "the start of the new app")]
+        p += [(COMMIT, ERASE_ARG, b"", 3, "the erase of the sector at 0x6000", "the erase")]
+        p += blocks(3, "the second pass")                  # written, block 0 kept in RAM; state 4 after the last
+        p += [(COMMIT, COMMIT_ARG, b"", 5, "the commit", "the commit"),
+              (START_APP, 0, b"", None, "the start of the new app", "the start")]
     return p
 
 
 class Session(pr.Recovery):
-    """The recovery protocol with the write commands. The hello is pd40_recovery's probe."""
+    """The recovery protocol with the write commands. The hello is pd40_recovery's probe. control: a reply may be read
+    from the reply buffer (request 0x43) when the bulk IN endpoint sends 64 zero bytes in its place."""
 
-    def __init__(self, dev, log, now):
+    def __init__(self, dev, log, now, control=False):
         super().__init__(dev, log, now)
+        self.control = control
         self.erased = False
         self.committed = False
+        self.last = None                       # what the last frame sent was, in words
+        self.routes = {"bulk": 0, "control": 0}   # the replies read over each endpoint
 
     def send(self, command, arg=0, payload=b"", quiet=False):
         self.tag += 1
@@ -196,25 +218,49 @@ class Session(pr.Recovery):
         self.dev.bulk_out(data)
         self.sent = (command, self.tag, self.now())
 
+    def reply_buffer(self):
+        self.access()
+        return bytes(self.dev.control_in(pr.REPLY_BUFFER, pr.REPLY))
+
     def answer(self, command, ms):
-        """The reply over bulk IN, checked: the protocol's, for this frame, status 0."""
+        """The reply to the last frame, checked: the protocol's, for this frame, status 0. Over the bulk IN endpoint,
+        whose packet must be read for the pedal to go on; with control, from the reply buffer when that packet is 64
+        zero bytes. Returns (the reply, "bulk" or "control")."""
         self.access()
         try:
             raw = bytes(self.dev.bulk_in(pr.REPLY, ms))
         except pr.Timeout:
-            raise BadAnswer(f"no reply to the {NAMES[command]} over the bulk IN endpoint within {ms} ms")
+            held = f"; the reply buffer (request {pr.REPLY_BUFFER:#x}) holds {pr.dump(self.reply_buffer())}" \
+                if self.control else ""
+            raise BadAnswer(f"no reply to the {NAMES[command]} (tag {self.tag}) over the bulk IN endpoint within "
+                            f"{ms} ms{held}")
+        route, why = "bulk", pr.what_came(raw, command, self.tag)
+        if why is not None:
+            if not self.control or raw != bytes(pr.REPLY):
+                raise BadAnswer(f"the bulk IN endpoint sent {why} in place of the reply to the {NAMES[command]} (tag "
+                                f"{self.tag})" + ("" if self.control else
+                                                  "; --accept-control-reply would read it from the reply buffer"
+                                                  if raw == bytes(pr.REPLY) else ""))
+            route, raw = "control", self.reply_buffer()
+            why = pr.what_came(raw, command, self.tag)
+            if why is not None:
+                raise BadAnswer(f"the bulk IN endpoint sent 64 zero bytes in place of the reply to the "
+                                f"{NAMES[command]} (tag {self.tag}), and the reply buffer (request "
+                                f"{pr.REPLY_BUFFER:#x}) holds {why}")
+        self.routes[route] += 1
         r = pr.parse_reply(raw, command, self.tag)
         if r.status:
             raise BadAnswer(f"the {NAMES[command]} (tag {self.tag}) was answered with status {r.status} "
                             f"({pr.STATUS.get(r.status, 'unknown')}), state {r.state}, next offset {r.next_offset:#x}, "
                             f"last flash error {r.words[1]:#x}")
-        return r
+        return r, route
 
     def step(self, command, arg, payload, state, what, ms, quiet=False):
+        self.last = what
         self.send(command, arg, payload, quiet)
         if command == COMMIT and arg == ERASE_ARG:
             self.erased = True                 # from here the pedal starts no app until the commit
-        r = self.answer(command, ms)
+        r, route = self.answer(command, ms)
         if command == BLOCK_CMD:
             want = arg + BLOCK
             if r.next_offset != want:
@@ -224,9 +270,16 @@ class Session(pr.Recovery):
         if command == COMMIT and arg == COMMIT_ARG:
             self.committed = True
         if not quiet:
-            self.log(f"{what}: accepted, state {r.state}, next offset {r.next_offset:#x}, image length "
-                     f"{r.image_length:#x}")
+            self.log(f"{what}: accepted over the {ROUTES[route]}, state {r.state}, next offset {r.next_offset:#x}, "
+                     f"image length {r.image_length:#x}")
         return r
+
+    def replies(self):
+        """How many replies came over each endpoint, in words."""
+        return ", ".join(f"{n} over the {ROUTES[k]}" for k, n in self.routes.items() if n) or "none"
+
+
+ROUTES = {"bulk": "bulk IN endpoint", "control": f"control endpoint (request {pr.REPLY_BUFFER:#x})"}
 
 
 def dry_run(image, log):
@@ -237,7 +290,7 @@ def dry_run(image, log):
         "pedal's hello reports, and refuses any other")
     tag = 1
     log(f"frame 1 header: {frame(HELLO, tag)[:24].hex()} (hello)")
-    for command, arg, payload, _, what in plan(image, boot, write=True):
+    for command, arg, payload, _, what, _ in plan(image, boot, write=True):
         tag += 1
         head = frame(command, tag, arg, payload)[:24].hex()
         if command == BLOCK_CMD:
@@ -280,10 +333,12 @@ def report_interrupted(session, log):
         log(COMMITTED)
     elif session.erased:
         log(ERASED)
+    if (session.committed or session.erased) and session.control:
+        log("Give --accept-control-reply again, as this time.")
 
 
-def run(bus, image, mode, watch, log):
-    """mode: "verify" or "write". Returns the exit code."""
+def run(bus, image, mode, watch, log, control=False):
+    """mode: "verify" or "write"; control: --accept-control-reply. Returns the exit code."""
     dev = bus.open_recovery()
     if dev is None:
         log(f"no recovery device ({pr.VID:04X}:{pr.PID:04X}) found. Power the pedal off, hold HOME, the right footswitch "
@@ -291,16 +346,39 @@ def run(bus, image, mode, watch, log):
         return 1
     found = bus.now()
     stamped = lambda m: log(f"[{(bus.now() - found) * 1000:6.0f} ms] {m}")
-    session = Session(dev, stamped, bus.now)
+    session = Session(dev, stamped, bus.now, control)
     started = None
+    phase = None                               # [name, when it started, frames sent in it]
+
+    def timed():
+        if phase:
+            name, at, n = phase
+            stamped(f"{name}: {n} frame{'s' if n > 1 else ''} in {(bus.now() - at) * 1000:.0f} ms")
+
     try:
         stamped(f"found {pr.VID:04X}:{pr.PID:04X} {dev.manufacturer!r} {dev.product!r}, device version {dev.bcd_device:#06x}")
         try:
+            phase = ["the hello", bus.now(), 1]
+            session.last = "the hello"
             hello, bulk = session.probe()
             pr.describe(hello, bulk, log)
+            if bulk is not None and not control:
+                raise GuardError(f"the hello reply came over the control endpoint only (the bulk IN endpoint sent "
+                                 f"{bulk}). To read every such reply from the reply buffer (request "
+                                 f"{pr.REPLY_BUFFER:#x}), checked the same way, run this again with "
+                                 "--accept-control-reply: the one real V23 pedal tried answered this way and still "
+                                 "acted on a command once the zeros in place of its reply had been read")
+            session.routes["bulk" if bulk is None else "control"] += 1
+            timed()
+            phase = None
             if bulk is not None:
-                raise GuardError("the hello reply did not come over the bulk IN endpoint, and the pedal takes the next "
-                                 "frame only after its reply has been read there")
+                stamped(f"replies: over the {ROUTES['control']}, because the bulk IN endpoint sent {bulk} in place of "
+                        "the hello reply (--accept-control-reply); each frame's bulk IN packet is still read first, "
+                        "and a reply that comes there is taken there")
+            else:
+                stamped(f"replies: over the {ROUTES['bulk']}" + (
+                    f"; over the {ROUTES['control']} whenever the bulk IN endpoint sends 64 zero bytes in place of "
+                    "one (--accept-control-reply)" if control else ""))
             if hello.state != 0:
                 raise GuardError(f"the recovery mode is in state {hello.state}: another tool started an update. Power-"
                                  "cycle the pedal into the recovery mode again first")
@@ -313,7 +391,11 @@ def run(bus, image, mode, watch, log):
             stamped(f"{image.what}: {len(image.area):#x} bytes, {image.blocks} blocks, CRC-32 "
                     f"{zlib.crc32(image.area):#010x}; {'the install' if mode == 'write' else 'the check only'}: "
                     f"{len(steps)} frames")
-            for i, (command, arg, payload, state, what) in enumerate(steps):
+            for command, arg, payload, state, what, part in steps:
+                if phase is None or part != phase[0]:
+                    timed()
+                    phase = [part, bus.now(), 0]
+                phase[2] += 1
                 if command == START_APP and mode == "write":
                     started = True
                 k = arg // BLOCK                                  # blocks: the first, every 32nd and the last shown
@@ -325,14 +407,20 @@ def run(bus, image, mode, watch, log):
                     stamped(f"{'first' if r.state == 2 else 'second'} pass done: {image.blocks} blocks and the whole "
                             f"image's CRC-32 accepted, state {r.state}"
                             + (": nothing was written" if r.state == 2 else ""))
+            if not started:
+                timed()
+            stamped(f"replies: {session.replies()}")
         except pr.ScsiError as e:
             if not pr.left_bus(bus, e):
                 raise
             if not started:
-                stamped(f"the pedal left the bus ({e}): the recovery mode ended on its own; nothing more is sent")
+                stamped(f"the pedal left the bus ({e}) during {session.last} (tag {session.tag}), "
+                        f"{session.since(bus.now())}: the recovery mode ended on its own; nothing more is sent. "
+                        f"Replies read: {session.replies()}")
                 report_interrupted(session, log)
                 return 4
-            stamped("start the app: sent; its reply did not arrive")   # it acts once its reply is read: it was
+            # command 5 acts once the bulk IN packet of its reply has been read, which it was
+            stamped(f"start the app: sent; the pedal left the bus before its reply was read whole ({e})")
     except (GuardError, ScsiError):
         report_interrupted(session, log)
         raise
@@ -400,8 +488,14 @@ def main(argv=None):
     mode = ap.add_mutually_exclusive_group()
     mode.add_argument("--verify", action="store_true", help="the pedal checks the image in its first pass; nothing is written")
     mode.add_argument("--write", action="store_true", help="write the image to [0x6000, 0x9F000) and start it")
+    ap.add_argument("--accept-control-reply", action="store_true",
+                    help="with --verify or --write: read a reply from the reply buffer (control request 0x43) "
+                         "when the bulk IN endpoint sends 64 zero bytes in its place, as on the one real V23 pedal "
+                         "tried; checked the same way")
     ap.add_argument("--watch", type=float, default=60, help="seconds to wait for the new app after the start (default 60)")
     a = ap.parse_args(argv)
+    if a.accept_control_reply and not (a.verify or a.write):
+        ap.error("--accept-control-reply goes with --verify or --write")
     log = lambda m: print(m, flush=True)
     try:
         image = load_image(a.image)
@@ -409,7 +503,7 @@ def main(argv=None):
             f"{image.blocks} blocks, CRC-32 {zlib.crc32(image.area):#010x}, every check passed")
         if not (a.verify or a.write):
             return dry_run(image, log)
-        return run(transport(), image, "write" if a.write else "verify", a.watch, log)
+        return run(transport(), image, "write" if a.write else "verify", a.watch, log, a.accept_control_reply)
     except GuardError as e:
         print(f"\nREFUSED: {e}; nothing more was sent", file=sys.stderr)
         return 2

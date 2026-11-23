@@ -351,7 +351,7 @@ Without `--accept-inferred`, `--leave` prints why its result is not proven and s
 | The helper's probe, bus watch, timing of a departure, leave (also with `--accept-control-reply`), refusals and handling of bad answers | Verified against a simulated recovery mode that reproduces the zeros after a sync, the departure at one failed access and a departure on its own some seconds after the last access (`tests/test_pd40_recovery.py`, and the kit's own copy in `tests/test_rescue_kit.py`) |
 | The corrected probe on a real pedal, without the sync | Seen twice on a real BlackBox on V23: the hello accepted over the control endpoint only (64 zero bytes, then nothing, on bulk IN), and the pedal left the recovery mode on its own within seconds |
 | When, after the last command, the recovery mode ends on its own, and what the pedal starts then | Not yet measured: the helper now logs it |
-| `--accept-control-reply`: whether the pedal acts on command 6 when the hello reply came over the control endpoint only | Not tried. Verified only against the simulated recovery mode |
+| `--accept-control-reply`: whether the pedal acts on command 6 when the hello reply came over the control endpoint only | Tried once on a real BlackBox on V23: the pedal acted on command 6 and moved to the chip's USB boot state, although its bulk IN endpoint sent only zeros. So on this pedal a command is acted on once the zeros in place of its reply have been read |
 | USB IDs, strings and descriptors of the recovery mode | Verified: byte for byte in the V23 boot loader |
 | The frame and reply format, the CRC-32 (zlib's), the requests `0x43` and `0x44`, command 6 and what it does: it answers, writes `usb_update_mode` to RAM, not to the flash, and resets the processor core once its reply has been read | Read in the V23 boot loader's code, not run |
 | The key combination | Read in the boot loader's code, and seen to show `RECOVERY` on a real pedal |
@@ -381,11 +381,16 @@ the pedal stayed in the recovery mode after the leave, 130 stopped by Ctrl-C.
 **Status: not yet tried on a real pedal.** Everything below runs against a simulated pedal only. The installer page still
 refuses a BlackBox on V22 or V23 and sends nothing to it; see [The installer page's switch](#the-installer-pages-switch).
 
-**What blocks it today.** The install needs every reply on the bulk IN endpoint: the recovery mode takes the next frame
-only after its reply was read there. On the one real pedal probed so far, the hello reply came over the control endpoint
-only and the pedal left the recovery mode on its own within seconds ([above](#a-pedal-on-m-vaves-v22-or-v23)). On such
-a pedal `tools/pd40_install.py --verify` and `--write` stop at the hello with `REFUSED` and send nothing more; nothing is
-written. The install can go ahead only once a probe shows the reply on the bulk IN endpoint and the mode staying up.
+**The replies over the control endpoint.** The recovery mode takes the next frame once the packet on its bulk IN endpoint
+for the last one has been read, and that packet should be the reply. On the one real pedal probed so far it was 64 zero
+bytes, then nothing, while the reply buffer (vendor request `0x43`) held the real reply; and that pedal acted on the
+leave (command 6) once those zeros had been read ([above](#a-pedal-on-m-vaves-v22-or-v23)). On such a pedal
+`tools/pd40_install.py` needs `--accept-control-reply` with `--verify` and `--write`: it then still reads each frame's
+bulk IN packet first, takes a real reply there, and when the packet is 64 zero bytes reads the reply from the reply
+buffer and checks it exactly as one from the bulk IN endpoint. Without the flag the tool stops at the hello with
+`REFUSED`, or at the first later reply that comes as zeros, and sends nothing more. The recovery mode on that pedal also
+ended on its own within seconds once the computer stopped talking to it, so the tool sends the frames back to back and
+logs how long each phase took; start it as soon as the screen shows `RECOVERY`.
 
 This installs Gamut on a BlackBox that runs M-VAVE's official V22 or V23, without going back to V21 or earlier and without
 touching M-VAVE's boot loader. It uses that boot loader's own recovery mode and `tools/pd40_install.py`. The way back is
@@ -453,9 +458,11 @@ first-run check below. That measurement can only be made on a pedal.
 
 ### Before the first write
 
-1. The read-only probe of [the section above](#a-pedal-on-m-vaves-v22-or-v23) has run on this pedal, its hello reply
-   came **over the bulk IN endpoint**, the pedal stayed in the recovery mode, and the probe named the head CRC-32
-   `0xb19d96a1`. The install tool needs the replies on that endpoint and refuses otherwise.
+1. The read-only probe of [the section above](#a-pedal-on-m-vaves-v22-or-v23) has run on this pedal: the hello was
+   accepted (`status 0`, `state 0`) and the probe named the head CRC-32 `0xb19d96a1`. Note the line under `hello`. If
+   it says `read over the control endpoint (request 0x43)`, add `--accept-control-reply` to every `--verify` and
+   `--write` command below; the tool refuses without it. If it says `read over the bulk IN endpoint`, the flag is not
+   needed.
 2. You have M-VAVE's `BlackBox_023.fwsc` (from M-VAVE, or the full rescue kit's `firmware` folder). Check it with the dry
    run below; it must print `M-VAVE's app area from ... (BlackBox_023)` and `every check passed`.
 3. You have built Gamut: `node tools/op.mjs package`, which ends with `release pin: gamut's image and packages are the
@@ -474,25 +481,38 @@ first-run check below. That measurement can only be made on a pedal.
    ```
 
 2. **The pedal's own check, nothing written.** Enter the recovery mode (switch off, hold HOME, the right footswitch and the
-   knob's PUSH, switch on, hold until the screen shows `RECOVERY`), then:
+   knob's PUSH, switch on, hold until the screen shows `RECOVERY`), then at once:
 
    ```
-   python3 tools/pd40_install.py build/apps/gamut/BlackBox_950-v23.bin --verify 2>&1 | tee gamut-v23-verify.log
+   python3 tools/pd40_install.py build/apps/gamut/BlackBox_950-v23.bin --verify --accept-control-reply 2>&1 | tee gamut-v23-verify.log
    ```
 
-   Expect the hello (`status 0`, `state 0`, the head `0xb19d96a1`), `the manifest: accepted`, then `first pass done: 153
-   blocks and the whole image's CRC-32 accepted, state 2: nothing was written`. Switch the pedal off and on: it starts
-   M-VAVE's V23 as before. Any `REFUSED` here: stop and send the log back.
+   Expect the hello (`status 0`, `state 0`, the head `0xb19d96a1`) and the route the replies take, on the pedal probed so
+   far `replies: over the control endpoint (request 0x43), because the bulk IN endpoint sent 64 zero bytes, then
+   nothing in place of the hello reply`. Then `the manifest: accepted over the control endpoint (request 0x43), state
+   1`, `first pass done: 153 blocks and the whole image's CRC-32 accepted, state 2: nothing was written`, the time of
+   each phase (`the first pass: 153 frames in ... ms`) and `replies: 155 over the control endpoint (request 0x43)`.
+   Switch the pedal off and on: it starts M-VAVE's V23 as before. Any `REFUSED` or `the pedal left the bus` here: stop
+   and send the log back; nothing was written.
 
 3. **The install.** Enter the recovery mode again, then:
 
    ```
-   python3 tools/pd40_install.py build/apps/gamut/BlackBox_950-v23.bin --write 2>&1 | tee gamut-v23-write.log
+   python3 tools/pd40_install.py build/apps/gamut/BlackBox_950-v23.bin --write --accept-control-reply 2>&1 | tee gamut-v23-write.log
    ```
 
    It runs the first pass again, then `the erase of the sector at 0x6000`, the second pass (every block written and read
-   back), `the commit`, `the start of the new app`, and watches the bus. Expect `1209:0001 appeared: Gamut` and `Gamut
-   started: the install worked`. Do not touch the pedal or the cable until the tool ends.
+   back), `the commit`, `the start of the new app`, and watches the bus. Over the control endpoint the pedal resets into
+   the new app as soon as the start's bulk IN packet has been read, so expect `start the app: sent; the pedal left the
+   bus before its reply was read whole`; over the bulk IN endpoint expect `the start of the new app: accepted`. Then
+   expect `1209:0001 appeared: Gamut` and `Gamut started: the install worked`. Do not touch the pedal or the cable until
+   the tool ends.
+
+   If the recovery mode ends during the session, the tool logs when and after which frame, for example `the pedal left
+   the bus (...) during block 9 (tag 166), 3 ms after the last command sent (command 3, tag 165) and 2410 ms after the
+   first access`, sends nothing more and ends with exit code 4. Before the line `the erase of the sector at 0x6000`
+   nothing was written; after it the tool says `The app area is erased or half written` and the install must be run
+   again ([below](#if-the-pedal-does-not-start-after-it)).
 
 4. **The first-run check.** On the boot screen, note the line `PWR`: on this head it should read `PWR 7 15 (BOOT
    LEVELS)`. Then, with the pedal on USB:
@@ -515,8 +535,8 @@ update it: its update loader reads this head, refuses it, and writes nothing.
 Enter the recovery mode, then:
 
 ```
-python3 tools/pd40_install.py BlackBox_023.fwsc --verify 2>&1 | tee official-v23-verify.log
-python3 tools/pd40_install.py BlackBox_023.fwsc --write 2>&1 | tee official-v23-write.log
+python3 tools/pd40_install.py BlackBox_023.fwsc --verify --accept-control-reply 2>&1 | tee official-v23-verify.log
+python3 tools/pd40_install.py BlackBox_023.fwsc --write --accept-control-reply 2>&1 | tee official-v23-write.log
 ```
 
 (Enter the recovery mode again between the two.) The tool refuses an official package whose head is not the pedal's, and
@@ -529,8 +549,8 @@ firmware on the old head.
 
 | What you see | What it means | Do |
 | --- | --- | --- |
-| The tool stopped before the line `the erase of the sector at 0x6000` | nothing was written | switch the pedal off and on: it starts as before. Send the log back |
-| The tool printed `The app area is erased or half written` | the area head is not written, so the boot loader starts nothing and restarts the chip again and again | the boot loader still reads the three controls on every start: enter the recovery mode and run `--write` again, with Gamut's image or with `BlackBox_023.fwsc` |
+| The tool stopped before the line `the erase of the sector at 0x6000`, with `REFUSED` or `the pedal left the bus` | nothing was written | switch the pedal off and on: it starts as before. Send the log back |
+| The tool printed `The app area is erased or half written` | the area head is not written, so the boot loader starts nothing and restarts the chip again and again | the boot loader still reads the three controls on every start: enter the recovery mode and run `--write` again (with `--accept-control-reply` if it was given), with Gamut's image or with `BlackBox_023.fwsc` |
 | The tool printed `The new image is written and committed; only the start of the app was not confirmed` | the commit was accepted, so the new image is complete; only the reply to the start command failed | switch the pedal off and on once. If it still starts nothing, enter the recovery mode and run `--write` again |
 | The tool ended with exit code 3 (`the new app did not appear`) | the install finished, but the expected USB device did not come | switch the pedal off and on once. If it still starts nothing, enter the recovery mode and put M-VAVE's app back as above |
 | Gamut starts, then crashes twice in a row | Gamut's boot guard asks for the chip's USB boot state (inferred on this head, proven on the old one) | the simplest: hold the three controls at power-on and put M-VAVE's app back with this tool. Or, if the USB boot state appears, `uboot_rescue.py --package BlackBox_023.fwsc` as in the quick start |
@@ -540,9 +560,13 @@ firmware on the old head.
 **Safety rules of the tool.** Nothing is opened without `--verify` or `--write`. Before anything is sent, the image must
 be a whole number of 4 KiB blocks no longer than `[0x6000, 0x9F000)`, its area head must pass its CRC under the chip key,
 its entry must be `0x02000120`, its files must pass their CRCs, and it must be a BlackBox image. Before the erase, the
-hello must have come over the bulk IN endpoint in state 0, the pedal's head must be the official V22/V23 head (and the
-official package's head the pedal's), and the pedal's own first pass must have accepted every block and the whole image.
-It stops at the first reply that is not status 0 or not the expected state or offset, and sends nothing more.
+hello must have been answered in state 0, the pedal's head must be the official V22/V23 head (and the official package's
+head the pedal's), and the pedal's own first pass must have accepted every block and the whole image. A reply is read
+over the control endpoint only with `--accept-control-reply`, and only when the bulk IN endpoint sent 64 zero bytes in
+its place; it is checked as one from the bulk IN endpoint (`SBR2`, this frame's command and tag, its CRC-32, the
+protocol's constants and write range). The tool stops at the first reply that is not that, not status 0 or not the
+expected state or offset, and sends nothing more. `--accept-control-reply` changes only where a reply is read; it adds no
+command and no frame.
 
 Exit codes: 0 done (the dry run printed, the pedal's check passed, or the new app appeared), 1 setup problem, no recovery
 device or a failed transfer, 2 refused or a bad answer, 3 the install finished but the new app did not appear, 4 the pedal
@@ -564,7 +588,8 @@ this install; with it the page still sends nothing to such a pedal. It is `false
 | The install of Gamut's area and the way back to M-VAVE's, on a simulated V23 flash: nothing below `0x6000` or from `0x9F000` up changes, block 0 is written last, the boot loader's four checks then pass, the official way back restores every byte | Verified against a simulated recovery mode that runs the write commands as read (`tests/recovery_sim.py`), on a synthetic V23 head, and on M-VAVE's real V23 `flash.bin` when its package is given to the test |
 | A failure after the erase, and the install run again | Verified against the same simulation |
 | The protocol's write commands, their checks and states, the manifest's layout and CRC | Read in the V23 boot loader's code, not run |
-| That the replies come over the bulk IN endpoint on a real pedal, and that the mode stays up for a whole install | Not so far: on the one pedal probed, the hello reply came over the control endpoint only and the mode ended on its own within seconds. The tool then refuses at the hello and writes nothing |
+| The replies over the control endpoint (`--accept-control-reply`): each frame's bulk IN packet read first, a real reply taken there, the reply buffer read and checked as a bulk reply when the packet is 64 zero bytes, the refusals without the flag, the times of the phases, and the pedal leaving mid-install with the frame it left after | Verified against the same simulation, with a pedal whose bulk IN endpoint sends 64 zero bytes for every reply (or for the hello only, or for every reply but the hello's) while its reply buffer holds the real one |
+| That a real pedal whose bulk IN endpoint sends zeros takes every frame of an install, and that its recovery mode stays up for a whole install when the frames go back to back | Not tried. On the one pedal probed, the hello reply came over the control endpoint only, the leave was acted on that way, and the mode ended on its own within seconds of the computer's last transfer |
 | That the boot loader starts Gamut at `0x6000`, and that Gamut runs there | Read, not tried |
 | Gamut's processor load and sound at the V23 supply levels | Not known: the first-run check measures it |
 | The stock V23 app with Gamut's data in its user area | Not known |

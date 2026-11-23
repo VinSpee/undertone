@@ -37,7 +37,8 @@
 #    refusal of every write, bad answers) against a simulated pedal in M-VAVE's V22/V23 recovery mode that sends zeros
 #    after a sync and leaves at one failed access or on its own, tests/recovery_sim.py
 #  - recovery-mode install: tools/pd40_install.py (dry run, the pedal's own check, the install of Gamut's app area at
-#    0x6000 and of M-VAVE's own app area, the way back; refusals, a failure after the erase, the pedal leaving) against
+#    0x6000 and of M-VAVE's own app area, the way back; refusals, a failure after the erase, the pedal leaving; the
+#    replies over bulk IN and, with --accept-control-reply, over the control endpoint when bulk IN sends zeros) against
 #    the same simulated recovery mode running the write commands on a simulated V23 flash; what the V23 boot loader's
 #    four checks then start (tests/test_pd40_install.py)
 #  - rescue kit: rescue/build_kit.py gives the pinned bytes twice; an unzipped kit's own files restore a simulated pedal

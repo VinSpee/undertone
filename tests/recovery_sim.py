@@ -10,8 +10,9 @@ vendor requests are 0x42 (sync), 0x43 (the reply buffer) and 0x44 (the first 24 
 
 Two behaviours of the real pedal on V23 are reproduced by default. The sync request's flush of the idle IN endpoint
 leaves an empty 64-byte packet armed, so the reply to the next frame is never sent: the old probe's sync and hello get 64
-zero bytes, then nothing (in_zeros instead sends zeros in place of every reply; swallows=False sends the reply after
-the empty packet). And one failed access to the USB
+zero bytes, then nothing (in_zeros instead sends zeros in place of every reply, and zeros_for in place of the replies
+to those commands, while the reply buffer holds the real reply, as on the real pedal; reading the zeros counts as
+reading the reply; swallows=False sends the reply after the empty packet). And one failed access to the USB
 controller (sie_fails_at, counted in the computer's transfers) ends the mode at once: the pedal leaves the bus, as
 command 6 does once its reply has been read, and after reset_s seconds comes back as after_reset: "uboot" (the chip's
 USB boot state), "recovery", "app" (the stock V23 app), "gamut" or None. Two more departures can be set: exits_after
@@ -70,12 +71,13 @@ class SimRecovery:
 
     def __init__(self, state=0, boot_crc=None, fault=None, in_zeros=False, swallows=True, sie_fails_at=None,
                  after_reset="uboot", reset_s=0.5, sie_error=DeviceGone, flash=None, fails_at=None,
-                 exits_after=None, stays=False):
+                 exits_after=None, stays=False, zeros_for=()):
         assert fault in (None, *FAULTS) and after_reset in AFTER_RESET
         self.flash = None if flash is None else bytearray(bytes(flash).ljust(FLASH_SIZE, b"\xFF"))
         if boot_crc is None:                      # computed over the flash at entry, as read
             boot_crc = V23_BOOT_CRC if flash is None else zlib.crc32(self.flash[:BASE])
         self.state, self.boot_crc, self.fault, self.in_zeros, self.swallows = state, boot_crc, fault, in_zeros, swallows
+        self.zeros_for = frozenset(zeros_for)     # the commands whose replies come as zeros on bulk IN
         self.sie_fails_at, self.after_reset, self.reset_s = sie_fails_at, after_reset, reset_s
         self.sie_error = sie_error                # what the computer sees of the failed access
         self.fails_at = fails_at                  # a flash address whose program fails (status 7)
@@ -308,7 +310,8 @@ class SimRecovery:
         raw += struct.pack("<I", zlib.crc32(raw) ^ (1 if self.fault == "crc" else 0))
         self.last_reply, self.waiting = raw, True
         if (not self.armed or not self.swallows) and self.fault != "silent":
-            self.armed.append(bytes(64) if self.in_zeros else raw[:32] if self.fault == "short" else raw)
+            zeros = self.in_zeros or command in self.zeros_for
+            self.armed.append(bytes(64) if zeros else raw[:32] if self.fault == "short" else raw)
 
     def bulk_in(self, n, ms):
         self.access("bulk in", n)
