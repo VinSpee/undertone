@@ -70,6 +70,13 @@ extract-flash.bat firmware\BlackBox_023.fwsc
     (Mac: python3 tools/extract_flash.py firmware/BlackBox_023.fwsc)
     Takes flash.bin out of a package, for use with --image in place of
     --package. You only need this if --package reports an error.
+tools/pd40_recovery.py  (Mac: python3 tools/pd40_recovery.py)
+    For a pedal on M-VAVE's V22 or V23 that shows RECOVERY (hold HOME, the
+    right footswitch and the knob's PUSH at power-on). Reads what the pedal's
+    recovery mode reports and writes nothing. With
+    --leave --accept-inferred it sends the pedal to the USB boot state where
+    the rescue tool works. Not yet tried on a real pedal; see the guide's
+    section "A pedal on M-VAVE's V22 or V23" first.
 SHA256SUMS.txt
     The SHA-256 of every file in this kit. Check one on Windows with
     certutil -hashfile RESCUE.bat SHA256
