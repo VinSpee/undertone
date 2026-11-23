@@ -10,6 +10,9 @@
 #   pxpkg.py APP.bin OTA.bin OUTDIR --version 1 --app starter      an app on the base firmware other than OpenPocket
 #       -> OUTDIR/starter-PocketX_901.fwsc, OUTDIR/starter-BlackBox_901.fwsc, and a manifest.json that says which
 #          product they are ("app": its id, name, version and what it can do, read from the image itself)
+#   beside each BlackBox package, its app area alone: OUTDIR/BlackBox_924-v23.bin (OUTDIR/starter-BlackBox_901-v23.bin),
+#       the bytes that tools/pd40_install.py writes to [0x6000, 0x9F000) of a BlackBox with M-VAVE's V22 or V23 boot
+#       loader, through that boot loader's recovery mode (docs/RESCUE.md)
 #
 # Package = JieLi UFW image: flash.bin (the image [0, 0x4000 + AREA_LEN) the update loader writes from 0x4000 up) and
 # ota.bin (the update loader, loader/). The flash head [0, 0x4000) is the JieLi SDK default (flash header, SDK SPL
@@ -256,9 +259,14 @@ def build(app, ota, outdir, version, sdk, flat=None, app_id=None):
     man = {"version": version, **({"app": info} if info else {}), "packages": []}
     for model in MODELS:
         product = f"{model}_{900 + version}"
-        pkg = ufw(flash_image(with_product(app, product), files), ota, product)
+        flash = flash_image(with_product(app, product), files)
+        pkg = ufw(flash, ota, product)
         name = f"{info['id']}-{product}.fwsc" if info else f"{product}.fwsc"
         (outdir / name).write_bytes(pkg)
+        if model == "BlackBox":                  # the same area, for the recovery mode of the V22/V23 boot loader
+            area = outdir / name.replace(".fwsc", "-v23.bin")
+            area.write_bytes(flash[0x4000:])
+            print(f"app area {area}: {AREA_LEN} B, for the recovery mode of a BlackBox on V22 or V23 (tools/pd40_install.py)")
         man["packages"].append({"model": model, "product": product, "file": name, "size": len(pkg),
                                 "sha256": hashlib.sha256(pkg).hexdigest()})
         print(f"package {outdir / name}: {len(pkg)} B, identity {product}" + (f", product {info['name']} {info['version']}" if info else ""))

@@ -7,7 +7,8 @@ key, the CRC of each file, the entry address 0x02000120.
   python3 tests/test_both_heads.py [--built] [OFFICIAL.fwsc ...]
 The heads are synthetic ones built to the two layouts (tests/fw_layouts.py), and the official packages' own heads when
 their files are given (they are not in this repository). The packages: one built here whose app fills the whole slot,
-and with --built every package the build made (build/apps/*: OpenPocket's in build/apps/gamut, each app's)."""
+and with --built every package the build made (build/apps/*: OpenPocket's in build/apps/gamut, each app's). Beside
+each BlackBox package, its -v23.bin is that package's app area byte for byte."""
 import sys
 import tempfile
 from pathlib import Path
@@ -79,6 +80,10 @@ with tempfile.TemporaryDirectory() as t:
         fl = flash_bin(pkg)
         ok(fw.app_base(fl) == 0x4000 and len(fl) == 0x4000 + pxpkg.AREA_LEN,
            f"{pkg.name}: flash.bin is the area at 0x4000 and {pxpkg.AREA_LEN:#x} bytes of it")
+        if "BlackBox" in pkg.name:
+            v23 = pkg.with_name(pkg.name.replace(".fwsc", "-v23.bin"))
+            ok(v23.is_file() and v23.read_bytes() == fl[0x4000:],
+               f"{v23.name}: the package's app area, for the V22/V23 recovery mode (tools/pd40_install.py)")
         for name, head in heads:
             bad = problems(head, fl[0x4000:])
             ok(not bad, f"{pkg.name} on the {name}" + (f": {', '.join(bad)}" if bad else ""))

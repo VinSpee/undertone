@@ -28,7 +28,7 @@ const IMAGE = "openpocket-build";
 const native = Boolean(process.env.NATIVE || process.env.OP_IN_CONTAINER);
 const python = process.platform === "win32" ? ["py", "-3"] : ["python3"];
 const OUT = "build/apps/gamut";   // OpenPocket's outputs, as each app's are in build/apps/<name>
-const OUTS = `${OUT}/openpocket.bin ${OUT}/*.fwsc ${OUT}/manifest.json`;
+const OUTS = `${OUT}/openpocket.bin ${OUT}/*.fwsc ${OUT}/*-v23.bin ${OUT}/manifest.json`;   // (*-v23.bin: tools/pxpkg.py)
 const TEST = `${OUT}/openpocket-midi-test.bin ${OUT}/midi-test/*.fwsc ${OUT}/midi-test/manifest.json`;
 
 function fail(message) {
@@ -103,7 +103,7 @@ const commands = {
     if (!/^[a-z0-9-]+$/.test(name || "")) fail("usage: app NAME   (a folder of firmware/apps, such as starter). See docs/ALT-FIRMWARE.md.");
     if (!existsSync(resolve(root, "firmware/apps", name, "app.sh"))) fail(`firmware/apps/${name}/app.sh not found.`);
     const out = `build/apps/${name}`;
-    return inContainer(["sh", "-c", `OP_APP=${name} sh firmware/build.sh && sha256sum ${out}/${name}.bin ${out}/*.fwsc ${out}/manifest.json > ${out}/SHA256SUMS && cat ${out}/SHA256SUMS${pinned(name) ? ` && sh tests/release_pin.sh ${name}` : ""}`]);
+    return inContainer(["sh", "-c", `OP_APP=${name} sh firmware/build.sh && sha256sum ${out}/${name}.bin ${out}/*.fwsc ${out}/*-v23.bin ${out}/manifest.json > ${out}/SHA256SUMS && cat ${out}/SHA256SUMS${pinned(name) ? ` && sh tests/release_pin.sh ${name}` : ""}`]);
   },
   // --built: the tests also take the packages the build made (OpenPocket's, each app's), which must be there
   test: (args = []) => inContainer(args.includes("--built") ? ["sh", "-c", "OP_BUILT=1 sh tests/run_tests.sh"] : ["sh", "tests/run_tests.sh"]),

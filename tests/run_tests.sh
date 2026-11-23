@@ -36,6 +36,10 @@
 #  - recovery helper: tools/pd40_recovery.py (probe, bus watch and departure times, leave and its control-endpoint gate,
 #    refusal of every write, bad answers) against a simulated pedal in M-VAVE's V22/V23 recovery mode that sends zeros
 #    after a sync and leaves at one failed access or on its own, tests/recovery_sim.py
+#  - recovery-mode install: tools/pd40_install.py (dry run, the pedal's own check, the install of Gamut's app area at
+#    0x6000 and of M-VAVE's own app area, the way back; refusals, a failure after the erase, the pedal leaving) against
+#    the same simulated recovery mode running the write commands on a simulated V23 flash; what the V23 boot loader's
+#    four checks then start (tests/test_pd40_install.py)
 #  - rescue kit: rescue/build_kit.py gives the pinned bytes twice; an unzipped kit's own files restore a simulated pedal
 #    on a V20, a V22 and a V23 flash head, and refuse the file of the other head (tests/test_rescue_kit.py)
 #  - hosted simulator: tools/sim.mjs driven over HTTP (controls, held buttons, screen, flash file, SysEx, the Web MIDI shim)
@@ -110,6 +114,8 @@ echo "== rescue tool (tools/uboot_rescue.py on a simulated UBOOT pedal)"
 python3 tests/test_uboot_rescue.py $1
 echo "== recovery helper (tools/pd40_recovery.py on a simulated V22/V23 recovery mode)"
 python3 tests/test_pd40_recovery.py
+echo "== recovery-mode install (tools/pd40_install.py: Gamut's app area at 0x6000 and the way back, on a simulated V23 pedal)"
+python3 tests/test_pd40_install.py ${OP_BUILT:+--built}
 echo "== rescue kit (rescue/build_kit.py: the pinned bytes; the unzipped kit on a simulated V20, V22 and V23 pedal)"
 python3 tests/test_rescue_kit.py
 echo "== hosted simulator (tools/sim.mjs)"

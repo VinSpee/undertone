@@ -159,7 +159,7 @@ PCM ring at `0x1F29EE0`, inside the cache-way range above (**likely**: the stock
 | Range | What |
 | --- | --- |
 | `0x00000..0x04000` | flash header, boot config: **never written**; the update loader reads it and refuses a head that does not put the app area at `0x4000` (M-VAVE's BlackBox V22 and later put it at `0x6000`) |
-| `0x04000..0xA3000` | the application area (the update loader rewrites only this). A package's app area is `0x99000` bytes, so it fits both heads: an update writes `0x04000..0x9D000` here, and the same bytes would sit at `0x06000..0x9F000` on a V22 head, below its stock settings. The loader refuses a package longer than the head's slot |
+| `0x04000..0xA3000` | the application area (the update loader rewrites only this). A package's app area is `0x99000` bytes, so it fits both heads: an update writes `0x04000..0x9D000` here, and the same bytes would sit at `0x06000..0x9F000` on a V22 head, below its stock settings. The loader refuses a package longer than the head's slot. On a V22/V23 head the boot loader's own recovery mode writes the area there instead (`tools/pd40_install.py`, `docs/RESCUE.md`) |
 | `0xA3000..0xFF000` | where the bootloader looks for update records: anything that ends like a record can be erased by an update, so user data there must be skipped by the loader (`loader/ldr_core.c`) |
 | `0xA5000` | stock "VM" (settings; holds the radio calibration records, VM 106..108, 187). On a Pocket X backup (`fm1-1.bin`, its official firmware) the active VM area is at **`0xA1000`**, inside Gamut's application area: installing Gamut overwrites it, and that pedal's radio records are gone (`ble_rf.c` gives defaults then) |
 | `0xBA000..0xBD000` | stock file `EXT_RESERVED/usr` (12 KB) |
