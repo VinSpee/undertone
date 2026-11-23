@@ -150,17 +150,23 @@ balance your sounds. The output ends in a soft limiter (transparent up to -2 dBF
 | FX | the next of DRV, SFX, SYN, PIT, CMP, GT and EQ in the order of the preset's chain, as the tiles read · **long press (0.8 s)** = MIDI page |
 | MASTER | output volume |
 
-**Screen (v36)**: PLAY shows the preset number and name large, the amp and cab, the chain in colour (on = filled,
-off = dark) and the selected block; EDIT shows the block on its colour, the model, and up to 5 settings with value and
-bar; the EDIT band also shows the preset number. `DSP xx%` (top right on PLAY, bottom right on EDIT) = DSP load (amber
-above 80 %; red with `!` = a block ran late; which cores ran is on the diagnostics page). **Overload guard**: the
-effects are bypassed until the next change, a red bar says `OVERLOAD: SOUND BYPASSED` (on EDIT the whole footer turns
-red) and the footer says `TURN A BLOCK OFF` (with `PEAK xxx%` on PLAY). While a NAM model loads, the MODEL row of the
-EDIT page reads `LOADING` in amber (on PLAY the corner does, and the amp name goes grey). Labels of blocks that are off
-are dimmer than those of blocks that are on. `EDITED`: the sound differs from its saved slot.
-Top centre of PLAY: the **battery** (v36), from the chip's own VBAT/4 channel (green, amber below 30 %, red below 15 %;
-`USB` when the 5 V supply is there); the diagnostics page shows the same reading in volts. On PLAY, the line under the
-tiles names a NAM amp's model and a user IR's name.
+**Screen (v36)**: PLAY shows the preset number and name large, the amp and cab, the chain as keys (a block that is on
+is a pale key, one that is off a dark key; the selected one has a ring) and the selected block; EDIT shows the block's
+name, its ON / OFF key, the model, and up to 5 settings with value and bar; the EDIT band also shows the preset number.
+A value is inverted, dark on a pale chip, while the knob changes it.
+**Colours**: the screen is dark with pale text. Green is a lamp, and only that: the dot beside `ON` while a block is on,
+the playing preset in the list, a computer connected on the MIDI page, `SAVED`, and the note and the needle when in
+tune. Amber is the only warning colour: something waits on you (`EDITED`, `HOLD: SAVE`, `LOADING`) or went wrong
+(overload, a late block, a low battery, a fault). Nothing is red, and the blocks have no colours of their own on the
+pedal (the web editor keeps them).
+`DSP xx%` (top right on PLAY, bottom right on EDIT) = DSP load (amber above 80 %, and with `!` when a block ran late;
+which cores ran is on the diagnostics page). **Overload guard**: the effects are bypassed until the next change, an
+amber bar says `OVERLOAD: SOUND BYPASSED` (on EDIT the whole footer turns amber) and the footer says `TURN A BLOCK OFF`
+(with `PEAK xxx%` on PLAY). While a NAM model loads, the MODEL row of the EDIT page reads `LOADING` in amber (on PLAY the
+corner does, and the amp name goes grey). `EDITED`: the sound differs from its saved slot.
+Top centre of PLAY: the **battery** (v36), from the chip's own VBAT/4 channel (the charge turns amber at 30 %, the
+figure too at 15 %; `USB` when the 5 V supply is there); the diagnostics page shows the same reading in volts. On PLAY,
+the line under the tiles names a NAM amp's model and a user IR's name.
 
 ## MIDI over USB-C (test build v37; [MIDI.md](MIDI.md))
 **Hold FX** for 0.8 s: the MIDI page (CHANNEL OMNI or 1 to 16, SEND, CLOCK > DELAY, USB AUDIO: [USB-AUDIO.md](USB-AUDIO.md)). Program Change 0 to 51 loads slot 1 to 52;
@@ -199,19 +205,20 @@ CC 7 is the MASTER volume. Details, the clock sync and the limits: [MIDI.md](MID
 
 ## Tuner
 Both footswitches, or a long press on HOME. The output is muted while the tuner is open (v36). The note, how far off it
-is in cents, and an amber arrow on the side of the note that points toward in tune. Any switch leaves it. It reads
+is in cents, and an arrow on the side of the note that points toward in tune; in tune, the note and the needle turn
+green. Any switch leaves it. It reads
 from about 28 Hz to 1100 Hz: a bass's strings, a five-string's low B included, and a guitar's up the neck.
 
 ## Diagnostics
 Keep holding HOME past the tuner (1.4 s in all), or hold HOME again on the tuner. The pages bug reports ask for a photo of
 (the tuner page showed these before); the knob turns between them, any control leaves, and the sound plays. Every figure is
-written beside its picture. Green is fine, amber is above 80 %, red is a late block or the effects bypassed.
+written beside its picture. Amber is a load above 80 %, a late block, a counter that is not zero or the effects bypassed.
 
 - **Page 1, the DSP:** the load as a bar with the safety bypass's limit marked (`GUARD 93%` with both cores, 85 % on one)
   and the peak since the preset was set; which cores ran (`C1` the second core, `C0` the fallback on the main core, `2C`
   both) and `PK`, the highest block load since boot; a bar for each core while the NAM network is split between them;
   `LATE` (blocks that ran late), `CLIP` (blocks at the soft clipper) and `BYPASS`; the four costliest blocks as bars, the
-  heaviest in amber, and `CUT n` once the delay or the reverb had to cut a wet block short.
+  heaviest the brightest, and `CUT n` once the delay or the reverb had to cut a wet block short.
 - **Page 2, input and power:** a meter for each input channel (`L -62 DB`, dB below full scale; with nothing plugged in,
   the pedal's own noise floor), with the last 3 dB marked as the clip zone; a marker that lights for 2 s when the output
   reaches the soft clipper, with the count; the battery as a cell with its volts and percent (`USB` on the 5 V supply);
