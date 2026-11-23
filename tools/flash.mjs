@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
-// node tools/op.mjs flash: write a built OpenPocket package to a connected pedal over USB MIDI, with no browser.
+// node tools/op.mjs flash: write a built Gamut package (or an app's, --app) to a connected pedal over USB MIDI, with no browser.
 // The protocol is docs/pxota.js and the package checks are docs/pxpkg.js, the very modules the installer page runs;
 // this file only adds the command line: arguments, the checks that come first, and the report.
 //   flash [--dry-run | --confirm-flash] [--rescue [--timeout SECONDS]] [--package FILE] [--manifest FILE] [--app NAME]
@@ -30,7 +30,7 @@ const USAGE = `usage: node tools/op.mjs flash --dry-run [--package FILE] [--mani
                    the flash stops (exit 2) before anything is sent; the version check is a precaution. It never
                    lifts the refusal of a BlackBox on M-VAVE's V22 or later, whose boot loader the install would overwrite
   --app NAME       install the alternative firmware NAME (built with \`node tools/op.mjs app NAME\`: its manifest is
-                   build/apps/NAME/manifest.json) in place of OpenPocket. Without it only OpenPocket is installed,
+                   build/apps/NAME/manifest.json) in place of Gamut. Without it only Gamut is installed,
                    which is also the way back from an alternative firmware`;
 const RECOVERY = `Recovery: do not switch the pedal off while it is in update mode (an update that stopped): reconnect the cable and
 run this again with --rescue --package FILE, which finishes it. Once the update has finished, switching it off and on is safe.
@@ -72,10 +72,10 @@ function manifestEntry(manifestPath, { file, model }, want) {
   try { man = JSON.parse(readFileSync(manifestPath, "utf8")); } catch (e) { throw refuse(`cannot read the manifest ${manifestPath}: ${e.message}${want ? ` (build it first: node tools/op.mjs app ${want})` : ""}`); }
   const app = man.app && typeof man.app.id === "string" ? man.app : null;
   if (app && want !== app.id) {
-    throw refuse(`${manifestPath} lists ${app.name} ${app.version}, an alternative firmware, not OpenPocket${want ? `, and not ${want}` : ""}. ` +
-      `To install it in place of OpenPocket, add --app ${app.id}. Nothing was sent.`);
+    throw refuse(`${manifestPath} lists ${app.name} ${app.version}, an alternative firmware, not Gamut${want ? `, and not ${want}` : ""}. ` +
+      `To install it in place of Gamut, add --app ${app.id}. Nothing was sent.`);
   }
-  if (!app && want) throw refuse(`${manifestPath} lists OpenPocket, not the alternative firmware ${want}. Nothing was sent.`);
+  if (!app && want) throw refuse(`${manifestPath} lists Gamut, not the alternative firmware ${want}. Nothing was sent.`);
   const entry = (man.packages || []).find((p) => (file ? p.file === file : p.model === model));
   if (!entry) throw refuse(file ? `${file} is not listed in ${manifestPath}: refusing an unlisted package` : `${manifestPath} has no package for ${model}`);
   return { entry, app };
@@ -89,10 +89,10 @@ async function loadPackage(args, { file, model }) {
   try { return { ...(await verifyPackage(bytes, entry)), path, sha256: entry.sha256, app }; } catch (e) { throw refuse(`${basename(path)}: ${e.message}`); }
 }
 // what a package is, in words, and the product the pedal must say it runs once the package is on it
-const pkgName = (p) => `${p.product} (${p.app ? `${p.app.name} ${p.app.version}, an alternative firmware` : `OpenPocket v${Number(p.product.split("_")[1]) - 900}`})`;
+const pkgName = (p) => `${p.product} (${p.app ? `${p.app.name} ${p.app.version}, an alternative firmware` : "Gamut"})`   // (a manifest of Gamut holds no version text);
 const devName = (d) => `${d.id.text} (${firmwareName(d.id, d.product)})`;
 const pkgApp = (p) => (p.app ? p.app.id : OPENPOCKET);
-const wayBack = (p, say) => { if (p.app) say("To go back to OpenPocket: node tools/op.mjs flash --confirm-flash (your OpenPocket presets, NAM models and IRs were not touched)."); };
+const wayBack = (p, say) => { if (p.app) say("To go back to Gamut: node tools/op.mjs flash --confirm-flash (your Gamut presets, NAM models and IRs were not touched)."); };
 
 // the one pedal on the bus, or an error that says why not. Each MIDI input is asked alone (read-only identity query).
 async function scan(access, timing) {
@@ -109,7 +109,7 @@ async function scan(access, timing) {
 
 async function detect(access, timing) {
   const { found, seen } = await scan(access, timing);
-  if (!found.length) throw refuse(`no OpenPocket-compatible pedal found${seen}. Plug the pedal in over USB, close the browser installer and any MIDI program, and try again.`);
+  if (!found.length) throw refuse(`no Pocket X or BlackBox found${seen}. Plug the pedal in over USB, close the browser installer and any MIDI program, and try again.`);
   if (found.length > 1) throw refuse(`${found.length} pedals answered (${found.map((d) => `${d.id.text} on "${d.name}"`).join(", ")}). Connect only one.`);
   return found[0];
 }
@@ -158,7 +158,7 @@ async function rescue(args, given, access, t, say) {
         const want = pkgs[dev.id.model];
         if (IS_OTA(dev.id)) {
           if (!given) throw refuse(`the pedal is in update mode (${dev.id.text}), which does not tell its model: add --package FILE to finish the update. Nothing was sent.`);
-          if (!OUR_LOADER(dev.id)) throw refuse(`the pedal is in the update mode of another firmware (${dev.id.text}); a rescue only finishes an OpenPocket update. Nothing was sent.`);
+          if (!OUR_LOADER(dev.id)) throw refuse(`the pedal is in the update mode of another firmware (${dev.id.text}); a rescue only finishes an update by this project's loader. Nothing was sent.`);
           say(`it is in update mode (${dev.id.text}); a real rescue would finish the update with ${given.product}.`);
         } else if (!want) throw refuse(`wrong model: the pedal is a ${dev.id.text}, no package given for it. Nothing was sent.`);
         else newerNote(dev.id, want.product, args, say);

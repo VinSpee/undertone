@@ -2,19 +2,19 @@
 
 The firmware tree builds more than one image for the pedal. The **base** is the code that every image has, whatever
 the image does with the sound. An **app** is one image built on the base, and each app is a product of its own.
-OpenPocket is the first app. STARTER (`firmware/apps/starter`) is the second: a small alternative firmware that exists
+Gamut is the first app. STARTER (`firmware/apps/starter`) is the second: a small alternative firmware that exists
 to be copied. PALETTE (`firmware/apps/palette`, [PALETTE.md](PALETTE.md)) is the third: a four-module stereo
 instrument with an engine and a memory layout of its own.
 
-The base exists so that an experiment that does not fit in OpenPocket can be its own image. OpenPocket's engine
+The base exists so that an experiment that does not fit in Gamut can be its own image. Gamut's engine
 region has 40 bytes free, so a different engine needs a different memory layout. An app is installed with the same
-installer as OpenPocket, and OpenPocket is put back the same way.
+installer as Gamut, and Gamut is put back the same way.
 
 This document is the reference for the base. To start an alternative firmware, read
 [ALT-FIRMWARE.md](ALT-FIRMWARE.md) first. It also covers the install, the way back and the recovery.
 
-OpenPocket itself does not change when the base changes. `build/apps/gamut/openpocket.bin` and both packages are the same
-bytes as the pinned release, upstream's published v42 with the bass tuner fix, trails, the editor watch fix, the flash hold fix, the built-in amps and cabinets removed and slot IR1's factory IR, numbered v43, and the build fails when they are not
+Gamut itself does not change when the base changes. `build/apps/gamut/openpocket.bin` and both packages are the same
+bytes as the pinned release, upstream's published v42 with the bass tuner fix, trails, the editor watch fix, the flash hold fix, the built-in amps and cabinets removed and slot IR1's factory IR, renamed Gamut 1.0b1 with the identity 50, and the build fails when they are not
 (section 9).
 
 ## 1. What the base holds
@@ -38,15 +38,15 @@ bytes as the pinned release, upstream's published v42 with the bass tuner fix, t
 | The link and the build: sections, fixed regions, RAM code, the memory report | `firmware/app.ld`, `firmware/build.sh`, `tools/ramcode.py`, `tools/check_calls.py` |
 | The package and the update loader | `tools/pxpkg.py`, `tools/mkloader.py`, `loader/` |
 
-OpenPocket's own files are in `firmware/apps/gamut/` (`openpocket.c`, `px_audio.h`, `ui.h`, `ui_colors.h`,
+Gamut's own files are in `firmware/apps/gamut/` (`openpocket.c`, `px_audio.h`, `ui.h`, `ui_colors.h`,
 `px_lights.h`, `px_store.h`, `px_models.h`, `px_irs.h`, `px_editor.h`, `px_midi.h`, `px_midi_io.h`, `px_ble_midi.h`,
 `ble/`, `memory.ld` and `engine/`). Everything under `firmware/` outside `firmware/apps/` is the base.
 
 A base file that was already a file of its own, such as `px_usb.h`, stays at its path. The tests include those files
 by path, and a file that does not move merges with upstream changes as before.
 
-STARTER is the check on the boundary. It includes the base's files and none of OpenPocket's. A base file that needs a
-name from OpenPocket's engine, presets, or screens stops the STARTER build.
+STARTER is the check on the boundary. It includes the base's files and none of Gamut's. A base file that needs a
+name from Gamut's engine, presets, or screens stops the STARTER build.
 
 ## 2. What an app is
 
@@ -56,7 +56,7 @@ translation unit, and every function is `static`. There are two ways to write th
 **On the plain schedule.** The app makes its sound in the audio interrupt, on one core, and the base does the start
 and the main loop. `firmware/apps/starter/starter.c` is the example, and section 3 lists what such an app declares.
 
-**With its own schedule.** OpenPocket shares a block between two cores, so it provides the audio callbacks itself
+**With its own schedule.** Gamut shares a block between two cores, so it provides the audio callbacks itself
 (`px_audio.h`) and writes its own start and main loop (`openpocket.c`). The table at the end of this section is the
 contract for that case.
 
@@ -67,8 +67,8 @@ The app's file defines these names before `base/board.h`:
 | `AUDIO_PROBE` | `0`. `1` builds the audio test in place of the app. |
 | `DSP_CPU1` | `1` starts the second core for the DSP. `build.sh` reads this line to link the second core's entry. |
 | `OP_NAME` | The product's name: the boot screen, the installer. |
-| `OP_VERSION_NUM`, `OP_VERSION` | The package's number (`"43"` gives `PocketX_943`) and the text on the screens. |
-| `OP_APP_ID` | An app other than OpenPocket: its folder's name under `firmware/apps`. OpenPocket defines none. |
+| `OP_VERSION_NUM`, `OP_VERSION` | `OP_VERSION_NUM` is the package's identity number. `"50"` gives `PocketX_950`. For an app, `OP_VERSION` is `v` and that number (`"01"` gives `v01`). Gamut keeps the two apart: `OP_VERSION_TEXT` (`1.0b1`) is the version text that the boot screen and the INFO reply show, and `OP_VERSION` is that text and the test channel's tag. |
+| `OP_APP_ID` | An app other than Gamut: its folder's name under `firmware/apps`. Gamut defines none. |
 | `A_CH` | `2` when the app's sound has a left and a right side. The default is `1`. |
 
 An app that writes its own start and loop provides these functions and calls the base in this order:
@@ -134,11 +134,11 @@ regions in this order:
 | `RAMTEXT` | Code that runs from RAM. Section `.bss.hi.*` uses its free end and is set to zero. |
 
 `app.ld` includes `memory.ld` and refuses the link when the three regions overlap, are out of order, or reach the
-stacks. It also refuses a `RAMTEXT` that the flash code cannot call. `firmware/apps/gamut/memory.ld` is OpenPocket's.
+stacks. It also refuses a `RAMTEXT` that the flash code cannot call. `firmware/apps/gamut/memory.ld` is Gamut's.
 
 | | `RAM` | `POOL` | `RAMTEXT` |
 | --- | --- | --- | --- |
-| OpenPocket | 96 KiB | 248 KiB | 88 KiB |
+| Gamut | 96 KiB | 248 KiB | 88 KiB |
 | STARTER | 64 KiB | 320 KiB | 48 KiB |
 | PALETTE | 64 KiB | 304 KiB | 64 KiB |
 
@@ -168,7 +168,7 @@ channels is not known.
   fades the output back in. Use it to swap an effect, change an order, or clear a buffer. A setting that only moves
   needs no such call: the engine glides to it.
 
-The base's schedule uses one core. The schedule that shares a block between two cores is OpenPocket's, in
+The base's schedule uses one core. The schedule that shares a block between two cores is Gamut's, in
 `px_audio.h`.
 
 ## 6. Controls
@@ -192,7 +192,7 @@ means.
 `held` is the set of buttons that are down, so the second button of a pair sees the first one. The buttons are
 `IN_FSUP`, `IN_FSDN`, `IN_PUSH`, `IN_HOME`, `IN_FX`, `IN_MOD`, `IN_AMP`, `IN_CAB`, `IN_DLY`, and `IN_REV`.
 
-OpenPocket polls the pins in its own main loop (`openpocket.c`) and times its gestures in `ui.h`.
+Gamut polls the pins in its own main loop (`openpocket.c`) and times its gestures in `ui.h`.
 
 ## 7. MIDI
 
@@ -207,19 +207,19 @@ An app with a MIDI map names it with `#define APP_MIDI name` and gets each messa
 (`MIDI_PC`, `MIDI_CC`, `MIDI_CLOCK`, `MIDI_START`, `MIDI_STOP`), its channel, and its data, with the millisecond it
 arrived. `midi_tempo` turns the clock into a quarter note's time. Without `APP_MIDI` the messages are dropped.
 
-OpenPocket has its own reader and map, and its own copy of the decoder (`px_midi.h`, `px_midi_io.h`).
+Gamut has its own reader and map, and its own copy of the decoder (`px_midi.h`, `px_midi_io.h`).
 
 ## 8. An app's data in flash
 
 | Range | Whose |
 | --- | --- |
 | `0x04000..0xA3000` | The firmware. An update rewrites it. |
-| `0xC0000..0xE0000` | OpenPocket's NAM models. |
+| `0xC0000..0xE0000` | Gamut's NAM models. |
 | `0xE0000..0xE5000` | An update's staging area. |
 | `0xE5000..0xEF000` | An app's own data (`base/store.h`), ten sectors of 4 KiB. |
-| `0xF0000..0xFC000` | OpenPocket's presets and cabinet IRs. |
+| `0xF0000..0xFC000` | Gamut's presets and cabinet IRs. |
 
-An app never writes OpenPocket's ranges. They must be there, untouched, when OpenPocket is installed again. The
+An app never writes Gamut's ranges. They must be there, untouched, when Gamut is installed again. The
 base's flash guard refuses a write outside the update's staging area and the range the app declares with
 `OP_FLASH_OWN`. An app that uses the store declares `BS_FLASH_OWN`.
 
@@ -234,11 +234,11 @@ A power cut during a save leaves the copy before it.
 
 The last 256 bytes of every sector stay erased. The boot code and every update loader look there, at each 4 KiB
 boundary minus 256, for the record of an update in progress, and a loader erases a sector that ends like one.
-OpenPocket's loader skips OpenPocket's ranges by address. It does not know this range. Those erased bytes are what
-keeps an app's data through a stay on OpenPocket.
+Undertone's loader skips Gamut's ranges by address. It does not know this range. Those erased bytes are what
+keeps an app's data through a stay on Gamut.
 
 Nothing is written before the first save. On a pedal that came from the official firmware this range holds part of
-the official sound bank (one amp model and eight cabinets), which OpenPocket's own areas already overlap elsewhere.
+the official sound bank (one amp model and eight cabinets), which Gamut's own areas already overlap elsewhere.
 The first save of an app overwrites it.
 
 ## 9. Build both products, and the release pin
@@ -247,55 +247,55 @@ The first save of an app overwrites it.
 node tools/op.mjs all             # or: make all
 ```
 
-`all` builds OpenPocket, then each app of `firmware/apps`, then runs the host tests with the packages it just built.
+`all` builds Gamut, then each app of `firmware/apps`, then runs the host tests with the packages it just built.
 The parts can be run alone:
 
 | Command | Result |
 | --- | --- |
-| `node tools/op.mjs package` | OpenPocket: `build/apps/gamut/openpocket.bin`, `*.fwsc`, `manifest.json`, `release.json` (the catalog), `SHA256SUMS`. It ends with the release pin. |
+| `node tools/op.mjs package` | Gamut: `build/apps/gamut/openpocket.bin`, `*.fwsc`, `manifest.json`, `release.json` (the catalog), `SHA256SUMS`. It ends with the release pin. |
 | `node tools/op.mjs app starter` | STARTER: `build/apps/starter/starter.bin`, `starter-PocketX_901.fwsc`, `starter-BlackBox_901.fwsc`, `manifest.json`, `SHA256SUMS`. |
 | `node tools/op.mjs test --built` | The host tests, also with those packages. |
 
-An app's outputs go to `build/apps/<name>/`. The OpenPocket build's outputs are not touched. The installer offers an app
+An app's outputs go to `build/apps/<name>/`. The Gamut build's outputs are not touched. The installer offers an app
 only when `firmware/catalog.json` lists it, or with `?app=<name>` ([ALT-FIRMWARE.md](ALT-FIRMWARE.md)).
 
 **The release pins.** Each firmware that is released has a pin, `firmware/apps/<name>/release.sha256`: the SHA-256
-of its image, both packages, and the manifest. STARTER, the template, has none. OpenPocket's pin,
+of its image, both packages, and the manifest. STARTER, the template, has none. Gamut's pin,
 `firmware/apps/gamut/release.sha256`, holds the sums of upstream's published v42 packages with the bass tuner fix (the tuner reads a bass's
 low strings), trails (the delay and the reverb ring out over a new preset), the editor watch fix (a request from
 the editor no longer cancels a push the pedal owes it) and the flash hold fix (a save or an erase of a NAM model or an
 IR reads the slots' names with the audio still held) and store format 6 (the built-in amps and cabinets removed:
 the AMP block plays NAM only, the CAB block USER IR only) and slot IR1's factory IR (ML Sound Lab's "BEST IR IN THE
-WORLD", with the factory presets' levels set for it), numbered v43 (`PocketX_943`, `BlackBox_943`). `package` ends with `tests/release_pin.sh gamut`, and `app <name>` with `tests/release_pin.sh <name>` for a firmware
+WORLD", with the factory presets' levels set for it), renamed Gamut 1.0b1 with the identity 50 (`PocketX_950`, `BlackBox_950`). `package` ends with `tests/release_pin.sh gamut`, and `app <name>` with `tests/release_pin.sh <name>` for a firmware
 with a pin; each fails when a sum differs. The build is deterministic: CI and a local build give the same bytes.
 
-The same sums mean that nothing in OpenPocket needs a check on a pedal. A change to a base file changes every app,
-so run `package` after one. A change that only moves code, or that adds lines for a case OpenPocket does not
+The same sums mean that nothing in Gamut needs a check on a pedal. A change to a base file changes every app,
+so run `package` after one. A change that only moves code, or that adds lines for a case Gamut does not
 compile, leaves the image the same bytes.
 
-To pin a new OpenPocket release after a merge of upstream's next version, compare the packages with upstream's
+To pin a new Gamut release after a merge of upstream's next version, compare the packages with upstream's
 published ones, then copy `build/apps/gamut/SHA256SUMS` over `firmware/apps/gamut/release.sha256` in the same commit. A change
-made to OpenPocket on purpose, such as the bass tuner fix or trails, is pinned the same way once its own tests pass.
+made to Gamut on purpose, such as the bass tuner fix or trails, is pinned the same way once its own tests pass.
 Another firmware's release is pinned by copying `build/apps/<name>/SHA256SUMS` over its `release.sha256`.
 
 ## 10. Which product an image is
 
 Every image on the base reports the identity `PocketX_9NN` or `BlackBox_9NN` in the update handshake. That is on
-purpose. An installer of any age finds the pedal by it and can install OpenPocket over it. The identity does not say
+purpose. An installer of any age finds the pedal by it and can install Gamut over it. The identity does not say
 which product runs. Three other things do.
 
-| Where | OpenPocket | An app |
+| Where | Gamut | An app |
 | --- | --- | --- |
 | In the image | No product descriptor. | A descriptor found by its mark `OP-APP:`: id, name, version, what it can do. |
-| In the package | `PocketX_943.fwsc`. The manifest has no `app`. | `starter-PocketX_901.fwsc`. The manifest's `app` holds the descriptor. |
+| In the package | `PocketX_950.fwsc`. The manifest has no `app`. | `starter-PocketX_901.fwsc`. The manifest's `app` holds the descriptor. |
 | On the pedal | INFO answers protocol 1 to 4. | INFO answers protocol 0, then the descriptor. |
 
 INFO is the first request of the editor protocol, `F0 7D 4F 50 01 F7` ([EDITOR-PROTOCOL.md](EDITOR-PROTOCOL.md)).
-OpenPocket has answered it since v32. No OpenPocket answers protocol 0, and the published web editor refuses it, so
+Gamut has answered it since v32, when it was called OpenPocket. No version of it answers protocol 0, and the published web editor refuses it, so
 an old editor does not open on an app.
 
 `tools/pxpkg.py` reads the descriptor from the image it packages. It refuses to package an app's image as
-OpenPocket, and OpenPocket's image as an app.
+Gamut, and Gamut's image as an app.
 
 The capabilities come from what the app includes: `stereo` (`A_CH 2`), `usb-audio` (`OP_UAUDIO`), `midi`
 (`APP_MIDI`), `store` (`base/store.h`). The descriptor also holds the protocol number of the app's own editor
@@ -309,7 +309,7 @@ The tools use this as follows:
   that firmware's name.
 - **The flasher** installs an app only with `--app <name>`. It names the product a pedal runs, checks after an
   install that the pedal runs the product that was installed, and ends with the way back.
-- **The web editor** says which product answered and how to put OpenPocket back. It does not open.
+- **The web editor** says which product answered and how to put Gamut back. It does not open.
 - **`node tools/op.mjs log`** names the product.
 
 The USB device's name is "OpenPocket" for every app, because the installer finds the pedal by that name.
@@ -323,38 +323,38 @@ controls from the pins up, the audio stages, the store, MIDI, and INFO.
 
 The simulator gives the app's screen, its controls, MIDI and SysEx, its flash, and the level of the two outputs for a
 test tone. Its page also plays a guitar loop through the app: the sound comes from the app's own C code, a part at a
-time. The WebAssembly engine of the OpenPocket simulator is OpenPocket's.
+time. The WebAssembly engine of the simulator is Gamut's.
 
 ## 12. What the base leaves out
 
-- **OpenPocket's own copies.** OpenPocket still has its own main loop, button polling, MIDI reader, preset store, and
+- **Gamut's own copies.** Gamut still has its own main loop, button polling, MIDI reader, preset store, and
   editor frames. It does not use `base/loop.h`, `input.h`, `midi.h`, `store.h`, or `product.h`. Moving it onto them
   changes its compiled code, and a changed image needs a check on a pedal (section 13).
 - **Two cores.** The base's schedule uses one core.
-- **The web editor for an app.** The editor edits OpenPocket only. An app's own requests reach the app, and no page
+- **The web editor for an app.** The editor edits Gamut only. An app's own requests reach the app, and no page
   speaks them yet.
-- **The Bluetooth test image and the test channel.** `OP_BLE` and `OP_CHANNEL` build OpenPocket only.
+- **The Bluetooth test image and the test channel.** `OP_BLE` and `OP_CHANNEL` build Gamut only.
 - **USB audio in STARTER.** The base has it (`OP_UAUDIO`). STARTER does not turn it on.
 
 ## 13. Compromises
 
-They exist so that OpenPocket's compiled code stays the same.
+They exist so that Gamut's compiled code stays the same.
 
-`base/boot_screens.h` holds statements, not functions, and OpenPocket's `app_main` includes it in its body. As
-functions, the same lines changed the stack layout of OpenPocket's `app_main`. `base/loop.h` wraps them in a function
+`base/boot_screens.h` holds statements, not functions, and Gamut's `app_main` includes it in its body. As
+functions, the same lines changed the stack layout of Gamut's `app_main`. `base/loop.h` wraps them in a function
 for other apps.
 
-The encoder's and the buttons' polling stays in OpenPocket's main loop for the same reason, and `base/input.h` is a
+The encoder's and the buttons' polling stays in Gamut's main loop for the same reason, and `base/input.h` is a
 second copy of that logic for other apps. The same holds for the MIDI decoder and the SysEx reply helpers.
 
 In `base/audio.h` the right side's lines are under `#if A_CH == 2`. A loop over the channels, written once, made the
-compiler emit different code for OpenPocket's one channel.
+compiler emit different code for Gamut's one channel.
 
-These copies can be joined when a changed OpenPocket image can be checked on a pedal.
+These copies can be joined when a changed Gamut image can be checked on a pedal.
 
 ## 14. Merge upstream changes
 
-OpenPocket's upstream does not have `firmware/base/`, the apps, or the product identity.
+Undertone's upstream, OpenPocket, does not have `firmware/base/`, the apps, or the product identity.
 
 - A file that kept its path merges as before.
 - A change upstream to lines that moved conflicts as "deleted by us". Apply the change by hand to the line's new
@@ -380,7 +380,7 @@ OpenPocket's upstream does not have `firmware/base/`, the apps, or the product i
   `tools/sim.mjs`, `tools/serve.py`, `tests/devsim.c`, `tests/fixtures.py`, `tests/run_tests.sh`,
   `tests/test_usb_audio.c`, `tests/test_page.mjs`, `tests/test_editor_page.mjs`, `tests/test_log.mjs`,
   `tests/test_op.mjs`, `Makefile`, and `.github/workflows/build.yml`.
-- A new file upstream is OpenPocket's until someone moves it.
+- A new file upstream is Gamut's until someone moves it.
 
 After a merge of a new upstream release, `node tools/op.mjs package` fails at the release pin, because the version
 changed. Compare the packages with upstream's published ones for that release, then pin them (section 9).

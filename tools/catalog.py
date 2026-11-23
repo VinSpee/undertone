@@ -4,7 +4,9 @@
 firmware (docs/install.html). firmware/catalog.json names the firmwares of a release, in the order of their cards, with
 one line on what each is and, when there is one, a warning to show with it ("note"). Everything else is read from
 what the build made: a firmware's name and version from its manifest, and each package's size and SHA-256 from the
-package itself, which must be the manifest's.
+package itself, which must be the manifest's. The first firmware, Gamut, has no product descriptor: its name and its
+version text ("version", the OP_VERSION_TEXT of firmware/apps/gamut/openpocket.c) are in firmware/catalog.json, and
+without a version text there its version is its number, "v" and the manifest's.
 
   tools/catalog.py [--source firmware/catalog.json] [--site build/apps/gamut] [--apps build/apps] [--out SITE/release.json]
 
@@ -41,7 +43,7 @@ def entry(src, folder, prefix):
             raise SystemExit(f"catalog: {folder / p['file']} is not the package its manifest describes: build it again")
         packages.append({**p, "file": prefix + p["file"]})
     return {"id": src["id"], "name": app["name"] if app else src["name"],
-            "version": app["version"] if app else f"v{man['version']}", "what": src["what"],
+            "version": app["version"] if app else src.get("version", f"v{man['version']}"), "what": src["what"],
             **({"note": src["note"]} if src.get("note") else {}),
             "manifest": prefix + "manifest.json", "packages": packages}
 

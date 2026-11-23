@@ -2,7 +2,7 @@
 
 This directory holds JieLi's own Bluetooth LE controller and host code, **as published, unmodified**, for the
 Bluetooth test image (`make ble`, [docs/BLE-TEST.md](../../docs/BLE-TEST.md)). Nothing here is part of the normal
-OpenPocket firmware or of the USB MIDI image; only the `ble` build target links it.
+Gamut firmware or of the USB MIDI image; only the `ble` build target links it.
 
 | | |
 | --- | --- |
@@ -29,9 +29,9 @@ Not used: the classic Bluetooth, TWS and ISO members of `btctrler.a`, and the cl
 `extract.sh` rebuilds this directory from an SDK checkout and checks the archive hashes above:
 `sh third_party/jieli-ble/extract.sh /path/to/fw-AC79_AIoT_SDK`.
 
-## What OpenPocket supplies
+## What Gamut supplies
 
-`firmware/apps/gamut/ble/` is OpenPocket's own code that these objects need: a small cooperative scheduler with the operating
+`firmware/apps/gamut/ble/` is Gamut's own code that these objects need: a small cooperative scheduler with the operating
 system calls they make (tasks, queues, semaphores, timers, heap, interrupt registration), the configuration
 (`ble_cfg.c`, derived from the SDK's `apps/common/config/log_config/lib_btctrler_config.c`, Apache-2.0), empty stand-ins
 for the parts that are not built (`ble_stubs.c`), and the radio start-up replay (`ble_rf.c`).

@@ -8,4 +8,4 @@ API: the SDK's `include_lib/driver/cpu/wl82/asm/iis.h` (reproduced in `../audio_
 
 `packager/`: `uboot.boot` (the SDK's SPL), `cfg_tool.bin` and `eq_cfg_hw.bin`, as is from
 `cpu/wl82/tools/` of the same SDK (Apache-2.0). `tools/pxpkg.py` puts them in the flash head of the `.fwsc` packages;
-the OpenPocket update loader never writes this head (only the application area).
+the Undertone update loader never writes this head (only the application area).

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
-// OpenPocket web editor: what its sections share. The state of the session (the pedal, its catalogue, its current
+// Gamut web editor: what its sections share. The state of the session (the pedal, its catalogue, its current
 // sound, its 52 slots), events between the sections, the messages, the questions, and the one long operation at a time.
 
 export const $ = (id) => document.getElementById(id);

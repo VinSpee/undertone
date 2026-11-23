@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
-// OpenPocket web editor: the 52 presets. Reading them, loading one, and everything that writes a slot (save, save as,
+// Gamut web editor: the 52 presets. Reading them, loading one, and everything that writes a slot (save, save as,
 // copy, move, rename, back to factory, import), each with what it replaces said beforehand and an Undo afterwards.
 
 import { app, $, h, icon, on, emit, slotName, say, task, act, busy, confirmDialog, promptDialog, pickDialog, menu, download,
@@ -209,7 +209,7 @@ export function exportAll() {
 }
 export async function importFile(f) {
   let list;
-  try { list = parsePresetFile(await f.text()); } catch (_) { say(`${f.name} is not an OpenPocket preset file.`, "err"); return; }
+  try { list = parsePresetFile(await f.text()); } catch (_) { say(`${f.name} is not a Gamut preset file.`, "err"); return; }
   if (!list.length) { say(`${f.name} holds no preset.`, "err"); return; }
   if (list.length === 1) return importOne(list[0], f.name);
   const ok = list.filter((o) => Number.isInteger(o.slot) && o.slot >= 1 && o.slot <= app.slots.length);

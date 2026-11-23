@@ -2,8 +2,9 @@
   "firmwares": [
     {
       "id": "openpocket",
-      "name": "OpenPocket",
-      "what": "Gamut, the new name of this guitar firmware: a chain of 12 blocks in presets, with neural amp models (NAM), your own cabinet IRs, drives and effects, and a preset editor in the browser."
+      "name": "Gamut",
+      "version": "1.0b1",
+      "what": "The guitar firmware, formerly called OpenPocket: a chain of 12 blocks in presets, with neural amp models (NAM), your own cabinet IRs, drives and effects, and a preset editor in the browser."
     },
     {
       "id": "palette",

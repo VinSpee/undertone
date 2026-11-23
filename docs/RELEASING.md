@@ -18,7 +18,7 @@ Nothing is published to npm, and nothing is published without a person.
 | `.github/scripts/release.mjs` | The steps that create the tag (`--tag`) and the draft release (`--draft TAG DIR`). Without an option it prints the tag and the notes and changes nothing |
 | `.github/scripts/assets.mjs` | The step that assembles the release's files from a build ([The release's files](#the-releases-files)) |
 
-The stubs live in `changelog/` and not beside the sources for three reasons. OpenPocket's sources have no folder of
+The stubs live in `changelog/` and not beside the sources for three reasons. Gamut's sources have no folder of
 their own. `tools/` has its own `package.json` and lock file, installed with `npm ci --prefix tools`, which an npm
 workspace would change. And a `package.json` in a firmware folder would sit among files the build reads.
 
@@ -29,8 +29,10 @@ Three numbers exist. Changesets own the first one and never touch the other two.
 | Number | Example | Where | Who changes it |
 | --- | --- | --- | --- |
 | The release | `v1.0.0-beta.1` | `changelog/*/package.json`, the tag, the GitHub release | Changesets, in the Version Packages pull request |
-| A firmware's version | `v43` for OpenPocket, `v01` for PALETTE | `OP_VERSION_NUM` in `firmware/apps/gamut/openpocket.c` and `firmware/apps/palette/palette.c`; on the boot screen | A person, in the pull request that changes that firmware |
-| The package identity | `BlackBox_943`, `PocketX_901` | Derived: 900 plus the firmware's version (`tools/pxpkg.py`). The installer tells builds apart by it | It follows the firmware's version |
+| A firmware's version | `1.0b1` for Gamut, `v01` for PALETTE | Gamut: `OP_VERSION_TEXT` in `firmware/apps/gamut/openpocket.c`, and the same text as its `version` in `firmware/catalog.json` (`tests/test_catalog.py` checks that they agree). PALETTE: `OP_VERSION_NUM` in `firmware/apps/palette/palette.c`, shown as `v` and its number. On the boot screen | A person, in the pull request that changes that firmware |
+| The package identity | `BlackBox_950`, `PocketX_901` | Derived: 900 plus `OP_VERSION_NUM` (`tools/pxpkg.py`). The installer tells builds apart by it | A person, with `OP_VERSION_NUM` |
+
+For Gamut the version text (`1.0b1`) and the identity number (50) are separate things: `OP_VERSION_NUM` sets the identity, and `OP_VERSION_TEXT` sets what the screens and the editor show. Every published build of Gamut needs a new identity number, because the installer tells builds apart only by it. An app such as PALETTE or STARTER shows `v` and its number from its descriptor, so for an app the two agree.
 
 One release carries several firmwares, and each keeps its own version and identity inside it. The release therefore
 needs a number of its own. It is a semantic version, so `v1.0.0-beta.1` cannot be mistaken for a firmware version
@@ -78,7 +80,7 @@ The jobs `files` and `release` of `.github/workflows/release.yml` make the draft
 found a tag without a release, and for a pushed tag.
 
 1. `files`, with read access only: it checks out the tag and builds as the `build` workflow does. `node tools/op.mjs
-   all` builds OpenPocket and every app of `firmware/apps`; a firmware with a pin fails when its packages are not the
+   all` builds Gamut and every app of `firmware/apps`; a firmware with a pin fails when its packages are not the
    pinned release's bytes. It then runs the host tests with the packages built. `node tools/op.mjs kit` builds the rescue kit.
    The job then compares the files on disk with their pins: each pinned firmware's image and packages with its
    `firmware/apps/<name>/release.sha256`, the kit with `rescue/kit.sha256`. STARTER has no pin. Then
@@ -93,7 +95,7 @@ The files of a release:
 | Asset | What it is | On the site at |
 | --- | --- | --- |
 | `release.json` | The firmware catalog (`tools/catalog.py`): one card per firmware on the installer page | `firmware/release.json` |
-| `manifest.json`, `PocketX_9NN.fwsc`, `BlackBox_9NN.fwsc` | OpenPocket's manifest and its package for each pedal | `firmware/` |
+| `manifest.json`, `PocketX_9NN.fwsc`, `BlackBox_9NN.fwsc` | Gamut's manifest and its package for each pedal | `firmware/` |
 | `<app>-manifest.json`, `<app>-PocketX_9NN.fwsc`, `<app>-BlackBox_9NN.fwsc` | The same for each other firmware of the catalog, such as PALETTE | `firmware/apps/<app>/` |
 | `OpenPocket-rescue-kit-<N>.zip` | The rescue kit without M-VAVE's files ([rescue/README.md](../rescue/README.md)) | Not from the release: the site builds its own kit |
 | `site.sha256` | The checksum list the site serves the release from: one line per file, its SHA-256, its path on the site and its asset name ([site/README.md](../site/README.md)) | |

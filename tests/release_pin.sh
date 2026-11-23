@@ -3,13 +3,14 @@
 # firmware or in another firmware (docs/BASE-FIRMWARE.md, section 9). firmware/apps/NAME/release.sha256 holds their
 # SHA-256; a firmware with no such file has no pin (STARTER, the template, is never released).
 #   tests/release_pin.sh NAME [SUMS]   compare SUMS with NAME's pin. The default SUMS is what the build wrote:
-#                                      build/apps/NAME/SHA256SUMS (`tools/op.mjs package` for OpenPocket, gamut;
+#                                      build/apps/NAME/SHA256SUMS (`tools/op.mjs package` for Gamut, gamut;
 #                                      `tools/op.mjs app NAME` for another firmware)
 # The same sums mean that nothing in that firmware needs a check on a pedal. To pin a new release of it, such as a merge
 # of upstream's next OpenPocket or a change made on purpose once its own tests pass, copy the build's SHA256SUMS over
-# its release.sha256 in the same commit. OpenPocket's pin (gamut) is upstream's published v42 with the bass tuner fix,
-# trails, the editor watch fix, the flash hold fix, the built-in amps and cabinets removed and slot IR1's factory IR,
-# numbered v43, its update loader refusing a flash head it does not know, its packages fitting both flash heads.
+# its release.sha256 in the same commit. Gamut's pin (gamut) is upstream's published OpenPocket v42 with the bass tuner
+# fix, trails, the editor watch fix, the flash hold fix, the built-in amps and cabinets removed and slot IR1's factory IR,
+# its update loader refusing a flash head it does not know, its packages fitting both flash heads, renamed Gamut: the
+# boot screen's name, the version text 1.0b1 and the identity 50 (PocketX_950, BlackBox_950).
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 NAME="$1"
 case "$NAME" in ""|*[!a-z0-9-]*) echo "usage: tests/release_pin.sh NAME [SUMS]   (NAME: a folder of firmware/apps)"; exit 2;; esac

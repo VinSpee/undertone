@@ -1,9 +1,9 @@
-# AC791N handbook: what OpenPocket learnt about the chip (for FM-1 firmware work)
+# AC791N handbook: what Undertone learnt about the chip (for FM-1 firmware work)
 
-This document collects what the OpenPocket project found about the JieLi AC791N, the chip in the FM-1, the Donner Pocket X
+This document collects what the Undertone project found about the JieLi AC791N, the chip in the FM-1, the Donner Pocket X
 and the M-VAVE BlackBox. It covers the CPU, memory, flash, second core, audio, accelerators and radio, the methods that
 worked for DSP on this chip, the mistakes that cost us builds, and what M-VAVE's own firmware does. It is written for a
-developer, or an assistant, building FM-1 firmware on felucca-bsp: OpenPocket uses the same BSP (`firmware/bsp/`), so the
+developer, or an assistant, building FM-1 firmware on felucca-bsp: Undertone uses the same BSP (`firmware/bsp/`), so the
 register names and helpers below are the ones you already have.
 
 **How sure each fact is.** **Measured**: seen on a real unit (pedal or FM-1). **Read**: seen in code (ours, the JieLi
@@ -44,7 +44,7 @@ firmware read in three passes), `docs/NAM.md` (the fixed-point network), `docs/B
 - **Hardware loops** (`rep N { ... }`) have no branch cost. The compiler uses them for simple counted loops. The stock
   firmware's sample loops are all hardware loops.
 - **Flash code runs through the instruction cache** (XIP), shared by both cores. A cache miss on flash is expensive. The
-  stock firmware keeps every per-sample routine in RAM (section 9), and so does OpenPocket since v40, with one
+  stock firmware keeps every per-sample routine in RAM (section 9), and so does Gamut since v40, with one
   exception (next point).
 - **Code in RAM is fetched more slowly than code in the cache** (measured, v40.5, sixteen copies of one instruction in a
   counted loop): a 6-byte instruction that works for 1 cycle takes 2.14 cycles from RAM and 1.49 from the flash; a
@@ -78,7 +78,7 @@ firmware read in three passes), `docs/NAM.md` (the fixed-point network), `docs/B
   the flash off (a flash write) with a job outstanding.
 - **Some units misread shared RAM on CPU1** (0x00200000 where 0 is stored, more often under load). The BSP guards
   every job with a check word, and `FM1_CPU1_FALLBACK 1` retires CPU1 on any misread or fault, so CPU0 continues alone.
-  OpenPocket builds with the fallback on and always keeps a one-core path that works.
+  Gamut builds with the fallback on and always keeps a one-core path that works.
 - **Sharing:** a single writer per word and `csync` around the hand-over. We saw no coherence problem with buffers
   written on one core and read on the other after the job's completion.
 - **Patterns that worked:**
@@ -113,12 +113,12 @@ firmware read in three passes), `docs/NAM.md` (the fixed-point network), `docs/B
 | `0x02000120..` | up to ~580 KB (`XIP` in `app.ld`) | flash code, executed in place; **app.bin file offset 0 = 0x02000120** (not 0x02000000: several of our early address readings were off by 0x120 for that reason) | measured |
 | `0x01C00000..0x01C08000` | 32 KB | free since v40 (until v39: `RAMTEXT`, 24 KB) | read (`app.ld`) |
 | `0x01C08000..` | 96 KB | `RAM`: `.data`, `.bss` | read |
-| `0x01C20000..0x01C5E000` | 248 KB | `POOL`: free SRAM, OpenPocket's DSP engine (~246 KB used in v40: the delay at half rate freed 87 KB) | read |
+| `0x01C20000..0x01C5E000` | 248 KB | `POOL`: free SRAM, Gamut's DSP engine (~246 KB used in v40: the delay at half rate freed 87 KB) | read |
 | `0x01C5E000..0x01C74000` | 88 KB | `RAMTEXT` (v40): code copied to RAM at boot. The flash driver and CPU1's loop (`.ram_text`, run with the flash off), and the audio path (`.ram_text.dsp.*`, about 75 KB, `tools/ramcode.py`). High enough to be within the call range of all the flash code | read (`app.ld`) |
 | `0x01C74000..0x01C7C000` | | user and supervisor stacks with 256-byte guard bands | read |
 | `0x01C7C000..0x01C7FD50` | | `NOINIT`: survives resets (crash records, boot counters) | read |
 | `0x01C7FD50..0x01C7FFFF` | | reserved: boot info, the CPU1 mailbox/entry word (`0x01C7FFF8`), vector table | read |
-| `0x01F28000..0x01F2F000` | 28 KB | **seven of the eight 4 KB data-cache ways turned into plain RAM** at boot (`firmware/px_cacheram.h`, from melodee). The data cache serves only the flash, so nothing is lost. OpenPocket puts the vector unit's inputs there, away from the RAM the CPUs use | measured |
+| `0x01F28000..0x01F2F000` | 28 KB | **seven of the eight 4 KB data-cache ways turned into plain RAM** at boot (`firmware/px_cacheram.h`, from melodee). The data cache serves only the flash, so nothing is lost. Gamut puts the vector unit's inputs there, away from the RAM the CPUs use | measured |
 | `0x01EE0400` | | FFT block / vector unit (section 6) | measured |
 | `0x01EEE008` / `00C` / `010` | | cache control: CON (bit 14 = idle), data ways, instruction ways | read (melodee) |
 | `0x01EEF0F0` | | a free-running timer the stock firmware reads to time its audio interrupt | read (stock) |
@@ -154,21 +154,21 @@ PCM ring at `0x1F29EE0`, inside the cache-way range above (**likely**: the stock
 
 ## 3. Flash (1 MiB SPI NOR)
 
-**[pedal] layout as OpenPocket uses it. The FM-1's own layout differs: felucca's main store is `0x97000..0xE0000`.**
+**[pedal] layout as Gamut uses it. The FM-1's own layout differs: felucca's main store is `0x97000..0xE0000`.**
 
 | Range | What |
 | --- | --- |
 | `0x00000..0x04000` | flash header, boot config: **never written**; the update loader reads it and refuses a head that does not put the app area at `0x4000` (M-VAVE's BlackBox V22 and later put it at `0x6000`) |
 | `0x04000..0xA3000` | the application area (the update loader rewrites only this). A package's app area is `0x99000` bytes, so it fits both heads: an update writes `0x04000..0x9D000` here, and the same bytes would sit at `0x06000..0x9F000` on a V22 head, below its stock settings. The loader refuses a package longer than the head's slot |
 | `0xA3000..0xFF000` | where the bootloader looks for update records: anything that ends like a record can be erased by an update, so user data there must be skipped by the loader (`loader/ldr_core.c`) |
-| `0xA5000` | stock "VM" (settings; holds the radio calibration records, VM 106..108, 187). On a Pocket X backup (`fm1-1.bin`, its official firmware) the active VM area is at **`0xA1000`**, inside OpenPocket's application area: installing OpenPocket overwrites it, and that pedal's radio records are gone (`ble_rf.c` gives defaults then) |
+| `0xA5000` | stock "VM" (settings; holds the radio calibration records, VM 106..108, 187). On a Pocket X backup (`fm1-1.bin`, its official firmware) the active VM area is at **`0xA1000`**, inside Gamut's application area: installing Gamut overwrites it, and that pedal's radio records are gone (`ble_rf.c` gives defaults then) |
 | `0xBA000..0xBD000` | stock file `EXT_RESERVED/usr` (12 KB) |
 | `0xBE000` | stock BTIF (Bluetooth pairing) |
-| `0xBF000..0xFF000` | stock file `EXT_RESERVED/pd40j` (256 KB): 20 amp models x 8 KB, 20 cabinets x 4 KB at `+0x28000`, the preset bank at `+0x3C000` (80 x 92 B + `PATCHEND`), the `GLB1` settings log at `+0x3E000` (`STOCK-FIRMWARE.md` 10.4). OpenPocket's own areas below reuse this range: installing OpenPocket overwrites the stock user data |
-| `0xC0000..0xE0000` | OpenPocket: NAM user models (16 x 8 KB) |
+| `0xBF000..0xFF000` | stock file `EXT_RESERVED/pd40j` (256 KB): 20 amp models x 8 KB, 20 cabinets x 4 KB at `+0x28000`, the preset bank at `+0x3C000` (80 x 92 B + `PATCHEND`), the `GLB1` settings log at `+0x3E000` (`STOCK-FIRMWARE.md` 10.4). Gamut's own areas below reuse this range: installing Gamut overwrites the stock user data |
+| `0xC0000..0xE0000` | Gamut: NAM user models (16 x 8 KB) |
 | `0xE0000..` | update loader staging (5 x 4 KB) |
-| `0xF0000..0xF4000` | OpenPocket presets, A/B copies, header written last (sequence + CRC16), read back after writing; bytes `0xF00..0xF7F` of each sector left erased (the loader reads that area) |
-| `0xF4000..0xFC000` | OpenPocket: cabinet IRs (8 x 4 KB) |
+| `0xF0000..0xF4000` | Gamut presets, A/B copies, header written last (sequence + CRC16), read back after writing; bytes `0xF00..0xF7F` of each sector left erased (the loader reads that area) |
+| `0xF4000..0xFC000` | Gamut: cabinet IRs (8 x 4 KB) |
 | near `0xFF000` | key/MAC area |
 
 **Writing the flash while audio runs (measured, v25 on):** the SFC (XIP) is switched off during erase and program, so
@@ -233,7 +233,7 @@ window (`SFCENC_CON`, `fm1_flash.h`, `ble_vm.h`), not through `0x02xxxxxx`.
 - **[pedal]** I2S on IIS_PORTA: MCLK PA4, SCLK PA5, LRCK PA6, output DAT0 PA7 → external DAC → SGM8905 amp (enable PA9
   high), input DAT1 PA8 from an external ADC, guitar on the **left channel only** (the right one carries steady noise
   14 dB above the left floor; mixing L+R added it). The chip's internal DAC is not used on the pedal.
-- **Blocks:** OpenPocket uses 128 frames at 44.1 kHz (2.9 ms). The stock firmware uses **64-frame blocks** at the same
+- **Blocks:** Gamut uses 128 frames at 44.1 kHz (2.9 ms). The stock firmware uses **64-frame blocks** at the same
   rate (its coefficient code also has a 48 kHz fast path, which misled an earlier reading).
 - **Real-time accounting:** time every block with TIMER4 against its budget (`frames / fs x 24 MHz`). Count blocks over
   100 % (`LATE`), blocks that reach the output clipper (`CLIP`), the peak load, and a per-effect time (v38 profiler). The
@@ -355,7 +355,7 @@ Measured on the pedal or proven on the PC against a reference. The engine is `fi
   soft knee at 0.5 and before a 3-band tone stack whose frequencies and ranges come from the model's header.
 - **Its NAM type is A2-Lite** (read: the 23-layer kernel/dilation table is in the firmware, 1 871 weights), in fixed
   point from a 7 KB RAM overlay (A). The `AM` models' GRU kernels are a second overlay (B) in the same window, and
-  the GRU's three 16 x 16 matrix-vector products a sample run **on the FFT block as a vector unit**, as OpenPocket's NAM
+  the GRU's three 16 x 16 matrix-vector products a sample run **on the FFT block as a vector unit**, as Gamut's NAM
   does (read, `STOCK-FIRMWARE.md` 11.4).
 - **Its cabinets:** 20 IRs of 1 024 taps (files, signed 24-bit), 64-frame partitions.
 - **Keys (read):** scanned every 20 ms; three footswitches on one ADC ladder (channel 9, combinations decoded,
@@ -441,7 +441,7 @@ What it took to get JieLi's controller (from the SDK's `btctrler.a` / `btstack.a
   handlers mask everything for their whole run (`cli` + a spin lock), as in the stock firmware.
 - **`cpu_in_irq`:** the SDK's is `icfg & 0xFF`, and the link scheduler calls `le_hw_suspend` from the interrupt, where a
   "no" takes the task's way (it waits on the baseband's busy flag). But the build that advertised and connected on a
-  BlackBox always said no, and the first v41 builds that used `icfg & 0xFF` were never seen by a phone: OpenPocket says no
+  BlackBox always said no, and the first v41 builds that used `icfg & 0xFF` were never seen by a phone: Gamut says no
   again until the low byte is read on the pedal outside an interrupt.
 - **Timers from the interrupt:** the link scheduler adds and removes timeouts inside the interrupt; the timer table needs
   a lock.
@@ -454,7 +454,7 @@ What it took to get JieLi's controller (from the SDK's `btctrler.a` / `btstack.a
   code out of the instruction cache both cores share. This was v37's `BYP` at 150 %.
 - **Radio calibration:** read the stock VM records raw (VM 106..108 to the radio replay, VM 187 the unit's calibration).
 - **Not verified:** sound under a link (the `ble-v41` branch's release: no crackle while idle, crackles while a phone sends a stream of CC), long runs (the stock firmware re-calibrates
-  the radio when the temperature drifts; OpenPocket does not), bonding across a power cycle. Flash writes mask every
+  the radio when the temperature drifts; Gamut does not), bonding across a power cycle. Flash writes mask every
   interrupt while the flash is busy, the radio's too, so the library's flash code is never fetched then.
 
 ---

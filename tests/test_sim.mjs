@@ -8,8 +8,9 @@ import { execFileSync } from "node:child_process";
 import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-// the version the simulated pedal reports (tests/edsim.c: OP_VERSION)
-const VER = /#define OP_VERSION "v(\d+)"/.exec(readFileSync(new URL("edsim.c", import.meta.url), "utf8"))[1];
+// the version text and the identity the simulated pedal reports (tests/edsim.c: OP_VERSION, FELUCCA_ID_PTR)
+const EDSIM = readFileSync(new URL("edsim.c", import.meta.url), "utf8");
+const VER = /#define OP_VERSION "([^"]+)"/.exec(EDSIM)[1], ID = /FELUCCA_ID_PTR = "([^"]+)"/.exec(EDSIM)[1];
 import { createContext, runInContext } from "node:vm";
 import { fileURLToPath } from "node:url";
 import { startSim } from "../tools/sim.mjs";
@@ -197,7 +198,7 @@ ok(await served("/", "text/html; charset=utf-8") && await served("/plain", "text
 // ---- 6. SysEx over HTTP (docs/EDITOR-PROTOCOL.md) ----
 let r = await act("/api/sysex", "f0 7d 4f 50 01 f7");
 const b = Buffer.from(r.reply, "hex");
-ok(b[4] === 1 && b.toString("latin1").includes(`v${VER}`) && b.toString("latin1").includes(`PocketX_9${VER}`), `sysex INFO: the editor protocol answers (v${VER}, PocketX_9${VER})`);
+ok(b[4] === 1 && b.toString("latin1").includes(VER) && b.toString("latin1").includes(ID), `sysex INFO: the editor protocol answers (${VER}, ${ID})`);
 r = await act("/api/sysex?timeout=100", "f0 7d 4f 50 7e f7");
 ok(r.reply === null, "sysex: a request the pedal does not understand gets no reply");
 r = await act("/api/sysex", JSON.stringify([0xF0, 0x7D, 0x4F, 0x50, 0x06, 5, 0, 0, 91, 0xF7]));   // SET AMP parameter 0 = 91
@@ -236,7 +237,7 @@ let access = await shim.navigator.requestMIDIAccess({ sysex: true });
 ok(access.inputs.size === 1 && access.outputs.size === 1 && [...access.inputs.values()][0].name === "OpenPocket", "shim: requestMIDIAccess gives one input and one output, \"OpenPocket\"");
 const ed = new Editor(access);
 const inf = await ed.connect();
-ok(inf && inf.version === `v${VER}` && inf.identity === `PocketX_9${VER}`, "editor (pxedit.js) over the shim: INFO");
+ok(inf && inf.version === VER && inf.identity === ID, "editor (pxedit.js) over the shim: INFO");
 const cat = await ed.catalog();
 ok(cat.blocks.length === 12 && cat.blocks[5].label === "AMP", "editor: the catalogue");
 await ed.setParam(5, 1, 33);

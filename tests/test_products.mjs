@@ -94,26 +94,26 @@ const altPkg = join(P.alt, "starter-PocketX_901.fwsc"), altMan = join(P.alt, "ma
 
 // ---- the guard: an alternative firmware is never installed for OpenPocket
 let r = await flasher(start, ["--confirm-flash", "--package", altPkg, "--manifest", altMan]);
-ok(r.code === 2 && /STARTER v01, an alternative firmware, not OpenPocket/.test(r.out) && /--app starter/.test(r.out) && unchanged(r.dump, start),
+ok(r.code === 2 && /STARTER v01, an alternative firmware, not Gamut/.test(r.out) && /--app starter/.test(r.out) && unchanged(r.dump, start),
   "an alternative firmware's package without --app: refused, its name and the option given, nothing written");
 r = await flasher(start, ["--confirm-flash", "--manifest", altMan]);
-ok(r.code === 2 && /not OpenPocket/.test(r.out) && unchanged(r.dump, start), "its manifest alone, without --app: refused the same way");
+ok(r.code === 2 && /not Gamut/.test(r.out) && unchanged(r.dump, start), "its manifest alone, without --app: refused the same way");
 r = await flasher(start, ["--confirm-flash", "--app", "chroma", "--manifest", altMan]);
 ok(r.code === 2 && /not chroma/.test(r.out) && unchanged(r.dump, start), "--app with another firmware's name: refused");
 r = await flasher(start, ["--confirm-flash", "--app", "starter", "--manifest", opMan]);
-ok(r.code === 2 && /lists OpenPocket, not the alternative firmware starter/.test(r.out) && unchanged(r.dump, start), "--app with OpenPocket's manifest: refused");
+ok(r.code === 2 && /lists Gamut, not the alternative firmware starter/.test(r.out) && unchanged(r.dump, start), "--app with OpenPocket's manifest: refused");
 r = await flasher(start, ["--confirm-flash", "--app", "starter", "--package", join(P.alt, "starter-BlackBox_901.fwsc"), "--manifest", altMan]);
 ok(r.code === 2 && /wrong model/.test(r.out) && unchanged(r.dump, start), "its BlackBox package on a Pocket X: refused, nothing written");
 
 // ---- OpenPocket -> the alternative firmware
 let d = await runs(start);
-ok(d && d.product === null && firmwareName(d.id, d.product) === "OpenPocket v23", "an OpenPocket too old to say which product it is (v23) is taken at its identity");
+ok(d && d.product === null && firmwareName(d.id, d.product) === "Gamut v23", "an OpenPocket too old to say which product it is (v23) is taken at its identity");
 r = await flasher(start, ["--dry-run", "--app", "starter", "--manifest", altMan]);
-ok(r.code === 0 && /would update PocketX_923 \(OpenPocket v23\) -> PocketX_901 \(STARTER v01, an alternative firmware\)/.test(r.out) && unchanged(r.dump, start),
+ok(r.code === 0 && /would update PocketX_923 \(Gamut v23\) -> PocketX_901 \(STARTER v01, an alternative firmware\)/.test(r.out) && unchanged(r.dump, start),
   "dry run with --app: it says what would replace what, and writes nothing");
 r = await flasher(start, ["--confirm-flash", "--app", "starter", "--manifest", altMan]);
 ok(r.code === 0 && /done: the pedal reports PocketX_901 \(STARTER v01, an alternative firmware\)/.test(r.out), `install with --app: done, and the pedal says it runs STARTER${r.code ? "\n" + r.out : ""}`);
-ok(/To go back to OpenPocket: node tools\/op\.mjs flash --confirm-flash/.test(r.out), "the flasher ends with the way back to OpenPocket");
+ok(/To go back to Gamut: node tools\/op\.mjs flash --confirm-flash/.test(r.out), "the flasher ends with the way back to OpenPocket");
 ok(appIn(r.dump) === "PocketX_901 starter CRC-OK", "the flash holds the app with the product descriptor \"starter\", every checksum right");
 ok(kept(r.dump).length === 0, `through that install the flash keeps OpenPocket's presets, models and IRs, and the app's own data${kept(r.dump).length ? ": NOT " + kept(r.dump).join(", ") : ""}`);
 ok(readFileSync(r.dump).subarray(0xEF000, 0xF0000).every((b) => b === 0xFF), "a sector that ends like an update record is erased by the loader (so the store keeps those bytes erased)");
@@ -130,11 +130,11 @@ ok(d && IS_ALT(d.product) && d.product.app === "starter" && d.product.name === "
 ok(d && d.product.caps.join() === "stereo,midi,store" && d.product.editor === 1, "and what it can do: a stereo sound, a MIDI map, its own store, its own editor requests");
 ok(d && d.id.text === "PocketX_901" && firmwareName(d.id, d.product) === "STARTER v01, an alternative firmware", "its identity is PocketX_901 as before: an installer of any age still finds it");
 r = await flasher(onAlt, ["--dry-run", "--manifest", opMan]);
-ok(r.code === 0 && /pedal: PocketX_901 \(STARTER v01, an alternative firmware\)/.test(r.out) && /-> PocketX_942 \(OpenPocket v42\)/.test(r.out), "the flasher names it, and OpenPocket as what would replace it");
+ok(r.code === 0 && /pedal: PocketX_901 \(STARTER v01, an alternative firmware\)/.test(r.out) && /-> PocketX_942 \(Gamut\)/.test(r.out), "the flasher names it, and OpenPocket as what would replace it");
 
 // ---- the way back
 r = await flasher(onAlt, ["--confirm-flash", "--manifest", opMan]);
-ok(r.code === 0 && /done: the pedal reports PocketX_942 \(OpenPocket v42\)/.test(r.out) && !/To go back/.test(r.out), `the way back: the flasher without --app installs OpenPocket${r.code ? "\n" + r.out : ""}`);
+ok(r.code === 0 && /done: the pedal reports PocketX_942 \(Gamut\)/.test(r.out) && !/To go back/.test(r.out), `the way back: the flasher without --app installs OpenPocket${r.code ? "\n" + r.out : ""}`);
 ok(appIn(r.dump) === "PocketX_942 openpocket CRC-OK" && kept(r.dump).length === 0, "the flash holds OpenPocket again; its presets, models and IRs and the app's own data are as they were");
 const onOp = r.dump;
 d = await runs(onOp);
@@ -142,12 +142,12 @@ ok(d && d.product && d.product.app === OPENPOCKET && !IS_ALT(d.product) && d.pro
 
 // ---- a pedal on the alternative firmware that restarts in a loop: rescue installs OpenPocket
 r = await flasher(onAlt, ["--rescue", "--confirm-flash", "--timeout", "20", "--manifest", opMan], { loop: { up: 500, down: 250, answerOn: 3 } });
-ok(r.code === 0 && /done: the pedal reports PocketX_942 \(OpenPocket v42\)/.test(r.out) && appIn(r.dump) === "PocketX_942 openpocket CRC-OK",
+ok(r.code === 0 && /done: the pedal reports PocketX_942 \(Gamut\)/.test(r.out) && appIn(r.dump) === "PocketX_942 openpocket CRC-OK",
   `rescue of a looping pedal on the alternative firmware: OpenPocket is installed the moment it answers${r.code ? "\n" + r.out : ""}`);
 
 // ---- the same number for both products (an alternative firmware at v42): only the product tells them apart
 r = await flasher(onOp, ["--confirm-flash", "--app", "starter", "--manifest", join(P.alt42, "manifest.json")]);
-ok(r.code === 0 && /PocketX_942 \(OpenPocket v42\) -> PocketX_942 \(STARTER v01, an alternative firmware\)/.test(r.out) && appIn(r.dump) === "PocketX_942 starter CRC-OK",
+ok(r.code === 0 && /PocketX_942 \(Gamut v42\) -> PocketX_942 \(STARTER v01, an alternative firmware\)/.test(r.out) && appIn(r.dump) === "PocketX_942 starter CRC-OK",
   "an alternative firmware with OpenPocket's own number: installed, told apart by its product");
 {   // the check after an install: the pedal must run the product that was installed, not only report its number
   const sim = simAccess([onOp]);
@@ -156,7 +156,7 @@ ok(r.code === 0 && /PocketX_942 \(OpenPocket v42\) -> PocketX_942 \(STARTER v01,
   let err = null;
   try { await new Updater(sim.access, null, FAST).install(image, "PocketX_942", null, { app: "starter" }); } catch (e) { err = e; }
   await sim.end();
-  ok(err && err.code === "mismatch" && /runs OpenPocket v42/.test(err.message), "an install that ends on another product than the one asked for is reported, though the number is right");
+  ok(err && err.code === "mismatch" && /runs Gamut v42/.test(err.message), "an install that ends on another product than the one asked for is reported, though the number is right");
 }
 
 // ---- the packages the build made: each app of firmware/apps over OpenPocket, and OpenPocket back over it

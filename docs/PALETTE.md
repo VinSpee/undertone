@@ -2,7 +2,7 @@
 
 PALETTE (`firmware/apps/palette`) is an alternative firmware on the base firmware
 ([BASE-FIRMWARE.md](BASE-FIRMWARE.md), [ALT-FIRMWARE.md](ALT-FIRMWARE.md)). It is a product of its own, not a version
-of OpenPocket. It is on the installer's catalog (`firmware/catalog.json`), so the installer page offers it in a card
+of Gamut. It is on the installer's catalog (`firmware/catalog.json`), so the installer page offers it in a card
 of its own, with a warning that it has not run on a pedal.
 
 Its reference is the Hologram Chroma Console: twenty stereo effects in four modules that can be put in any order. The
@@ -208,15 +208,15 @@ A web page needs no more than these.
 - [audio/README.md](audio/README.md) lists fifteen audio samples: Creative Commons guitar recordings through the
   engine on a computer and then through an amplifier simulation, each with an amp-only reference. They are not
   recordings of a pedal.
-- `node tools/op.mjs all` builds the image and its packages next to OpenPocket's and STARTER's, installs the built
-  package on the simulated update pedal over OpenPocket and OpenPocket back, and ends with the release pin.
+- `node tools/op.mjs all` builds the image and its packages next to Gamut's and STARTER's, installs the built
+  package on the simulated update pedal over Gamut and Gamut back, and ends with the release pin.
 
 ## 9. Merging upstream changes
 
 PALETTE is files of its own: `firmware/apps/palette/`, `firmware/apps/palette/tests/test_palette.c`, `firmware/apps/palette/tests/test_palette_sim.mjs`,
 `firmware/apps/palette/tests/palette_render.c`, `tools/cyclecount.py`, and its documents (`docs/PALETTE*.md`, `docs/palette-guide.html`,
 `docs/audio/`, `docs/screens/palette/`, `docs/recordings/palette-controls.gif`). It changes no file of the base firmware
-(`firmware/base/`, `px_usb.h`, `app.ld`, `build.sh`) and none of OpenPocket's.
+(`firmware/base/`, `px_usb.h`, `app.ld`, `build.sh`) and none of Gamut's.
 
 It adds lines to five files that upstream also edits: `README.md` (one sentence), `docs/SIMULATOR.md` (in its
 section on apps, which upstream does not have), `tools/sim.mjs` (the simulator's loop, audio, and clock requests),

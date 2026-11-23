@@ -131,7 +131,7 @@ for (const argv of [["--confirm-flash"], ["--rescue", "--confirm-flash", "--time
 {
   const lines = [];
   const code = await main(["--dry-run", "--manifest", man], { access: { inputs: new Map(), outputs: new Map() }, say: say(lines), timing: FAST });
-  ok(code === 2 && /no OpenPocket-compatible pedal found/.test(lines.join("\n")), "no pedal: a clear error");
+  ok(code === 2 && /no Pocket X or BlackBox found/.test(lines.join("\n")), "no pedal: a clear error");
   const a = simAccess([old]), b = simAccess([old]);
   await a.ready; await b.ready;
   for (const p of [...b.access.inputs.values(), ...b.access.outputs.values()]) p.name = "OpenPocket B";

@@ -6,6 +6,7 @@ manifests and packages the build made. No official file needed.
 it, and every package it names is there with the catalog's SHA-256 (`node tools/op.mjs all` runs it so)."""
 import hashlib
 import json
+import re
 import shutil
 import struct
 import sys
@@ -69,10 +70,16 @@ with tempfile.TemporaryDirectory() as t:
     shutil.copytree(apps / "starter", apps / "palette")
     source.write_text(json.dumps({"firmwares": [{"id": "palette", "what": "x"}]}))
     ok("is the manifest of 'starter', not of 'palette'" in refused(lambda: catalog.build(source, site, apps)), "another firmware's manifest in a firmware's folder: refused")
+    source.write_text(json.dumps({"firmwares": [{**two["firmwares"][0], "version": "1.0b1"}]}))
+    ok(catalog.build(source, site, apps)["firmwares"][0]["version"] == "1.0b1", "the first firmware's version text from the source, when it has one")
     source.write_text(json.dumps({"firmwares": [{"id": "openpocket", "what": "x"}]}))
     ok("needs a \"name\"" in refused(lambda: catalog.build(source, site, apps)), "the first firmware without a name in the source: refused")
     source.write_text(json.dumps({"firmwares": [{"id": "../x", "what": "x"}]}))
     ok("needs an id" in refused(lambda: catalog.build(source, site, apps)), "an id that is a path: refused")
+
+gamut = next(f for f in json.loads((ROOT / "firmware" / "catalog.json").read_text())["firmwares"] if f["id"] == catalog.PRIMARY)
+text = re.search(r'#define OP_VERSION_TEXT "([^"]+)"', (ROOT / "firmware" / "apps" / "gamut" / "openpocket.c").read_text())
+ok(text and gamut.get("version") == text[1], f"firmware/catalog.json gives Gamut the version text of its source ({text and text[1]})")
 
 if "--built" in sys.argv:
     site = ROOT / "build" / "apps" / "gamut"

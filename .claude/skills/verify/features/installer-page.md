@@ -1,7 +1,7 @@
 # Installer page (docs/install.html)
 
 ## Sub-features
-Connect to the pedal over Web MIDI, detect the running firmware (OpenPocket vN or official), Install, Rescue mode (pedal in a boot loop), return to the official firmware.
+Connect to the pedal over Web MIDI, detect the running firmware (Gamut, an app on its base, or official), Install, Rescue mode (pedal in a boot loop), return to the official firmware.
 
 ## How to get to it (user POV)
 Open the page in Chrome/Edge, press Connect, plug the pedal in, press Install.

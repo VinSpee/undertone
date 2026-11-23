@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
-// OpenPocket web editor: the start. Finding the pedal and every way that can fail, the sections and the way between
+// Gamut web editor: the start. Finding the pedal and every way that can fail, the sections and the way between
 // them, the DSP load, the keyboard. The sections themselves: edsound.js, edpresets.js, edmodels.js, edmidi.js.
 
 import { app, $, h, icon, on, emit, say, busy } from "./edcore.js";
@@ -36,7 +36,7 @@ async function connect() {
     app.access.onstatechange = onPorts;
     const e = new Editor(app.access);
     const info = await e.connect();
-    if (!info && e.other) { app.other = e.other; setConn("other"); return; }   // an alternative firmware answered: not OpenPocket
+    if (!info && e.other) { app.other = e.other; setConn("other"); return; }   // an alternative firmware answered: not Gamut
     if (!info) { setConn(was === "lost" ? "lost" : "notfound"); return; }
     app.ed = e; app.info = info;
     e.onLost = lost;
@@ -48,7 +48,7 @@ async function connect() {
     await loadAssets();
     e.onState = onPush;
     await e.watch(true);
-    $("status").textContent = `${info.identity.replace(/_9?\d+$/, "")} · OpenPocket ${info.version}`;
+    $("status").textContent = `${info.identity.replace(/_9?\d+$/, "")} · Gamut ${info.version}`;
     setConn("ready");
     emit("slots"); emit("state", {});
     clearInterval(pingTimer);
@@ -110,7 +110,7 @@ const GATE = {
       h("li", {}, h("b", { text: "Press Connect. " }), "The browser asks to use MIDI devices: allow it."),
       h("li", {}, h("b", { text: "Play. " }), "Every change here sounds at once, and what you change on the pedal shows here.")),
     connectBtn("Connect"),
-    h("p", { class: "dim" }, "The pedal needs OpenPocket v32 or newer. ", h("a", { href: "install.html", text: "Install or update it" }), " first if it runs something older."),
+    h("p", { class: "dim" }, "The pedal needs Gamut (or OpenPocket v32 or newer, its earlier name). ", h("a", { href: "install.html", text: "Install or update it" }), " first if it runs something older."),
     h("ul", { class: "what" },
       h("li", {}, h("b", { text: "Presets" }), "Browse, rename, reorder, copy and back up the 52 presets."),
       h("li", {}, h("b", { text: "Sound" }), "The signal chain and every block's settings, live."),
@@ -136,11 +136,11 @@ const GATE = {
     const seen = app.access ? [...app.access.inputs.values()].filter((i) => i.state !== "disconnected").map((i) => i.name || "unnamed device") : [];
     return [
       h("h1", { text: "No pedal answered" }),
-      h("p", { id: "seen", text: seen.length ? `The browser sees ${seen.length === 1 ? "this MIDI device" : "these MIDI devices"}: ${seen.join(", ")}. None answered as a pedal running OpenPocket.` : "The browser sees no MIDI device at all." }),
+      h("p", { id: "seen", text: seen.length ? `The browser sees ${seen.length === 1 ? "this MIDI device" : "these MIDI devices"}: ${seen.join(", ")}. None answered as a pedal running Gamut.` : "The browser sees no MIDI device at all." }),
       h("ul", { class: "check" },
         h("li", { text: "Is the pedal switched on and past its start screen?" }),
         h("li", { text: "Does the cable carry data? Many USB-C cables only charge." }),
-        h("li", {}, "Does it run OpenPocket v32 or newer? ", h("a", { href: "install.html", text: "Install or update it" }), "."),
+        h("li", {}, "Does it run Gamut (or OpenPocket v32 or newer)? ", h("a", { href: "install.html", text: "Install or update it" }), "."),
         h("li", { text: "Is another tab or program using it (the installer, a DAW)? Close that first." })),
       connectBtn("Try again"),
       h("p", { class: "dim", text: "The editor also tries again by itself as soon as a device is plugged in." }),
@@ -150,9 +150,9 @@ const GATE = {
     const o = app.other, name = `${o.name} ${o.version}`;
     return [
       h("h1", { text: `This pedal runs ${name}` }),
-      h("p", { id: "othernote", text: `${o.name} is an alternative firmware built on OpenPocket's base. It is not OpenPocket, and this editor edits OpenPocket's presets and blocks, which ${o.name} does not have.` }),
-      h("p", {}, "To use this editor, put OpenPocket back: ", h("a", { href: "install.html", text: "open the installer" }), " and press ", h("b", { text: "Back to OpenPocket" }),
-        ". Your OpenPocket presets, NAM models and cabinet IRs are still on the pedal."),
+      h("p", { id: "othernote", text: `${o.name} is an alternative firmware built on Undertone, the base Gamut is built on. It is not Gamut, and this editor edits Gamut's presets and blocks, which ${o.name} does not have.` }),
+      h("p", {}, "To use this editor, put Gamut back: ", h("a", { href: "install.html", text: "open the installer" }), " and press ", h("b", { text: "Back to Gamut" }),
+        ". Your Gamut presets, NAM models and cabinet IRs are still on the pedal."),
       connectBtn("Try again"),
       h("p", { class: "dim", text: "The editor also tries again by itself as soon as a device is plugged in." }),
     ];
@@ -219,7 +219,7 @@ function renderConnPop() {
   pop.textContent = "";
   if (!i) return;
   pop.append(h("h2", { text: i.identity.replace(/_9?\d+$/, "") }),
-    h("dl", { class: "facts" }, h("dt", { text: "Firmware" }), h("dd", { text: `OpenPocket ${i.version}` }), h("dt", { text: "Port" }), h("dd", { text: i.port }),
+    h("dl", { class: "facts" }, h("dt", { text: "Firmware" }), h("dd", { text: `Gamut ${i.version}` }), h("dt", { text: "Port" }), h("dd", { text: i.port }),
       h("dt", { text: "Presets" }), h("dd", { text: `${i.nslot}, ${app.slots.filter((s) => s.saved).length} of yours` })),
     h("h3", { text: "Keys" }),
     h("dl", { class: "keys" }, h("dt", { text: "/" }), h("dd", { text: "search the presets" }), h("dt", { text: "[  ]" }), h("dd", { text: "previous, next preset" }),

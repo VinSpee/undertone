@@ -1,10 +1,10 @@
 # Credits and licences
 
-OpenPocket is GPL-3.0-only (`LICENSE`), except the parts below, which keep their own licences.
+Undertone is GPL-3.0-only (`LICENSE`), except the parts below, which keep their own licences.
 
 | Part | Origin | Licence |
 | --- | --- | --- |
-| `firmware/bsp/` (chip support: startup, interrupts, second core, flash, USB-MIDI device, M-UPGRADE update entry `ota.c`) | [felucca-bsp](https://github.com/hugelton/felucca-bsp), Leo Kuroshita / Hügelton Instruments and contributors. `chip/ota.c` changed for OpenPocket (identity read at run time). `chip/usb.c` changed for OpenPocket's USB audio (v42): the audio streams switched at run time (`FELUCCA_UAC_SWITCH`), the record stream's packet pacing of felucca-bsp `e79a1f8`, the playback mix in integers, fewer controller reads a poll. | MPL-2.0 (`LICENSES/MPL-2.0.txt`) |
+| `firmware/bsp/` (chip support: startup, interrupts, second core, flash, USB-MIDI device, M-UPGRADE update entry `ota.c`) | [felucca-bsp](https://github.com/hugelton/felucca-bsp), Leo Kuroshita / Hügelton Instruments and contributors. `chip/ota.c` changed for Undertone (identity read at run time). `chip/usb.c` changed for the USB audio of Gamut (v42, then called OpenPocket): the audio streams switched at run time (`FELUCCA_UAC_SWITCH`), the record stream's packet pacing of felucca-bsp `e79a1f8`, the playback mix in integers, fewer controller reads a poll. | MPL-2.0 (`LICENSES/MPL-2.0.txt`) |
 | `loader/` (update loader) | felucca-bsp `loader/`, changed for the Pocket X flash layout | MPL-2.0 |
 | `docs/pxota.js`, `docs/pxpkg.js`, `tools/pxpkg.py`, `tools/mkloader.py`, `tools/lz4blk.py` | adapted from [Felucca](https://github.com/hugelton/Felucca)'s web installer and build tools (as used by CLIPPER and SLOOP) | GPL-3.0 |
 | `firmware/sdk/` (I2S and DAC drivers as LLVM bitcode, SPL, cfg files) | JieLi AC79 SDK V1.2.0 (fw-AC79_AIoT_SDK) | Apache-2.0 (`LICENSES/Apache-2.0.txt`) |
@@ -14,11 +14,11 @@ OpenPocket is GPL-3.0-only (`LICENSE`), except the parts below, which keep their
 | `firmware/fonts.h` (bitmaps generated from Inter) | [Inter](https://rsms.me/inter/), Rasmus Andersson | SIL OFL 1.1 (`LICENSES/OFL-1.1-Inter.txt`) |
 | `assets/loops/*.wav` (guitar loops for the simulator), and `docs/assets/audio/riff.m4a` (`riff.wav` as AAC, which the site's home page plays) | cut from [Guitar-TECHS](https://zenodo.org/records/14963133), credits in `assets/loops/ATTRIBUTION.md` | CC BY 4.0 |
 
-The factory NAM models (`firmware/apps/gamut/engine/px_nam_factory.h`, v37) are A2-Lite networks trained by OpenPocket from Neural Amp
+The factory NAM models (`firmware/apps/gamut/engine/px_nam_factory.h`, v37) are A2-Lite networks trained for Gamut from Neural Amp
 Modeler community captures ([pelennor2170/NAM_models](https://github.com/pelennor2170/NAM_models), GPL v3; authors
 in `docs/NAM.md`) played with DI guitar from [Alec-Wright/Automated-GuitarAmpModelling](https://github.com/Alec-Wright/Automated-GuitarAmpModelling)
 (GPL v3). The NAM A2 architecture is from Neural Amp Modeler (Steven Atkinson, MIT); `firmware/apps/gamut/engine/px_nam.c`,
-`tools/nam_a2.py` and `tools/train_a2.py` are written for OpenPocket from the published architecture.
+`tools/nam_a2.py` and `tools/train_a2.py` are written for Gamut from the published architecture.
 
 The factory cabinet IR (`firmware/apps/gamut/engine/px_ir_factory.h`, slot IR1's IR while the user has loaded none there) is
 ["BEST IR IN THE WORLD"](https://www.facebook.com/watch/?ref=embed_video&v=1053603041469100), a free cabinet impulse response by ML Sound Lab. It is redistributed
@@ -37,7 +37,7 @@ sounds (pull request #26).
 
 Sound models: the names refer to the gear that inspired each voicing (circuit analyses published by ElectroSmash,
 Electric Druid, R.G. Keen / GEOFEX, Rob Robinette, Duncan's Tone Stack Calculator; speaker data sheets; manufacturers'
-manuals). All trademarks belong to their owners; OpenPocket is not affiliated with Donner, M-VAVE or any gear maker.
+manuals). All trademarks belong to their owners; Undertone is not affiliated with Donner, M-VAVE or any gear maker.
 
 No part of the official Pocket X / BlackBox firmware is in this repository. The installer's way back to the official
 firmware uses the file you download from the maker; it is checked in your browser and never uploaded.

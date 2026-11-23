@@ -62,10 +62,10 @@ to need (see below).
   (`firmware/bsp/chip/fm1_usb.h`). The stock firmware uses it as a sound card: USB Audio Class 1, playback adaptive and
   record asynchronous, 2 channels, 24 bit, 44.1 kHz only, beside a MIDI interface ([STOCK-FIRMWARE.md](STOCK-FIRMWARE.md)
   13.2 and 15.2).
-- **The USB code.** OpenPocket's USB device is felucca-bsp's `chip/usb.c` (MPL-2.0), written for the FM-1, which has the
+- **The USB code.** Gamut's USB device is felucca-bsp's `chip/usb.c` (MPL-2.0), written for the FM-1, which has the
   same chip. It already held both audio streams, switched off at build time: a record stream (`FELUCCA_UAC`) and a
   playback stream (`FELUCCA_UAC_OUT`), both on endpoint 4, 16 bit stereo, with rings, pacing and the descriptors, and
-  the notes of what macOS needs of them. OpenPocket had built it with MIDI alone.
+  the notes of what macOS needs of them. Gamut had built it with MIDI alone.
 
 So the feature is felucca-bsp's streams switched on, a setting, and the pedal's side of the audio.
 
@@ -77,7 +77,7 @@ So the feature is felucca-bsp's streams switched on, a setting, and the pedal's 
 - **The interfaces** are in the order audio control, record stream, playback stream, MIDI
   (`FELUCCA_UAC_MIDI_LAST 1`). felucca-bsp found that macOS 13 to 15 show no audio device when the MIDI interface comes
   before the streams.
-- **The setting** switches the descriptors at run time (`FELUCCA_UAC_SWITCH`, added to `usb.c` for OpenPocket, after
+- **The setting** switches the descriptors at run time (`FELUCCA_UAC_SWITCH`, added to `usb.c` for Gamut, after
   its `usb_cdc_switch`): off, the pedal presents the descriptors of a build without audio, with `bcdDevice` 3.00; on,
   the audio device, with `bcdDevice` 3.D0, so a computer does not reuse what it learnt about the other one. A change
   takes the pedal off the bus for one second. The setting is one bit in the preset store's header

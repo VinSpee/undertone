@@ -427,5 +427,5 @@ export function parsePresetFile(text) {
   const o = JSON.parse(text);
   if (o && o.format === "openpocket-presets" && Array.isArray(o.presets)) return o.presets;
   if (o && Array.isArray(o.blocks)) return [o];                // a bare preset
-  throw fail("format", "not an OpenPocket preset file");
+  throw fail("format", "not a Gamut preset file");
 }
