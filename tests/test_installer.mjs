@@ -9,7 +9,7 @@ import { mkdtempSync, readFileSync, existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { Updater, IS_OPENPOCKET, newerOfficialWarning, layoutRefusal } from "../docs/pxota.js";
+import { Updater, IS_OPENPOCKET, newerOfficialWarning, layoutRefusal, V23_RECOVERY_INSTALL } from "../docs/pxota.js";
 import { productOf, logicalImage, checkOfficial } from "../docs/pxpkg.js";
 import { simAccess } from "./simpedal.mjs";
 
@@ -131,6 +131,10 @@ ok(productOf(px) === "PocketX_924" && productOf(bb) === "BlackBox_924", "package
   ok(/BlackBox_022.*no longer switch on/s.test(layoutRefusal(box(22)) || "") && /BlackBox_023/.test(layoutRefusal(box(23)) || "") &&
      [box(20), box(21), box(923), pocket(16), pocket(17)].every((id) => layoutRefusal(id) === null),
     "layout check: official BlackBox 022 and 023 refused; BlackBox 020 / 021, OpenPocket and the Pocket X not concerned");
+  ok(V23_RECOVERY_INSTALL === false && /Keep M-VAVE's firmware/.test(layoutRefusal(box(23))) &&
+     /no longer switch on.*cannot install on it.*tools\/pd40_install\.py/s.test(layoutRefusal(box(23), true) || "") &&
+     [box(20), box(21), box(923), pocket(16)].every((id) => layoutRefusal(id, true) === null),
+    "layout check: the V23 install switch is off; on, the refusal stays and names the recovery-mode install instead");
   const untouched = (dump, flash) => {
     const a = flashOf(dump), b = flashOf(join(TMP, flash));
     return a.subarray(0, 0xE0000).equals(b.subarray(0, 0xE0000)) && a.subarray(0xE5000).equals(b.subarray(0xE5000));

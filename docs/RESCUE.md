@@ -259,7 +259,8 @@ Use this for a BlackBox whose V22 or V23 boot loader is intact: a pedal that run
 no longer starts but which still shows `RECOVERY` with the key combination of step 1. On such a pedal nothing else in this repository reaches the
 chip's USB boot state, so `uboot_rescue.py` cannot start. M-VAVE's boot loader has a recovery mode of its own, and
 `tools/pd40_recovery.py` reads it. Whether that mode can lead to the USB boot state is not yet known. The helper never
-writes to the pedal's flash.
+writes to the pedal's flash. The same recovery mode can also rewrite the app area, which is how Gamut is installed on such
+a pedal and how M-VAVE's own app is put back: [Gamut on a BlackBox with V22 or V23](#gamut-on-a-blackbox-with-v22-or-v23).
 
 **What a real pedal did.** On a BlackBox on the official V23 the recovery device appeared and answered the sync request
 `0x42`, but the bulk IN endpoint then sent 64 zero bytes in place of the hello reply and nothing after, and within
@@ -374,6 +375,199 @@ Exit codes: 0 done (after a probe without the leave: the pedal stayed in the rec
 problem, no recovery device or a failed transfer, 2 refused or a bad answer, 3 the pedal left after the leave but the
 USB boot state did not appear, 4 the pedal left the recovery mode on its own during the probe or the watch after it, 5
 the pedal stayed in the recovery mode after the leave, 130 stopped by Ctrl-C.
+
+## Gamut on a BlackBox with V22 or V23
+
+**Status: not yet tried on a real pedal.** Everything below runs against a simulated pedal only. The installer page still
+refuses a BlackBox on V22 or V23 and sends nothing to it; see [The installer page's switch](#the-installer-pages-switch).
+
+**What blocks it today.** The install needs every reply on the bulk IN endpoint: the recovery mode takes the next frame
+only after its reply was read there. On the one real pedal probed so far, the hello reply came over the control endpoint
+only and the pedal left the recovery mode on its own within seconds ([above](#a-pedal-on-m-vaves-v22-or-v23)). On such
+a pedal `tools/pd40_install.py --verify` and `--write` stop at the hello with `REFUSED` and send nothing more; nothing is
+written. The install can go ahead only once a probe shows the reply on the bulk IN endpoint and the mode staying up.
+
+This installs Gamut on a BlackBox that runs M-VAVE's official V22 or V23, without going back to V21 or earlier and without
+touching M-VAVE's boot loader. It uses that boot loader's own recovery mode and `tools/pd40_install.py`. The way back is
+the same tool with M-VAVE's `BlackBox_023.fwsc`, which puts the official app back. No full flash backup is needed for
+that way back, because nothing outside the app area is ever written.
+
+### Why it works
+
+These facts come from reading the V22/V23 boot loader's code (V22 and V23 carry the same boot loader, byte for byte):
+
+| | V20 and older | V22 and V23 |
+| --- | --- | --- |
+| Boot loader | `[0xA0, 0x38D0)` | `[0xA0, 0x5CA0)` |
+| App area (`app_dir_head`) | `0x4000` | `0x6000` |
+| Stock settings (`VM`), radio (`BTIF`), user area, `key_mac` | `0xA5000`, `0xBE000`, `0xBF000`, `0xFF000` | `0x9F000`, `0xBE000`, `0xBF000`, `0xFF000` |
+| CRC-32 of `[0, app area)` | | `0xB19D96A1` |
+| Supply levels the boot loader sets | none (VDC14 3, SYSVDD 11 stay) | VDC14 7, SYSVDD 15, VDDIOM 4 |
+
+- **The boot loader starts the app area at `0x6000` after four CRC16 checks only:** the flash header (32 bytes at 0,
+  key `0xFFFF`), each head entry up to `app_dir_head`, and the first 32 bytes at `0x6000` under the chip key `0x980F`.
+  It does not check the area's data CRC, any length, version or identity. It maps `0x02000000` to the start of the area
+  and calls `0x02000120`, so Gamut runs there unchanged.
+- **Gamut's app area is already laid out for it.** Each package's area is `0x99000` bytes, and its bytes do not depend on
+  where it sits. At `0x6000` it fills `[0x6000, 0x9F000)` exactly and ends where the stock settings begin. The build writes
+  it as a file of its own beside the BlackBox package, `build/apps/gamut/BlackBox_950-v23.bin`; its SHA-256 is in the
+  release pin, `firmware/apps/gamut/release.sha256`.
+- **The recovery mode writes only `[0x6000, 0x9F000)`.** Its flash driver refuses every erase and program outside that
+  range, so it can never change the boot loader, the stock settings, the radio records or `key_mac`. It has no signature
+  and no version check. It accepts an image whose manifest names the pedal's own head (the CRC-32 above) and the entry
+  `0x02000120`.
+- **Gamut's own data stays where it is on every pedal:** NAM models from `0xC0000`, its update staging at `0xE0000`,
+  presets at `0xF0000`, IRs from `0xF4000`, all inside the stock user area, as on the old head. Gamut never writes the
+  stock settings, the radio records or `key_mac`. It reads its data with direct flash reads, not through the mapped
+  window, so the window's other start (`0x6000`) changes nothing for it.
+
+The protocol, as read: frames of 4608 bytes from `SBU2` (command, tag, argument, payload length, payload CRC-32, at most
+4096 bytes of payload) and 64-byte replies from `SBR2` (status, state, next offset, image length, the write range, the
+head's CRC-32).
+
+| Command | State before → after | What it does |
+| --- | --- | --- |
+| 1 hello | any | the reply only |
+| 2 manifest | 0 → 1 | `SKR2`, `0x20000`, `0x07910040`, flash size `0x100000`, `0x6000`, `0x9F000`, the image's length and CRC-32, the CRC-32 of the pedal's `[0, 0x6000)`, the entry `0x02000120`, the block count (at most 153), a free word, three zeros, a CRC-32 over the first 60 bytes and the table, then one CRC-32 per 4 KiB block |
+| 3 block | 1 → 2 | each block checked against the table, in order, and the whole image's CRC-32 after the last. **Nothing is written** |
+| 4, argument 2 | 2 → 3 | erases the sector at `0x6000`: from here the pedal starts no app until the commit |
+| 3 block | 3 → 4 | each block erased, programmed and read back; block 0 is kept in RAM |
+| 4, argument 4 | 4 → 5 | checks the whole image, writes block 0 (the area head) last, checks again |
+| 5 start | 5 | resets into the new app |
+| 6 leave | 0 or 6 | the way toward the chip's USB boot state (`tools/pd40_recovery.py --leave`) |
+
+### The supply levels
+
+On this head the boot loader leaves VDC14 at 7, SYSVDD at 15 and VDDIOM at 4, the stock firmware's levels. Gamut keeps
+the levels it finds (`firmware/base/start.h`), and this change does not alter that. On the old head it finds 3 and 11, at
+which it was tuned. When v30 copied the stock firmware's whole power setup (these levels and also the 1.3 V supply moved
+to the DC-DC), a Pocket X measured 77 % processor load instead of 61 % with crackles; which part of that setup caused it
+was never shown (`docs/HARDWARE-HANDBOOK.md`, section 4). The V23 boot loader sets the levels but not the DC-DC.
+
+Gamut could set its own levels at its start: the registers are the ones it reads for its boot screen, and
+`firmware/bsp/chip/fm1_sys.h` has the functions that raise them, which v30 used. Lowering them has never been done by any
+firmware of this project (those functions only raise), the
+handbook warns that some units read flash and RAM wrong at the low levels under load, and the higher levels are the ones
+M-VAVE's own firmware runs at all the time. So the levels are left as they are, and the load at them is measured by the
+first-run check below. That measurement can only be made on a pedal.
+
+### Before the first write
+
+1. The read-only probe of [the section above](#a-pedal-on-m-vaves-v22-or-v23) has run on this pedal, its hello reply
+   came **over the bulk IN endpoint**, the pedal stayed in the recovery mode, and the probe named the head CRC-32
+   `0xb19d96a1`. The install tool needs the replies on that endpoint and refuses otherwise.
+2. You have M-VAVE's `BlackBox_023.fwsc` (from M-VAVE, or the full rescue kit's `firmware` folder). Check it with the dry
+   run below; it must print `M-VAVE's app area from ... (BlackBox_023)` and `every check passed`.
+3. You have built Gamut: `node tools/op.mjs package`, which ends with `release pin: gamut's image and packages are the
+   release's`.
+
+`tools/pd40_install.py` needs libusb (`brew install libusb`) and no `sudo`. Keep every output (`2>&1 | tee FILE`).
+
+### The install
+
+1. **Dry run, no pedal needed.** It checks the image and prints every frame the install would send, in order. It opens
+   no USB device.
+
+   ```
+   python3 tools/pd40_install.py build/apps/gamut/BlackBox_950-v23.bin 2>&1 | tee gamut-v23-dry.log
+   python3 tools/pd40_install.py BlackBox_023.fwsc 2>&1 | tee official-v23-dry.log
+   ```
+
+2. **The pedal's own check, nothing written.** Enter the recovery mode (switch off, hold HOME, the right footswitch and the
+   knob's PUSH, switch on, hold until the screen shows `RECOVERY`), then:
+
+   ```
+   python3 tools/pd40_install.py build/apps/gamut/BlackBox_950-v23.bin --verify 2>&1 | tee gamut-v23-verify.log
+   ```
+
+   Expect the hello (`status 0`, `state 0`, the head `0xb19d96a1`), `the manifest: accepted`, then `first pass done: 153
+   blocks and the whole image's CRC-32 accepted, state 2: nothing was written`. Switch the pedal off and on: it starts
+   M-VAVE's V23 as before. Any `REFUSED` here: stop and send the log back.
+
+3. **The install.** Enter the recovery mode again, then:
+
+   ```
+   python3 tools/pd40_install.py build/apps/gamut/BlackBox_950-v23.bin --write 2>&1 | tee gamut-v23-write.log
+   ```
+
+   It runs the first pass again, then `the erase of the sector at 0x6000`, the second pass (every block written and read
+   back), `the commit`, `the start of the new app`, and watches the bus. Expect `1209:0001 appeared: Gamut` and `Gamut
+   started: the install worked`. Do not touch the pedal or the cable until the tool ends.
+
+4. **The first-run check.** On the boot screen, note the line `PWR`: on this head it should read `PWR 7 15 (BOOT
+   LEVELS)`. Then, with the pedal on USB:
+
+   ```
+   node tools/op.mjs dsp 2>&1 | tee gamut-v23-dsp.log
+   ```
+
+   It plays every saved preset for 6 seconds and reads the load, the peak, the late blocks and the safety bypass. Exit
+   code 0 means no preset was late or bypassed. Play through the presets and listen for crackles. Send the boot screen's
+   `PWR` line and the log back either way: they are the first measurement of Gamut at these levels. Late blocks, the
+   bypass or crackles mean Gamut needs its own supply levels on this head before it can be offered; put the official app
+   back meanwhile if they bother you.
+
+Updating Gamut later on this pedal works the same way, with the new `BlackBox_950-v23.bin`. The installer page cannot
+update it: its update loader reads this head, refuses it, and writes nothing.
+
+### The way back to M-VAVE's V23
+
+Enter the recovery mode, then:
+
+```
+python3 tools/pd40_install.py BlackBox_023.fwsc --verify 2>&1 | tee official-v23-verify.log
+python3 tools/pd40_install.py BlackBox_023.fwsc --write 2>&1 | tee official-v23-write.log
+```
+
+(Enter the recovery mode again between the two.) The tool refuses an official package whose head is not the pedal's, and
+any package for the old head. It writes M-VAVE's own app area to `[0x6000, 0x9F000)`. The head was never changed, so the
+pedal then holds what M-VAVE's own V23 update leaves below `0x9F000`, byte for byte. Expect `3654:7756 appeared: the
+normal pedal (the stock V23 app)`. The stock user area from `0xBF000` still holds what Gamut stored there, as after a return to the official
+firmware on the old head.
+
+### If the pedal does not start after it
+
+| What you see | What it means | Do |
+| --- | --- | --- |
+| The tool stopped before the line `the erase of the sector at 0x6000` | nothing was written | switch the pedal off and on: it starts as before. Send the log back |
+| The tool printed `The app area is erased or half written` | the area head is not written, so the boot loader starts nothing and restarts the chip again and again | the boot loader still reads the three controls on every start: enter the recovery mode and run `--write` again, with Gamut's image or with `BlackBox_023.fwsc` |
+| The tool printed `The new image is written and committed; only the start of the app was not confirmed` | the commit was accepted, so the new image is complete; only the reply to the start command failed | switch the pedal off and on once. If it still starts nothing, enter the recovery mode and run `--write` again |
+| The tool ended with exit code 3 (`the new app did not appear`) | the install finished, but the expected USB device did not come | switch the pedal off and on once. If it still starts nothing, enter the recovery mode and put M-VAVE's app back as above |
+| Gamut starts, then crashes twice in a row | Gamut's boot guard asks for the chip's USB boot state (inferred on this head, proven on the old one) | the simplest: hold the three controls at power-on and put M-VAVE's app back with this tool. Or, if the USB boot state appears, `uboot_rescue.py --package BlackBox_023.fwsc` as in the quick start |
+| `RECOVERY` no longer appears with the three controls | the boot loader itself is damaged; this tool never writes it, so something else did | the chip's USB boot state then appears by itself: use the quick start with `BlackBox_023.fwsc` |
+| The recovery mode appears but this tool cannot finish | | the leave to the USB boot state: start `uboot_rescue.py --package BlackBox_023.fwsc` in a second Terminal, then `tools/pd40_recovery.py --leave --accept-inferred`, as in [the section above](#a-pedal-on-m-vaves-v22-or-v23). Whether the ROM stays in its USB boot state after that is not yet known |
+
+**Safety rules of the tool.** Nothing is opened without `--verify` or `--write`. Before anything is sent, the image must
+be a whole number of 4 KiB blocks no longer than `[0x6000, 0x9F000)`, its area head must pass its CRC under the chip key,
+its entry must be `0x02000120`, its files must pass their CRCs, and it must be a BlackBox image. Before the erase, the
+hello must have come over the bulk IN endpoint in state 0, the pedal's head must be the official V22/V23 head (and the
+official package's head the pedal's), and the pedal's own first pass must have accepted every block and the whole image.
+It stops at the first reply that is not status 0 or not the expected state or offset, and sends nothing more.
+
+Exit codes: 0 done (the dry run printed, the pedal's check passed, or the new app appeared), 1 setup problem, no recovery
+device or a failed transfer, 2 refused or a bad answer, 3 the install finished but the new app did not appear, 4 the pedal
+left the recovery mode on its own, 130 stopped by Ctrl-C.
+
+### The installer page's switch
+
+The page refuses a BlackBox on official V22 or later and sends nothing to it, because its update loader writes from
+`0x4000` and would overwrite the end of this boot loader. That refusal stays until the install above is proven on a pedal.
+One constant, `V23_RECOVERY_INSTALL` in `docs/pxota.js`, then changes the refusal's words so that they send the user to
+this install; with it the page still sends nothing to such a pedal. It is `false` today.
+
+### What is verified and what is not
+
+| | Status |
+| --- | --- |
+| Gamut's `-v23.bin` is its BlackBox package's app area, byte for byte, and fits `[0x6000, 0x9F000)` | Verified by `tests/test_both_heads.py` and the release pin |
+| The tool's dry run, its checks of the image, the manifest, the frames, the order of the commands, the refusals | Verified by `tests/test_pd40_install.py` |
+| The install of Gamut's area and the way back to M-VAVE's, on a simulated V23 flash: nothing below `0x6000` or from `0x9F000` up changes, block 0 is written last, the boot loader's four checks then pass, the official way back restores every byte | Verified against a simulated recovery mode that runs the write commands as read (`tests/recovery_sim.py`), on a synthetic V23 head, and on M-VAVE's real V23 `flash.bin` when its package is given to the test |
+| A failure after the erase, and the install run again | Verified against the same simulation |
+| The protocol's write commands, their checks and states, the manifest's layout and CRC | Read in the V23 boot loader's code, not run |
+| That the replies come over the bulk IN endpoint on a real pedal, and that the mode stays up for a whole install | Not so far: on the one pedal probed, the hello reply came over the control endpoint only and the mode ended on its own within seconds. The tool then refuses at the hello and writes nothing |
+| That the boot loader starts Gamut at `0x6000`, and that Gamut runs there | Read, not tried |
+| Gamut's processor load and sound at the V23 supply levels | Not known: the first-run check measures it |
+| The stock V23 app with Gamut's data in its user area | Not known |
 
 ## BlackBox V21 factory sounds
 

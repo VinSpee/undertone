@@ -113,15 +113,25 @@ export function parseInfo(pkt) {
 const NEWEST_OFFICIAL = Object.fromEntries(MODELS.map((m) => [m, Math.max(...OFFICIAL.filter((o) => o.model === m)
   .map((o) => parseInt(o.product.split("_")[1], 10)))]));
 
+// THE SWITCH for Gamut on a BlackBox with M-VAVE's V22 or V23 (tools/pd40_install.py, docs/RESCUE.md "Gamut on a
+// BlackBox with V22 or V23"). false until that install is proven on a pedal. true changes only the words of the refusal
+// below: they then send the user to that install, through the boot loader's recovery mode. This page still sends
+// nothing to such a pedal either way, because its update loader writes from 0x4000 and refuses that head.
+export const V23_RECOVERY_INSTALL = false;
+
 // The refusal, in words, of a pedal whose official firmware moved its flash head (pxpkg.js MOVED_HEAD), else null.
 // Installing over it would overwrite the end of its boot loader and the pedal would no longer switch on, so no
 // confirmation lifts this refusal. The update loader refuses such a head itself as well (headRefused). Both checks
 // come from upstream pull request isod89/openpocket#35.
-export function layoutRefusal(id) {
+export function layoutRefusal(id, recoveryInstall = V23_RECOVERY_INSTALL) {
   if (!IS_OFFICIAL(id) || !(id.version >= MOVED_HEAD[id.model])) return null;
-  return `This ${id.model} runs M-VAVE's official firmware ${String(id.version).padStart(3, "0")} (${id.text}). From V22 on, ` +
-    `that firmware has a larger boot loader at the start of the pedal's memory, and installing this firmware would ` +
-    `overwrite its end: the pedal would no longer switch on. This installer cannot install on it. Keep M-VAVE's firmware on this pedal.`;
+  const why = `This ${id.model} runs M-VAVE's official firmware ${String(id.version).padStart(3, "0")} (${id.text}). From V22 on, ` +
+    `that firmware has a larger boot loader at the start of the pedal's memory, and installing from this page would ` +
+    `overwrite its end: the pedal would no longer switch on. `;
+  return why + (recoveryInstall
+    ? `This page cannot install on it. Gamut is installed on this pedal through the boot loader's own recovery mode instead, ` +
+      `with tools/pd40_install.py, which leaves that boot loader alone: see "Gamut on a BlackBox with V22 or V23" in the rescue guide.`
+    : `This installer cannot install on it. Keep M-VAVE's firmware on this pedal.`);
 }
 
 // A warning for a pedal that runs an official firmware newer than the newest one this page knows, else null. The USB

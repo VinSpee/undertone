@@ -3,7 +3,12 @@
 /* FM-1 XIP window: flash offset off (>= 0x4000, the app area start) reads
  * at CPU address 0x02000000 + off - 0x4000 through the SFC/cache. Data
  * outside the plain (unencrypted) window reads decrypted: see
- * fm1_flash.h fl_plain_window_init. */
+ * fm1_flash.h fl_plain_window_init.
+ * The window starts where the boot loader found the app area. On the head of
+ * M-VAVE's BlackBox V22 and V23 that is 0x6000, so there FM1_XIP is 0x2000
+ * past the data: the cache lines fl_inval drops after an erase or program are
+ * the wrong ones. That is harmless, because the firmware reads its own data
+ * with SPI reads (fl_read_ram), never through this window. */
 #pragma once
 #include <stdint.h>
 #include "fm1_cc.h"
