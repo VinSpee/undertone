@@ -175,6 +175,7 @@ static void sim_ble(const char *l)
     else if (!strcmp(l, "safe")) { ble_state = BLE_OFF; sim_safe = 1; sim_rst = 4u; ble_last = (ble_boot_t){ .failed = 1, .stage = 7, .blocks = 9 }; }
 }
 #endif
+#include "../firmware/apps/gamut/ui_colors.h"         /* (BLK_COL, for the editor) */
 #include "../firmware/apps/gamut/px_editor.h"
 
 static int hexv(int c) { return c <= '9' ? c - '0' : (c | 32) - 'a' + 10; }

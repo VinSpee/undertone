@@ -46,7 +46,9 @@ int px_nam_user(int slot, char *name12, float *level_db, float *w) { (void)w; if
 int px_ir_user(int slot, char *name12, float *h) { (void)h; if (slot != 1 && slot != 4) return 0; strcpy(name12, slot == 1 ? "V30 4X12" : "GREENBACK"); return 1; }
 #include "ui_text.h"
 #include "../ui.h"
+#include "../ui_colors.h"               /* (the web editor's block colours: the screen must not show them) */
 
+static int reds;                        /* pages that showed red */
 static void shot(const char *dir, const char *name)
 {
     static int n;
@@ -60,10 +62,14 @@ static void shot(const char *dir, const char *name)
         fwrite(rgb, 1, 3, f);
     }
     fclose(f);
-    int holes = 0;
-    for (int i = 0; i < 240 * 240; i++) holes += fb[i] == POISON;
-    printf("%-28s %6lu px sent%s", name, px_sent, holes ? "" : "\n");
+    int holes = 0, red = 0;
+    for (int i = 0; i < 240 * 240; i++) {               /* (red: more red than amber or housing have for their green) */
+        holes += fb[i] == POISON;
+        red += fb[i] != POISON && (fb[i] >> 11) > 16 && ((fb[i] >> 5) & 63) < 24;
+    }
+    printf("%-28s %6lu px sent%s", name, px_sent, holes || red ? "" : "\n");
     if (holes) printf("   %d pixels never drawn (magenta)\n", holes);
+    else if (red) { printf("   %d red pixels: a fault is drawn in amber, never in red\n", red); reds++; }
     px_sent = 0;
 }
 static void poison(void) { for (int i = 0; i < 240 * 240; i++) fb[i] = POISON; }
@@ -71,7 +77,7 @@ static void status(void) { ui_status("DSP 42%", 0); }
 static void full(void) { poison(); uc.screen = -1; ui_invalidate(); ui_render(); status(); }
 
 
-/* ---- the design review's quick wins (F1, F2, F3, F4, F13): text that fits, and the state each screen shows ---- */
+/* ---- the design review's quick wins (F1, F2, F3, F4): text that fits, and the state each screen shows ---- */
 static int count_col(uint32_t x, uint32_t y, uint32_t w, uint32_t h, uint16_t col)
 {
     int n = 0;
@@ -79,6 +85,42 @@ static int count_col(uint32_t x, uint32_t y, uint32_t w, uint32_t h, uint16_t co
     return n;
 }
 static void play_again(void) { poison(); uc.screen = -1; ui_invalidate(); ui_render(); }
+static int px_at(uint32_t x, uint32_t y, uint16_t c) { return fb[y * 240u + x] == c; }
+/* ---- the palette's meanings (ui_palette.h): a block is on or off by light, not by a colour of its own; green is the lamp ---- */
+static int lamp_meanings(const char *d)
+{
+    load_preset(9); cur_preset = 9; ui_blk = PX_B_AMP; ui_home(); play_again(); ui_status("DSP 42%", UI_ST_NORM);
+    for (int i = 0; i < PX_NBLK; i++) {                 /* (2 px into a key from its top, above its label) */
+        int b = PRESET.order[i], on = PRESET.on[b] != 0;
+        if (!px_at(tile_x(i) + T_W / 2u, tile_y(i) + 2u, on ? C_HOUSING : C_KEY)) { printf("lamp: block %d's key must be pale when on and dark when off\n", b); return 1; }
+        if (!px_at(tile_x(i) + T_W / 2u, tile_y(i) - 2u, b == (int)ui_blk ? C_HOUSING : C_GROUND) || !px_at(tile_x(i) + T_W / 2u, tile_y(i) - 1u, C_GROUND)) { printf("lamp: the ring is round the selected key only, a pixel of ground away from it\n"); return 1; }
+    }
+    for (int b = 0; b < PX_NBLK; b++)
+        if (BLK_COL[b] != C_HOUSING && count_col(0, 0, 240, 240, BLK_COL[b])) { printf("lamp: PLAY shows block %d's colour\n", b); return 1; }
+    int lit = count_col(194, P_INFO_Y, 12, 23, C_LAMP);
+    if (!PRESET.on[PX_B_AMP] || lit < 40 || count_col(0, S_H, 240, P_INFO_Y - S_H, C_LAMP) || count_col(0, 0, 240, 240, GRN)) { printf("lamp: PLAY's only green is the lamp of the selected block, lit while it is on\n"); return 1; }
+    PRESET.on[PX_B_AMP] = 0; ui_render(); shot(d, "play_selected_block_off");
+    if (count_col(0, 0, 240, 240, C_LAMP) || count_col(194, P_INFO_Y, 12, 23, C_LAMP_OFF) != lit) { printf("lamp: an off block's lamp is unlit\n"); return 1; }
+    ui_push(); poison(); ui_render(); ui_status("DSP 42%", UI_ST_NORM);
+    if (!px_at(180, 15, C_KEY) || count_col(178, 6, 52, 19, C_LAMP_OFF) != lit) { printf("lamp: block page: an off block has a dark key and an unlit lamp\n"); return 1; }
+    for (int b = 0; b < PX_NBLK; b++)
+        if (BLK_COL[b] != C_HOUSING && count_col(0, 0, 240, 240, BLK_COL[b])) { printf("lamp: the block page shows block %d's colour\n", b); return 1; }
+    ui_knob(-1, 0); ui_push(); ui_render(); shot(d, "edit_on_key_selected");   /* (back from MODEL: ON; PUSH switches it) */
+    if (!PRESET.on[PX_B_AMP] || !px_at(180, 15, C_HOUSING) || count_col(178, 6, 52, 19, C_LAMP_KEY) != lit || count_col(0, 0, 240, 240, C_LAMP)) { printf("lamp: block page: an on block has a pale key and the lamp lit in the key's green\n"); return 1; }
+    if (!px_at(204, 4, C_HOUSING) || !px_at(204, 5, C_PLATE)) { printf("lamp: block page: the ring round the selected ON key is a pixel of plate away from it\n"); return 1; }
+    ui_knob(1, 0); ui_knob(1, 0); ui_push(); ui_render(); shot(d, "edit_value_inverted");   /* (MODEL, the first setting, edit it) */
+    if (ui_mode != M_EDIT || ui_item != 2u || !count_col(E_LIST_X, E_P0 + 1u, 230u - E_LIST_X, 23, C_GRAPHITE)) { printf("lamp: a value being changed is inverted: graphite on housing\n"); return 1; }
+    ui_push(); ui_render();
+    if (count_col(E_LIST_X, E_P0 + 1u, 230u - E_LIST_X, 23, C_GRAPHITE)) { printf("lamp: the value is as it was once the change is done\n"); return 1; }
+    ui_home(); load_preset(9); play_again(); ui_status("DSP 42%", UI_ST_NORM);
+    /* the battery: the charge turns amber at 30 %, the figure too at 15 %; neither is green or red */
+    { int m = bat_mv;
+      bat_pct = 31; ui_render(); if (count_col(84, 0, 74, S_H, C_AMBER)) { printf("lamp: a battery at 31 %% is not amber\n"); return 1; }
+      bat_pct = 30; ui_render(); if (!count_col(86, 6, 18, 8, C_AMBER) || count_col(112, 3, 46, 15, C_AMBER)) { printf("lamp: at 30 %% the charge is amber, the figure not yet\n"); return 1; }
+      bat_pct = 15; ui_render(); shot(d, "play_battery_low"); if (!count_col(112, 3, 46, 15, C_AMBER)) { printf("lamp: at 15 %% the figure is amber too\n"); return 1; }
+      bat_pct = -1; bat_mv = m; ui_render(); }
+    return 0;
+}
 static int quick_wins(const char *d)
 {
     char c[16];
@@ -94,32 +136,32 @@ static int quick_wins(const char *d)
     ui_load_text(c, 88, 0, 0, 1);
     if (strcmp(c, "DSP 88%!")) { printf("F11: a late block reads \"%s\"\n", c); return 1; }
     if (ft_width(&FT_SM, "KNOB: SELECT  PUSH: EDIT") > ST_X - 2u) { printf("F1: the longest hint no longer fits beside the load figure\n"); return 1; }
-    /* F1: overload is a red banner with an instruction, on PLAY (top bar) and on a block page (footer) */
+    /* F1: overload is an amber banner with an instruction, on PLAY (top bar) and on a block page (footer) */
     load_preset(9); cur_preset = 9; ui_blk = PX_B_AMP; ui_home(); play_again(); ui_status("DSP 42%", UI_ST_NORM);
-    if (count_col(0, 0, 240, 3, C_ALERT)) { printf("F1: PLAY shows the banner without an overload\n"); return 1; }
+    if (count_col(0, 0, 240, 3, C_AMBER)) { printf("F1: PLAY shows the banner without an overload\n"); return 1; }
     ui_status("PEAK 150%", UI_ST_BYPASS); ui_render(); shot(d, "play_overload_banner");
-    if (count_col(0, 0, 240, S_H, C_ALERT) < 240 * 5 || count_col(0, F_Y + 3u, 240, 15, WHT) == 0) { printf("F1: PLAY overload: no red bar, or no instruction in the footer\n"); return 1; }
+    if (count_col(0, 0, 240, S_H, C_AMBER) < 240 * 5 || count_col(0, 3, 240, 15, C_GRAPHITE) == 0 || count_col(0, F_Y + 3u, 240, 15, C_HOUSING) == 0) { printf("F1: PLAY overload: no amber bar with graphite words, or no instruction in the footer\n"); return 1; }
     ui_push(); ui_render(); shot(d, "edit_overload_banner");
-    if (count_col(0, F_Y, 240, 18, C_ALERT) < 240 * 3 || count_col(0, F_Y + 3u, 240, 15, WHT) == 0) { printf("F1: block page overload: the footer is not red\n"); return 1; }
+    if (count_col(0, F_Y, 240, 18, C_AMBER) < 240 * 3 || count_col(0, F_Y + 3u, 240, 15, C_GRAPHITE) == 0) { printf("F1: block page overload: the footer is not amber with graphite words\n"); return 1; }
     ui_status("DSP 42%", UI_ST_NORM); ui_render();
-    if (count_col(0, F_Y, 240, 18, C_ALERT)) { printf("F1: the footer stays red after the overload ends\n"); return 1; }
+    if (count_col(0, F_Y, 240, 18, C_AMBER)) { printf("F1: the footer stays amber after the overload ends\n"); return 1; }
     ui_home(); play_again(); ui_status("DSP 42%", UI_ST_NORM);
-    if (count_col(0, 0, 240, S_H, C_ALERT)) { printf("F1: the top bar stays red after the overload ends\n"); return 1; }
+    if (count_col(0, 0, 240, S_H, C_AMBER)) { printf("F1: the top bar stays amber after the overload ends\n"); return 1; }
     /* F2: LOADING shows amber on the MODEL row being edited (the name greys), and amber in the corner on PLAY (the amp name greys) */
     {
         play_again(); ui_status("DSP 61%", UI_ST_NORM);
-        int amp = count_col(94, P_NUM_Y + 4u, 142, 23, BLK_COL[PX_B_AMP]);
+        int amp = count_col(94, P_NUM_Y + 4u, 142, 23, C_HOUSING);
         ui_status("DSP 61%", UI_ST_LOADING); ui_render(); shot(d, "play_loading");
-        if (!amp || count_col(94, P_NUM_Y + 4u, 142, 23, BLK_COL[PX_B_AMP]) || !count_col(ST_X, 3, ST_W, 15, UI_ACC)) { printf("F2: PLAY: the amp name must grey and the corner read LOADING in amber\n"); return 1; }
+        if (!amp || count_col(94, P_NUM_Y + 4u, 142, 23, C_HOUSING) || !count_col(ST_X, 3, ST_W, 15, C_AMBER)) { printf("F2: PLAY: the amp name must grey and the corner read LOADING in amber\n"); return 1; }
         ui_status("DSP 61%", UI_ST_NORM); ui_render();
-        if (count_col(94, P_NUM_Y + 4u, 142, 23, BLK_COL[PX_B_AMP]) != amp) { printf("F2: PLAY: the amp name must come back when the model plays\n"); return 1; }
+        if (count_col(94, P_NUM_Y + 4u, 142, 23, C_HOUSING) != amp) { printf("F2: PLAY: the amp name must come back when the model plays\n"); return 1; }
         ui_push(); poison(); ui_render(); ui_status("DSP 61%", UI_ST_NORM);
-        int row = count_col(BAR_X, E_P0 + 5u, 130, 15, UI_ACC);
+        int row = count_col(BAR_X, E_P0 + 5u, 130, 15, C_AMBER);
         ui_status("DSP 61%", UI_ST_LOADING); ui_render(); shot(d, "edit_model_loading");
-        if (count_col(BAR_X, E_P0 + 5u, 130, 15, UI_ACC) <= row || count_col(140, E_P0 + 1u, 90, 23, UI_TXT)) { printf("F2: block page: the MODEL row must read LOADING in amber, the name in grey\n"); return 1; }
-        if (count_col(ST_X, F_Y + 3u, ST_W, 15, UI_ACC)) { printf("F2: block page: the corner keeps the load figure\n"); return 1; }
+        if (count_col(BAR_X, E_P0 + 5u, 130, 15, C_AMBER) <= row || count_col(140, E_P0 + 1u, 90, 23, C_HOUSING)) { printf("F2: block page: the MODEL row must read LOADING in amber, the name in grey\n"); return 1; }
+        if (count_col(ST_X, F_Y + 3u, ST_W, 15, C_AMBER)) { printf("F2: block page: the corner keeps the load figure\n"); return 1; }
         ui_status("DSP 61%", UI_ST_NORM); ui_render();
-        if (count_col(BAR_X, E_P0 + 5u, 130, 15, UI_ACC) != row) { printf("F2: block page: the MODEL row must come back\n"); return 1; }
+        if (count_col(BAR_X, E_P0 + 5u, 130, 15, C_AMBER) != row) { printf("F2: block page: the MODEL row must come back\n"); return 1; }
         ui_home(); play_again(); ui_status("DSP 42%", UI_ST_NORM);
     }
     /* F3: a footswitch on a block page goes back to PLAY (on the block it was on); the band carries the preset number */
@@ -129,23 +171,18 @@ static int quick_wins(const char *d)
     ui_preset_step(-1);
     if (cur_preset != 9) { printf("F3: the footswitch must still change the preset\n"); return 1; }
     ui_enter_block(PX_B_AMP); poison(); uc.screen = -1; ui_invalidate(); ui_render();
-    int band = count_col(8, 6, 24, 19, BLK);
+    int band = count_col(8, 6, 24, 19, C_KEY);
     cur_preset = 11; load_preset(11); ui_render(); shot(d, "edit_band_after_midi_change");   /* (a Program Change keeps the page) */
-    if (!band || count_col(8, 6, 24, 19, BLK) == band) { printf("F3: the band must show the new preset number after a MIDI change\n"); return 1; }
+    if (!band || count_col(8, 6, 24, 19, C_KEY) == band) { printf("F3: the band must show the new preset number after a MIDI change\n"); return 1; }
     ui_home(); cur_preset = 9; load_preset(9);
     /* F4: while EDITED shows, the footer names SAVE */
     play_again(); ui_status("DSP 42%", UI_ST_NORM);
-    if (count_col(0, F_Y + 3u, 240, 15, UI_ACC)) { printf("F4: SAVE is named without an edit\n"); return 1; }
+    if (count_col(0, F_Y + 3u, 240, 15, C_AMBER)) { printf("F4: SAVE is named without an edit\n"); return 1; }
     PRESET.p[PX_B_AMP][1] ^= 7u; ui_render(); shot(d, "play_edited_save_hint");
-    if (!count_col(0, F_Y + 3u, 240, 15, UI_ACC)) { printf("F4: EDITED shows, but the footer does not name SAVE\n"); return 1; }
+    if (!count_col(0, F_Y + 3u, 240, 15, C_AMBER)) { printf("F4: EDITED shows, but the footer does not name SAVE\n"); return 1; }
     load_preset(9); ui_render();
-    if (count_col(0, F_Y + 3u, 240, 15, UI_ACC)) { printf("F4: the SAVE hint stays after the edit is gone\n"); return 1; }
-    /* F13: the label of an off tile reads (contrast of at least 2.5 against the tile; the old one was 1.5 to 3.2) */
-    for (int b = 0; b < PX_NBLK; b++) {
-        uint16_t fg = ft_mix(BLK_COL[b], C_OFF, 11);
-        if (fg == C_OFF || fg == BLK_COL[b]) { printf("F13: block %d: an off label must differ from its tile and from an on tile\n", b); return 1; }
-    }
-    return 0;
+    if (count_col(0, F_Y + 3u, 240, 15, C_AMBER)) { printf("F4: the SAVE hint stays after the edit is gone\n"); return 1; }
+    return lamp_meanings(d);
 }
 
 /* ---- the full overhaul (v42): the design review's F4 to F17, through ui.h's own controls (ui_buttons, ui_turn, ui_action) ---- */
@@ -154,29 +191,28 @@ static void hold(uint32_t mask, uint32_t ms) { for (uint32_t t = 0; t < ms; t +=
 static void tap(int b) { hold(1u << b, 40); hold(0, 5); }
 #define CHECK(c, m) do { if (!(c)) { printf("%s\n", m); return 1; } } while (0)
 /* the diagnostics as pictures (v42): each figure beside its graphic, colours by state, two pages turned by the knob */
-static int px_at(uint32_t x, uint32_t y, uint16_t c) { return fb[y * 240u + x] == c; }
 static int diagnostics(const char *d)
 {
     char b[48];
     ui_dg.load = 61; ui_dg.peak = 70; ui_dg.cores = 2; ui_dg.split = 1; ui_dg.guard = 93; ui_dg.cl[0] = 52; ui_dg.cl[1] = 56;
     ui_dg.late = 0; ui_dg.bypass = 0;
     diag_draw(); shot(d, "diagnostics");
-    CHECK(dg_page == 0 && count_col(10, 60, 220, 6, GRN) && !count_col(10, 60, 220, 6, UI_ACC), "diag: a load of 61 % is a green bar");
-    CHECK(px_at(10 + dg_w(93, 100, 220) - 1, 58, WHT) && px_at(10 + dg_w(93, 100, 220) - 1, 67, WHT), "diag: the guard's tick at 93 %");
-    CHECK(count_col(88, 93, 144, 6, GRN) && count_col(88, 109, 144, 6, GRN), "diag: a bar for each core");
+    CHECK(dg_page == 0 && count_col(10, 60, 100, 6, C_HOUSING) && !count_col(10, 60, 100, 6, C_AMBER), "diag: a load of 61 % is a housing bar");
+    CHECK(px_at(10 + dg_w(93, 100, 220) - 1, 58, C_AMBER) && px_at(10 + dg_w(93, 100, 220) - 1, 67, C_AMBER), "diag: the guard's tick at 93 %");
+    CHECK(count_col(88, 93, 144, 6, C_HOUSING) && count_col(88, 109, 144, 6, C_HOUSING), "diag: a bar for each core");
     {
         uint8_t top[DG_BLK];
         int n = dg_top(top, DG_BLK);
         CHECK(n == 4 && top[0] == PX_NBLK && top[1] == PX_B_REVERB && top[2] == PX_B_DELAY && top[3] == PX_B_CAB, "diag: CPU per block, costliest first");
-        CHECK(count_col(52, 165, 148, 5, UI_ACC) && !count_col(52, 180, 148, 5, UI_ACC), "diag: the heaviest block highlighted, the others not");
+        CHECK(count_col(52, 165, 148, 5, C_HOUSING) && !count_col(52, 180, 148, 5, C_HOUSING), "diag: the heaviest block highlighted, the others not");
     }
-    CHECK(count_col(2, 122, 76, 18, GRN) && !count_col(2, 122, 76, 18, RED), "diag: no late block: a green chip");
+    CHECK(count_col(2, 122, 76, 18, C_HOUSING) && !count_col(2, 122, 76, 18, C_AMBER), "diag: no late block: its chip in housing");
     ui_dg.load = 86; diag_draw();
-    CHECK(count_col(10, 60, 220, 6, UI_ACC) && !count_col(10, 60, 220, 6, GRN), "diag: above 80 % the load turns amber");
-    ui_dg.late = 1; bat_raw[2] = 3; diag_draw(); shot(d, "diagnostics_late");
-    CHECK(count_col(10, 60, 220, 6, RED) && count_col(2, 122, 76, 18, RED), "diag: a late block: the load and its chip in red");
+    CHECK(count_col(10, 60, 100, 6, C_AMBER) && !count_col(10, 60, 100, 6, C_HOUSING), "diag: above 80 % the load turns amber");
+    ui_dg.load = 61; ui_dg.late = 1; bat_raw[2] = 3; diag_draw(); shot(d, "diagnostics_late");
+    CHECK(count_col(10, 60, 100, 6, C_AMBER) && count_col(2, 122, 76, 18, C_AMBER) && !count_col(2, 122, 76, 18, C_HOUSING), "diag: a late block: the load and its chip in amber");
     ui_dg.late = 0; bat_raw[2] = 0; ui_dg.load = 61; ui_dg.split = 0; diag_draw();
-    CHECK(!count_col(88, 93, 144, 6, GRN), "diag: no layer split: no core bars (CPU0 --)");
+    CHECK(!count_col(88, 93, 144, 6, C_HOUSING), "diag: no layer split: no core bars (CPU0 --)");
     ui_dg.split = 1;
     /* every figure fits its box at its widest */
     dg_pct(b, "DSP ", 999); CHECK(ft_width(&FT_MD, b) <= 120u, "diag: DSP 999% fits");
@@ -189,12 +225,12 @@ static int diagnostics(const char *d)
     /* the knob turns the page; both pages are drawn whole */
     poison(); ui_turn(1, 0); CHECK(dg_page == 1, "diag: the knob turns to page 2");
     diag_draw(); shot(d, "diagnostics_2");
-    CHECK(count_col(82, 58, 150, 8, GRN) && count_col(82, 58, 150, 8, ui_dark(RED)), "diag: an input meter, green, with its clip zone");
-    CHECK(!px_at(DG_X, 112, RED), "diag: no recent soft clip: the marker is dark");
-    bat_raw[3]++; diag_draw(); CHECK(px_at(DG_X + 2, 114, RED), "diag: a new soft clip lights the marker");
+    CHECK(count_col(82, 58, 150, 8, C_HOUSING) && count_col(82, 58, 150, 8, DG_CLIP_ZONE) && DG_CLIP_ZONE != C_RIM, "diag: an input meter, in housing, with its clip zone");
+    CHECK(!px_at(DG_X, 112, C_AMBER), "diag: no recent soft clip: the marker is dark");
+    bat_raw[3]++; diag_draw(); CHECK(px_at(DG_X + 2, 114, C_AMBER), "diag: a new soft clip lights the marker");
     for (int i = 0; i < 25; i++) diag_draw();
-    CHECK(!px_at(DG_X + 2, 114, RED), "diag: the marker goes dark again");
-    CHECK(count_col(DG_X + 3, 159, 40, 16, GRN), "diag: the battery's cell is filled");
+    CHECK(!px_at(DG_X + 2, 114, C_AMBER), "diag: the marker goes dark again");
+    CHECK(count_col(DG_X + 3, 159, 40, 16, C_HOUSING), "diag: the battery's cell is filled");
     poison(); ui_turn(-1, 0); diag_draw(); shot(d, "diagnostics_1_again");
     CHECK(dg_page == 0, "diag: and back to page 1");
     return 0;
@@ -223,10 +259,12 @@ static int overhaul(const char *d)
     hold(1u << UB_FSUP | 1u << UB_FSDN, 60);
     CHECK(ui_mode == M_TUNER && cur_preset == 9 && a_tmute, "F5: both footswitches: the step back, the tuner, muted");
     tuner_draw(108.0f); shot(d, "tuner_flat");
-    CHECK(count_col(10, 76, 46, 23, UI_ACC) && !count_col(184, 76, 46, 23, UI_ACC), "F12: flat: an arrow on the left, toward in tune");
-    CHECK(count_col(0, 30, 240, 30, UI_BG) == 240 * 30 && count_col(0, 206, 240, 16, UI_BG) == 240 * 16, "F12: no diagnostics on the tuner page");
-    tuner_draw(112.5f); CHECK(!count_col(10, 76, 46, 23, UI_ACC) && count_col(184, 76, 46, 23, UI_ACC), "F12: sharp: the arrow on the right");
-    tuner_draw(110.0f); CHECK(!count_col(10, 76, 46, 23, UI_ACC) && !count_col(184, 76, 46, 23, UI_ACC), "F12: in tune: no arrow");
+    CHECK(count_col(10, 76, 46, 23, C_HOUSING) && !count_col(184, 76, 46, 23, C_HOUSING), "F12: flat: an arrow on the left, toward in tune");
+    CHECK(count_col(0, 30, 240, 30, C_GROUND) == 240 * 30 && count_col(0, 206, 240, 16, C_GROUND) == 240 * 16, "F12: no diagnostics on the tuner page");
+    CHECK(count_col(56, 60, 128, 54, C_HOUSING) && !count_col(0, 30, 240, F_Y - 30u, C_LAMP), "tuner: out of tune: the note in housing, nothing lit");
+    tuner_draw(112.5f); CHECK(!count_col(10, 76, 46, 23, C_HOUSING) && count_col(184, 76, 46, 23, C_HOUSING), "F12: sharp: the arrow on the right");
+    tuner_draw(110.0f); CHECK(!count_col(10, 76, 46, 23, C_HOUSING) && !count_col(184, 76, 46, 23, C_HOUSING), "F12: in tune: no arrow");
+    CHECK(count_col(56, 60, 128, 54, C_LAMP) && !count_col(56, 60, 128, 54, C_HOUSING) && count_col(110, TN_BAR_Y - 2u, 20, 14, C_LAMP), "tuner: in tune: the note and the needle are the lamp's green");
     hold(0, 300);
     hold(1u << UB_FSDN, 40); hold(1u << UB_FSDN | 1u << UB_FSUP, 40); hold(0, 300);
     CHECK(ui_mode == M_CHAIN && cur_preset == 9 && !a_tmute, "F5: both footswitches leave the tuner, the preset as it was");
@@ -242,19 +280,22 @@ static int overhaul(const char *d)
     if (diagnostics(d)) return 1;
     tap(UB_FX); CHECK(ui_mode == M_CHAIN, "any control leaves the diagnostics");
     full();
-    /* F11: the load figure in plain words, amber when high, red when a block ran late */
+    /* F11: the load figure in plain words, amber when high or when a block ran late (which adds "!") */
     CHECK(ui_load_kind(85, 0, 0, 0, 0) == UI_ST_HIGH && ui_load_kind(80, 0, 0, 0, 0) == UI_ST_NORM && ui_load_kind(85, 1, 0, 0, 0) == UI_ST_NORM
           && ui_load_kind(85, 0, 0, 1, 0) == UI_ST_LATE && ui_load_kind(85, 0, 1, 1, 0) == UI_ST_BYPASS && ui_load_kind(5, 0, 1, 1, 1) == UI_ST_LOADING,
           "F11: the load's kind");
     ui_load_text(c, 42, 0, 0, 0); CHECK(!strcmp(c, "DSP 42%"), "F11: the load reads DSP 42%");
     ui_status("DSP 85%", UI_ST_HIGH); ui_render(); shot(d, "play_dsp_high");
-    CHECK(count_col(ST_X, 3, ST_W, 15, UI_ACC) && !count_col(ST_X, 3, ST_W, 15, RED), "F11: a high load in amber");
-    ui_status("DSP 91%!", UI_ST_LATE); ui_render(); CHECK(count_col(ST_X, 3, ST_W, 15, RED), "F11: a late block in red");
-    ui_status("DSP 42%", UI_ST_NORM); ui_render();
+    CHECK(count_col(ST_X, 3, ST_W, 15, C_AMBER), "F11: a high load in amber");
+    ui_status("DSP 91%!", UI_ST_LATE); ui_render(); CHECK(count_col(ST_X, 3, ST_W, 15, C_AMBER), "F11: a late block in amber");
+    ui_status("DSP 42%", UI_ST_NORM); ui_render(); CHECK(!count_col(ST_X, 3, ST_W, 15, C_AMBER), "F11: a normal load is not amber");
     /* F8: HOME on PLAY: the preset list; the knob browses without loading, PUSH loads, HOME goes back */
     poison(); tap(UB_HOME); CHECK(ui_mode == M_LIST, "F8: HOME on PLAY: the preset list"); ui_render(); shot(d, "preset_list");
+    CHECK(count_col(12, LS_Y0 + 2u * LS_ROW, 8, LS_ROW, C_LAMP) && count_col(0, 0, 240, 240, C_LAMP) == count_col(12, LS_Y0 + 2u * LS_ROW, 8, LS_ROW, C_LAMP), "F8: the playing preset, and it alone, has the lamp");
     for (int i = 0; i < 3; i++) ui_turn(1, 0);
     ui_render(); shot(d, "preset_list_browsed");
+    CHECK(!count_col(0, 0, 240, 240, C_LAMP), "F8: browsed away from the playing preset: no lamp in sight");
+    for (int k = 0; k < px_preset_count(); k++) { px_preset_t q; px_preset_factory(&q, k); CHECK(ft_width(&FT_MD, q.name) <= 174u, "F8: a factory name does not fit its row of the list"); }
     CHECK(cur_preset == 9 && ls_at == 12, "F8: the knob browses without loading");
     tap(UB_PUSH); CHECK(cur_preset == 12 && ui_mode == M_CHAIN, "F8: PUSH loads the preset shown and returns to PLAY");
     tap(UB_HOME); ui_turn(-1, 0); tap(UB_HOME); CHECK(ui_mode == M_CHAIN && cur_preset == 12, "F8: HOME leaves the list without loading");
@@ -303,9 +344,9 @@ static int overhaul(const char *d)
     }
     /* F14: on PLAY, the line under the tiles names a NAM amp's model and a user IR */
     ui_home(); ui_blk = PX_B_AMP; full();
-    int m0 = count_col(62, P_INFO_Y, 132, 23, UI_TXT);
+    int m0 = count_col(62, P_INFO_Y, 132, 23, C_HOUSING);
     PRESET.p[PX_B_AMP][0] = (uint8_t)px_nam_knob(5); ui_render(); shot(d, "play_info_nam_model");
-    CHECK(count_col(62, P_INFO_Y, 132, 23, UI_TXT) != m0, "F14: the line under the tiles follows the NAM model");
+    CHECK(count_col(62, P_INFO_Y, 132, 23, C_HOUSING) != m0, "F14: the line under the tiles follows the NAM model");
     /* F9: the block page's selection goes in the order drawn: ON at the top, MODEL, the settings */
     ui_blk = PX_B_AMP; ui_mode = M_BLOCK; ui_item = 0;
     ui_turn(-1, 0); CHECK(ui_item == 1u, "F9: back from MODEL: ON");
@@ -325,11 +366,11 @@ static int overhaul(const char *d)
     /* F17: SYN's page is SYNTH; a block of one model shows no arrows */
     CHECK(!strcmp(ui_block_name(PX_B_SYN), "SYNTH"), "F17: SYN's page is SYNTH");
     ui_blk = PX_B_GATE; ui_mode = M_BLOCK; ui_item = 0; full(); shot(d, "edit_gate_no_arrows");
-    CHECK(px_ntypes(PX_B_GATE) == 1 && !count_col(8, E_TYPE_Y, 20, 23, UI_ACC), "F17: NOISE GATE: no arrows");
+    CHECK(px_ntypes(PX_B_GATE) == 1 && !count_col(8, E_TYPE_Y, 20, 23, C_LABEL), "F17: NOISE GATE: no arrows");
     /* F15, F16: SAVE says a copy keeps its name; RESTORE FACTORY says RESTORE and does nothing on a factory sound */
     ui_home(); load_preset(9); cur_preset = 9; full();
     poison(); save_open(); save_knob(1); save_draw(); shot(d, "save_copy_keeps_name");
-    CHECK(count_col(0, 186, 240, 15, UI_DIM), "F15: SAVE to another slot says the name stays");
+    CHECK(count_col(0, 186, 240, 15, C_LABEL), "F15: SAVE to another slot says the name stays");
     while (sv_dest != SV_FACTORY) save_knob(-1);
     save_draw(); shot(d, "save_restore_nothing");
     CHECK(sv_dest == SV_FACTORY && !st_saved(9), "F16: RESTORE FACTORY");
@@ -389,5 +430,7 @@ int main(int argc, char **argv)
     mid_cfg.chan = 16; midi_open(); midi_knob(1); midi_draw(); shot(d, "midi_channel_wraps_to_omni");
     if (mid_cfg.chan != 0) { printf("midi: channel 16 + 1 must wrap to omni\n"); return 1; }
     midi_knob(-1); if (mid_cfg.chan != 16) { printf("midi: omni - 1 must wrap to 16\n"); return 1; }
-    return quick_wins(d) || overhaul(d);
+    if (quick_wins(d) || overhaul(d)) return 1;
+    if (reds) { printf("%d pages show red\n", reds); return 1; }
+    return 0;
 }

@@ -54,8 +54,8 @@ typedef struct { int dummy; } op_font;
 static op_font FT_MD;
 static uint32_t ft_box(uint32_t x, uint32_t y, uint32_t w, const char *s, const op_font *f, uint16_t fg, uint16_t bg, int a)
 { (void)x; (void)y; (void)w; (void)s; (void)f; (void)fg; (void)bg; (void)a; return 0; }
-#define UI_ACC 0
-#define UI_BG 0
+#define C_AMBER 0
+#define C_GROUND 0
 #define OP_BLE_TEST 1
 static uint32_t ms_now(void) { return 0; }
 #include "../px_midi_io.h"

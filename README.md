@@ -35,7 +35,7 @@ Written from scratch for the pedal's own chip (JieLi AC791N, two cores), install
   editor), the pedal is also a class-compliant USB sound card, 16-bit stereo at 44.1 kHz, no driver: the computer records
   the pedal's sound and plays through its output, beside MIDI. [docs/USB-AUDIO.md](docs/USB-AUDIO.md)
 - What changed: [Gamut 1.0b1](docs/WHATS-NEW-1.0b1.md), [v42](docs/WHATS-NEW-v42.md), [v41](docs/WHATS-NEW-v41.md), [v40](docs/WHATS-NEW-v40.md), [v39](docs/WHATS-NEW-v39.md), [v38](docs/WHATS-NEW-v38.md), [v37](docs/WHATS-NEW-v37.md), [since v33](docs/WHATS-NEW-v34-v36.md)
-- **New screen (v36)**: a PLAY page readable from a distance (preset number and name, amp, chain in colour) and an EDIT
+- **New screen (v36)**: a PLAY page readable from a distance (preset number and name, amp, chain as pale and dark keys) and an EDIT
   page with big values and bars
 - **8 reverbs rebuilt in v35**: an 8-line feedback delay network with early reflections and moving lines (no
   metallic tail), the decay time you set (low and high frequencies apart), and Dattorro's plate; **delays up to 2 s**

@@ -120,6 +120,7 @@ static void ir_changed(uint32_t s)   /* v38: a user IR was written or erased: th
 #define ED_DIAG_LEN 224u
 static void ed_diag_line(uint32_t i, char *out);
 #endif
+#include "ui_colors.h"      /* BLK_COL: the blocks' colours, for the web editor (the pedal's screen has its own palette: ui_palette.h) */
 #include "px_editor.h"      /* the web editor (docs/EDITOR-PROTOCOL.md) */
 #include "px_midi_io.h"     /* musical MIDI over USB (docs/MIDI.md) */
 #endif
@@ -222,7 +223,7 @@ static void app_main(void)
     audio_start();                       /* guitar -> DSP engine -> output, amp enabled */
     leds_init();                         /* the button lights: all off loaded, then on (PC7 low), as stock */
     op_stage(ST_UI, "SCREEN...");
-    lcd_rect(0, 0, 240, 240, UI_BG);
+    lcd_rect(0, 0, 240, 240, C_GROUND);
     ui_invalidate();
     ui_render();
     op_stage(ST_RUN, 0);

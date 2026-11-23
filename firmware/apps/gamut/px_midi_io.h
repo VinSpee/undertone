@@ -19,7 +19,7 @@ static void midi_persist(void)                  /* the page's HOME: save the set
 {
     st_midi = px_midi_cfg_pack(&mid_cfg);
     st_usb = (uint8_t)((st_usb & ~1u) | (px_ua_on & 1u));   /* v42: USB AUDIO (px_usb.h then presents the device anew) */
-    ft_box(0, 186, 240, "SAVING...", &FT_MD, UI_ACC, UI_BG, 1);
+    ft_box(0, 186, 240, "SAVING...", &FT_MD, C_AMBER, C_GROUND, 1);
     if (st_ok) (void)st_commit();
 }
 
