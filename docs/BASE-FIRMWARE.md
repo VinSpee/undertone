@@ -38,7 +38,7 @@ bytes as the pinned release, upstream's published v42 with the bass tuner fix, t
 | The link and the build: sections, fixed regions, RAM code, the memory report | `firmware/app.ld`, `firmware/build.sh`, `tools/ramcode.py`, `tools/check_calls.py` |
 | The package and the update loader | `tools/pxpkg.py`, `tools/mkloader.py`, `loader/` |
 
-Gamut's own files are in `firmware/apps/gamut/` (`openpocket.c`, `px_audio.h`, `ui.h`, `ui_colors.h`,
+Gamut's own files are in `firmware/apps/gamut/` (`openpocket.c`, `px_audio.h`, `ui.h`, `ui_palette.h`, `ui_fonts.h`, `ui_colors.h`,
 `px_lights.h`, `px_store.h`, `px_models.h`, `px_irs.h`, `px_editor.h`, `px_midi.h`, `px_midi_io.h`, `px_ble_midi.h`,
 `ble/`, `memory.ld` and `engine/`). Everything under `firmware/` outside `firmware/apps/` is the base.
 

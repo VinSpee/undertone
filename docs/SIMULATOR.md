@@ -176,10 +176,10 @@ before it is answered, so a state read right after a press shows the press.
 `state`:
 
 ```json
-{"slot": 0, "name": "TWIN CLEAN", "dirty": 0, "saved": 0, "mode": "chain", "block": 5, "item": 0, "volume": 80,
+{"slot": 0, "name": "twin clean", "dirty": 0, "saved": 0, "mode": "chain", "block": 5, "item": 0, "volume": 80,
  "battery_mv": 3920, "usb_mv": 0, "tuner_hz": 0, "writes_ok": 1, "frame": 35324,
  "dsp": {"load": 42, "bypass": 0, "core1": 1}, "last_press": "fs_up", "presses": 1, "knob": 0, "held": [],
- "preset": {"name": "TWIN CLEAN", "on": [..12], "type": [..12], "order": [..12], "p": [[..5] x 12]}}
+ "preset": {"name": "twin clean", "on": [..12], "type": [..12], "order": [..12], "p": [[..5] x 12]}}
 ```
 
 `slot` is 0..51 (the pedal shows 1..52); `dirty`: the sound differs from its slot (the pedal's "EDITED"); `saved`: the

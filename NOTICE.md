@@ -12,6 +12,7 @@ Undertone is GPL-3.0-only (`LICENSE`), except the parts below, which keep their 
 | `third_party/jieli-ble/` (JieLi's Bluetooth LE controller, 33 objects of `btctrler.a` and 3 of `cpu.a`, as published LLVM bitcode, used only by the Bluetooth test image `make ble`) | JieLi AC79 SDK V1.2.0 (fw-AC79_AIoT_SDK, commit `0617f4c`), `cpu/wl82/liba/`; see `third_party/jieli-ble/README.md` | Apache-2.0 (`third_party/jieli-ble/LICENSE-JieLi-Apache-2.0`, `LICENSES/Apache-2.0.txt`) |
 | `firmware/apps/gamut/ble/ble_cfg.c` | values and names from the same SDK's `apps/common/config/log_config/lib_btctrler_config.c` | Apache-2.0 |
 | `firmware/fonts.h` (bitmaps generated from Inter) | [Inter](https://rsms.me/inter/), Rasmus Andersson | SIL OFL 1.1 (`LICENSES/OFL-1.1-Inter.txt`) |
+| `firmware/apps/gamut/ui_fonts.h` (bitmaps generated from B612 and B612 Mono by `tools/mkfont.py gamut`: a modified version of the fonts, which declare no reserved font name) | [B612](https://github.com/polarsys/b612), The B612 Project Authors | SIL OFL 1.1 (`LICENSES/OFL-1.1-B612.txt`) |
 | `assets/loops/*.wav` (guitar loops for the simulator), and `docs/assets/audio/riff.m4a` (`riff.wav` as AAC, which the site's home page plays) | cut from [Guitar-TECHS](https://zenodo.org/records/14963133), credits in `assets/loops/ATTRIBUTION.md` | CC BY 4.0 |
 
 The factory NAM models (`firmware/apps/gamut/engine/px_nam_factory.h`, v37) are A2-Lite networks trained for Gamut from Neural Amp

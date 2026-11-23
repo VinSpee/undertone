@@ -41,7 +41,7 @@ Gamut (the stock-firmware scan was skipped on purpose).
    **Back to the official firmware** step. The SD-card recovery (`make appimage`) works as before.
 
 The status text at the bottom right of the screen shows the Bluetooth state: `STARTING` with the stage and the pedal's
-usual `DSP 42%`, then `ADVERTISING` (the proof counters, scrolling) or `FAILED` (the failure, scrolling, with its short
+usual `dsp 42%`, then `ADVERTISING` (the proof counters, scrolling) or `FAILED` (the failure, scrolling, with its short
 code first so that it is always on screen). See [Reading the status text](#reading-the-status-text).
 
 ## What you should see

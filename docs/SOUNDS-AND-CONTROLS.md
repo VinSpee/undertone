@@ -10,8 +10,8 @@ the knob to move it, PUSH to drop it (HOME puts it back). Delay before the amp, 
 the fuzz... The order is saved with the preset.
 
 Each block has a **type** (the model), an **ON/OFF** state and up to **5 settings (0–100)**. Where a bare number
-would mean nothing, the screen shows the real value: interval (`+5TH`), semitones (`-7`), time in ms (`510`),
-playback heads (`1+2`), EQ dB (`+6`), bits (`8`), `SLOW`/`FAST` for the rotary.
+would mean nothing, the screen shows the real value: interval (`+5th`), semitones (`-7`), time (`510 ms`),
+playback heads (`1+2`), EQ dB (`+6`), bits (`8`), `slow`/`fast` for the rotary.
 
 The names refer to the famous units the sounds are inspired by. The amps are neural network models of real amps, the
 cabinets your own impulse responses, and the effects follow published circuit analyses (ElectroSmash, Electric Druid,
@@ -123,14 +123,17 @@ every IR to the same energy, so the loudness changes only as much as the two cab
 
 | | Clean | Crunch | Lead | High gain | Effects |
 |---|---|---|---|---|---|
-| | 01 TWIN CLEAN | 07 TS BLUES | 13 BRIT LEAD | 17 MODERN ROCK | 22 VIBE ROCK |
-| | 02 CHORUS CLEAN | 08 BLUES BREAKUP | 14 SMOOTH LEAD | 18 5150 RHYTHM | 23 ORGAN |
-| | 03 AC15 CHIME | 09 KLON CRUNCH | 15 HAIR METAL | 19 TIGHT METAL | 24 ACOUSTIC |
-| | 04 FUNK WAH | 10 BRIT CRUNCH | 16 SPACE LEAD | 20 SWEDE DEATH | |
-| | 05 SURF SPRING | 11 70S ROCK | | 21 DOOM | |
-| | 06 AMBIENT SWELL | 12 BOUTIQUE | | | |
+| | 01 twin clean | 07 ts blues | 13 brit lead | 17 modern rock | 22 vibe rock |
+| | 02 chorus clean | 08 blues breakup | 14 smooth lead | 18 5150 rhythm | 23 organ |
+| | 03 ac15 chime | 09 klon crunch | 15 hair metal | 19 tight metal | 24 acoustic |
+| | 04 funk wah | 10 brit crunch | 16 space lead | 20 swede death | |
+| | 05 surf spring | 11 70s rock | | 21 doom | |
+| | 06 ambient swell | 12 boutique | | | |
 
-25–52: **USER 25 … USER 52**, a clean NAM TWIN + USER IR (IR1) + a little room, to build your own.
+25–52: **user 25 … user 52**, a clean NAM TWIN + USER IR (IR1) + a little room, to build your own.
+
+The factory names are in small letters since the screen's new fonts. A sound you saved before keeps the name it was
+saved with, in capitals.
 
 **Levels (v36)**: every NAM model plays at the same loudness at GAIN noon; every block type, with its knobs at
 noon, keeps the loudness when switched on; each preset has its own **PRESET LVL** (GT page, 3rd line: -15..+15 dB) to
@@ -154,18 +157,20 @@ balance your sounds. The output ends in a soft limiter (transparent up to -2 dBF
 is a pale key, one that is off a dark key; the selected one has a ring) and the selected block; EDIT shows the block's
 name, its ON / OFF key, the model, and up to 5 settings with value and bar; the EDIT band also shows the preset number.
 A value is inverted, dark on a pale chip, while the knob changes it.
-**Colours**: the screen is dark with pale text. Green is a lamp, and only that: the dot beside `ON` while a block is on,
-the playing preset in the list, a computer connected on the MIDI page, `SAVED`, and the note and the needle when in
-tune. Amber is the only warning colour: something waits on you (`EDITED`, `HOLD: SAVE`, `LOADING`) or went wrong
+**Text**: words are in B612 and figures in B612 Mono. Labels, hints and settings are in small letters (`gain`, `knob:
+block`, `363 ms`); the name of a preset, a model or an IR is shown as it is stored.
+**Colours**: the screen is dark with pale text. Green is a lamp, and only that: the dot beside `on` while a block is on,
+the playing preset in the list, a computer connected on the MIDI page, `saved`, and the note and the needle when in
+tune. Amber is the only warning colour: something waits on you (`edited`, `hold: save`, `loading`) or went wrong
 (overload, a late block, a low battery, a fault). Nothing is red, and the blocks have no colours of their own on the
 pedal (the web editor keeps them).
-`DSP xx%` (top right on PLAY, bottom right on EDIT) = DSP load (amber above 80 %, and with `!` when a block ran late;
+`dsp xx%` (top right on PLAY, bottom right on EDIT) = DSP load (amber above 80 %, and with `!` when a block ran late;
 which cores ran is on the diagnostics page). **Overload guard**: the effects are bypassed until the next change, an
-amber bar says `OVERLOAD: SOUND BYPASSED` (on EDIT the whole footer turns amber) and the footer says `TURN A BLOCK OFF`
-(with `PEAK xxx%` on PLAY). While a NAM model loads, the MODEL row of the EDIT page reads `LOADING` in amber (on PLAY the
-corner does, and the amp name goes grey). `EDITED`: the sound differs from its saved slot.
+amber bar says `overload: sound bypassed` (on EDIT the whole footer turns amber) and the footer says `turn a block off`
+(with `peak xxx%` on PLAY). While a NAM model loads, the MODEL row of the EDIT page reads `loading` in amber (on PLAY the
+corner does, and the amp name goes grey). `edited`: the sound differs from its saved slot.
 Top centre of PLAY: the **battery** (v36), from the chip's own VBAT/4 channel (the charge turns amber at 30 %, the
-figure too at 15 %; `USB` when the 5 V supply is there); the diagnostics page shows the same reading in volts. On PLAY,
+figure too at 15 %; `usb` when the 5 V supply is there); the diagnostics page shows the same reading in volts. On PLAY,
 the line under the tiles names a NAM amp's model and a user IR's name.
 
 ## MIDI over USB-C (test build v37; [MIDI.md](MIDI.md))
@@ -191,11 +196,11 @@ On / off: 64 and up is on. Settings 0 to 127 are 0 to 100. Model: the whole 0 to
 CC 7 is the MASTER volume. Details, the clock sync and the limits: [MIDI.md](MIDI.md).
 
 ## Saving your sounds (v25)
-- `EDITED` at the top of the PLAY screen means the sound has been edited since the preset was loaded; the footer then reads `HOLD: SAVE`.
+- `edited` at the top of the PLAY screen means the sound has been edited since the preset was loaded; the footer then reads `hold: save`.
 - **Long press on PUSH**: SAVE page. The knob picks the slot (1 to 52; the current preset is offered first; the
   screen shows the name of the sound that will be replaced), PUSH saves, HOME cancels.
-- At the very end of the list: **RESTORE FACTORY** puts the current slot back to its factory preset (the footer reads
-  `PUSH: RESTORE`; on a slot that already holds its factory sound, PUSH does nothing).
+- At the very end of the list: **restore factory** puts the current slot back to its factory preset (the footer reads
+  `push: restore`; on a slot that already holds its factory sound, PUSH does nothing).
 - A sound saved to another slot keeps its name: rename it in the web editor.
 - The pedal starts on the slot saved last.
 - Sounds are kept in flash (0xF0000–0xF4000, two copies): a power cut during a save leaves the previous version,
@@ -214,15 +219,15 @@ Keep holding HOME past the tuner (1.4 s in all), or hold HOME again on the tuner
 (the tuner page showed these before); the knob turns between them, any control leaves, and the sound plays. Every figure is
 written beside its picture. Amber is a load above 80 %, a late block, a counter that is not zero or the effects bypassed.
 
-- **Page 1, the DSP:** the load as a bar with the safety bypass's limit marked (`GUARD 93%` with both cores, 85 % on one)
+- **Page 1, the DSP:** the load as a bar with the safety bypass's limit marked (`guard 93%` with both cores, 85 % on one)
   and the peak since the preset was set; which cores ran (`C1` the second core, `C0` the fallback on the main core, `2C`
-  both) and `PK`, the highest block load since boot; a bar for each core while the NAM network is split between them;
-  `LATE` (blocks that ran late), `CLIP` (blocks at the soft clipper) and `BYPASS`; the four costliest blocks as bars, the
-  heaviest the brightest, and `CUT n` once the delay or the reverb had to cut a wet block short.
-- **Page 2, input and power:** a meter for each input channel (`L -62 DB`, dB below full scale; with nothing plugged in,
+  both) and `pk`, the highest block load since boot; a bar for each core while the NAM network is split between them;
+  `late` (blocks that ran late), `clip` (blocks at the soft clipper) and `bypass`; the four costliest blocks as bars, the
+  heaviest the brightest, and `cut n` once the delay or the reverb had to cut a wet block short.
+- **Page 2, input and power:** a meter for each input channel (`L -62 dB`, dB below full scale; with nothing plugged in,
   the pedal's own noise floor), with the last 3 dB marked as the clip zone; a marker that lights for 2 s when the output
-  reaches the soft clipper, with the count; the battery as a cell with its volts and percent (`USB` on the 5 V supply);
-  the raw battery readings (`C9`, `CH`).
+  reaches the soft clipper, with the count; the battery as a cell with its volts and percent (`usb` on the 5 V supply);
+  the raw battery readings (`C9`, `ch`).
 
 ## Audio input (v26–v28)
 Like the official firmware: input and output in 24 bits (v26), and the guitar read from the left channel only (v28).

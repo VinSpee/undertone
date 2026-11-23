@@ -154,7 +154,7 @@ RAM**. v40 did the same for Gamut (then called OpenPocket; `tools/ramcode.py`), 
   with Bluetooth off keeps v33's supplies. v30 had this setup for everything and a Pocket X then measured slower and
   crackled; that was never proven to come from the supplies (the DSP still ran from flash then), but listen for it.
 - The radio's interrupts stay at priority 2, below the audio, as in the stock firmware (`OP_BLE_IRQ_PRIO`).
-- **When the second core stops**, the MIDI page says so in amber (`CORE 2 OFF: MISREAD`, `LATE`, `FAULT`). It then stays
+- **When the second core stops**, the MIDI page says so in amber (`core 2 off: misread`, `late`, `fault`). It then stays
   off **until the pedal is switched off and on again** (a restart is not enough).
 - **`cpu_in_irq` says no, always**, as in the test image that advertised and connected on a BlackBox. The first v41 builds
   answered as the SDK does (`icfg & 0xFF`), and no phone saw them: what that byte holds outside an interrupt after this

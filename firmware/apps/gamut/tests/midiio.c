@@ -51,7 +51,7 @@ static int ui_nitems(void) { return 2 + px_nparams(PX_B_AMP, PRESET.type[PX_B_AM
 static void load_preset(uint32_t i) { px_preset_factory(&PRESET, (int)i); }
 static int st_commit(void) { commits++; return 0; }
 typedef struct { int dummy; } op_font;
-static op_font FT_MD;
+static op_font GF_TX;
 static uint32_t ft_box(uint32_t x, uint32_t y, uint32_t w, const char *s, const op_font *f, uint16_t fg, uint16_t bg, int a)
 { (void)x; (void)y; (void)w; (void)s; (void)f; (void)fg; (void)bg; (void)a; return 0; }
 #define C_AMBER 0
