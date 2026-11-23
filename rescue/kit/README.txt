@@ -57,9 +57,12 @@ restore ends with "Done". Then unplug the cable, switch the pedal off, wait
 5 seconds and switch it on. If a run stops in the middle, run the same line
 again: it continues.
 
-After path B, DO NOT INSTALL OPENPOCKET ON THE PEDAL. Today's OpenPocket
-installer writes over the end of the V22/V23 boot loader, and the pedal goes
-dark again. Wait for an installer that supports V22 and V23.
+After path B, DO NOT INSTALL OPENPOCKET ON THE PEDAL FROM THE INSTALLER PAGE.
+An installer that does not know the V22/V23 layout writes over the end of that
+boot loader, and the pedal goes dark again. On such a pedal Gamut is installed
+with a command of the repository instead, tools/uboot_install.py, which never
+writes the boot loader: see the guide's section "Gamut on a BlackBox with V22
+or V23". It has worked on one real pedal.
 
 Other files here
 ----------------
@@ -76,9 +79,12 @@ tools/pd40_recovery.py  (Mac: python3 tools/pd40_recovery.py)
     recovery mode reports and writes nothing. Then it watches the USB
     devices for 60 seconds: if the pedal leaves the recovery mode, it shows
     when, and what the pedal starts next. Run it at once after RECOVERY
-    appears and send its output back. Do not use --leave yet:
-    whether it reaches the USB boot state is not known. See the guide's
-    section "A pedal on M-VAVE's V22 or V23" first.
+    appears: the pedal restarts by itself about 4 seconds after power-on.
+    With --leave --accept-inferred --accept-control-reply it sends the one
+    command that took the one real pedal tried to the USB boot state, where
+    tools/uboot_rescue.py works; start that tool first, in a second window,
+    because that state lasts only seconds. See the guide's section "A pedal
+    on M-VAVE's V22 or V23" first.
 SHA256SUMS.txt
     The SHA-256 of every file in this kit. Check one on Windows with
     certutil -hashfile RESCUE.bat SHA256
@@ -88,11 +94,14 @@ Backups are saved in the OpenPocket-rescue folder of your user (home) folder.
 
 Status
 ------
-The tool has restored one real pedal on path A, from a Mac. Path B (V22 and
-V23) was tested against a simulated pedal with M-VAVE's real V22 and V23
-files, and it matches one community report of a real pedal restored this way.
-The OpenPocket team has not yet run path B on a real pedal, and has not run
-the Windows launcher on a real pedal.
+The tool has restored one real pedal on path A, from a Mac. On path B it has
+put the official V23 app back on one real pedal whose V23 boot loader was
+intact, reached through the recovery mode's leave, from a Mac. A pedal that
+went dark after an install for the old layout was tested against a simulated
+pedal with M-VAVE's real V22 and V23 files, and it matches one community
+report of a real pedal restored this way; the OpenPocket team has not run
+that case on a real pedal, and has not run the Windows launcher on a real
+pedal.
 
 Credits and licences
 --------------------

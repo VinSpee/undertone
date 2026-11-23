@@ -159,7 +159,7 @@ PCM ring at `0x1F29EE0`, inside the cache-way range above (**likely**: the stock
 | Range | What |
 | --- | --- |
 | `0x00000..0x04000` | flash header, boot config: **never written**; the update loader reads it and refuses a head that does not put the app area at `0x4000` (M-VAVE's BlackBox V22 and later put it at `0x6000`) |
-| `0x04000..0xA3000` | the application area (the update loader rewrites only this). A package's app area is `0x99000` bytes, so it fits both heads: an update writes `0x04000..0x9D000` here, and the same bytes would sit at `0x06000..0x9F000` on a V22 head, below its stock settings. The loader refuses a package longer than the head's slot. On a V22/V23 head the boot loader's own recovery mode writes the area there instead (`tools/pd40_install.py`, `docs/RESCUE.md`) |
+| `0x04000..0xA3000` | the application area (the update loader rewrites only this). A package's app area is `0x99000` bytes, so it fits both heads: an update writes `0x04000..0x9D000` here, and the same bytes would sit at `0x06000..0x9F000` on a V22 head, below its stock settings. The loader refuses a package longer than the head's slot. On a V22/V23 head the area is written there through the chip's USB boot state instead (`tools/uboot_install.py`, `docs/RESCUE.md`) |
 | `0xA3000..0xFF000` | where the bootloader looks for update records: anything that ends like a record can be erased by an update, so user data there must be skipped by the loader (`loader/ldr_core.c`) |
 | `0xA5000` | stock "VM" (settings; holds the radio calibration records, VM 106..108, 187). On a Pocket X backup (`fm1-1.bin`, its official firmware) the active VM area is at **`0xA1000`**, inside Gamut's application area: installing Gamut overwrites it, and that pedal's radio records are gone (`ble_rf.c` gives defaults then) |
 | `0xBA000..0xBD000` | stock file `EXT_RESERVED/usr` (12 KB) |
@@ -187,7 +187,10 @@ window (`SFCENC_CON`, `fm1_flash.h`, `ble_vm.h`), not through `0x02xxxxxx`.
   The always-on P33 domain keeps it across a warm reset but not across a power cycle. The boot loader's value applies
   after power-on. On one BlackBox the pin sits at its active level, so the unit reset every ~4.3 s after power-on
   (issue #1). The stock app writes `PINR_CON = 0` first thing; **do the same**. Pocket X boots with `PINR 08`
-  (off), a BlackBox with `PINR 09` (on).
+  (off), a BlackBox with `PINR 09` (on). The recovery mode of M-VAVE's V22/V23 boot loader never writes `PINR_CON`
+  (read in its code). On one BlackBox that mode ended about 4.3 s after power-on whatever the computer did, in the
+  middle of a flash write; this reset is the likely cause (inferred: the reset source was not read). A write through
+  that mode needs about 14 s, so it cannot finish (`docs/RESCUE.md`).
 - **Reset source:** `P3_RST_SRC` bits: 0 power-on, 1 VDDIO low, 2 watchdog, 3 VCM, 4 long press, 5 1.2 V, 6 soft. Show
   it on the boot screen; it named the long-press cause above.
 - **Supplies:** the stock firmware sets VDC14 7, SYSVDD 15, the 1.3 V supply on the DC-DC and several P3_ANA_CON bits.
@@ -203,7 +206,10 @@ window (`SFCENC_CON`, `fm1_flash.h`, `ble_vm.h`), not through `0x02xxxxxx`.
   loader); the crash screen with `VEC`, `PC`, `RETS` looked up in `symbols.txt`.
 - **Mask-ROM rescue:** a looping unit spends ~44 s between crashes in JieLi's USB boot ROM ("UBOOT", USB `4C4A:8057`,
   `WL82 UBOOT1.00`). With JieLi's `wl82loader.bin` in RAM the whole flash can be read and rewritten (chip key `0x980F`).
-  The ROM cannot be damaged (`tools/uboot_rescue.py`, `docs/RESCUE.md`).
+  The ROM cannot be damaged (`tools/uboot_rescue.py`, `docs/RESCUE.md`). A BlackBox on the V22/V23 boot loader
+  reaches the same state from that boot loader's recovery mode: its leave command (6) resets the processor core, and on
+  one real pedal the ROM then came up as `4C4A:8057` about 0.8 s later. Unclaimed, it stayed only seconds. Gamut was
+  installed there that way (`tools/uboot_install.py`).
 
 ---
 

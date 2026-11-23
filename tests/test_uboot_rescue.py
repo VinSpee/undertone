@@ -108,7 +108,7 @@ class Rescue(unittest.TestCase):
         return sim, open_device
 
     def run_rescue(self, open_device, sim, write, attempts=10, image=IMAGE):
-        return ur.rescue(open_device, LOADER, image, write, self.backups, attempts, self.logs.append, sim.clock)
+        return ur.rescue(open_device, LOADER, ur.whole_image(image), write, self.backups, attempts, self.logs.append, sim.clock)
 
     def test_v21_factory_restore_backs_up_and_changes_only_the_sound_bank(self):
         before = bytes(crashed_flash())
@@ -445,7 +445,7 @@ class Rescue(unittest.TestCase):
         flash = bytearray(noise(4, ur.FLASH_SIZE))
         flash[:0x4000] = image[:0x4000]
         sim = uboot_sim.SimPedal(flash, LOADER)
-        n, _ = ur.rescue(lambda: sim, LOADER, image, True, self.backups, 1, self.logs.append, sim.clock)
+        n, _ = ur.rescue(lambda: sim, LOADER, ur.whole_image(image), True, self.backups, 1, self.logs.append, sim.clock)
         self.assertEqual(bytes(sim.flash[:HI]), image)
         broken = Path(self.tmp.name) / "broken.fwsc"
         raw = bytearray(PACKAGE.read_bytes())

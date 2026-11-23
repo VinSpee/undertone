@@ -6,17 +6,20 @@ Use this when the pedal shows a black screen or keeps restarting, and the instal
 USB cable and a Mac or a Windows PC. The first run only checks the pedal and saves a backup. Nothing is written until the
 second run.
 
-> **Warning.** Do not install Gamut on a pedal that ran M-VAVE V22 or V23, not even after a successful rescue.
-> Undertone's installer writes from `0x4000`, over the end of the V22/V23 boot loader, and the pedal goes dark again.
-> This project's installer page, `node tools/op.mjs flash` and the update loader in its packages now refuse such a pedal
-> and write nothing; older installers, upstream's among them, do not. Wait for an installer that supports V22 and V23.
-> It is not released yet.
+> **Warning.** Do not install Gamut from an installer page on a pedal that ran M-VAVE V22 or V23, not even after a
+> successful rescue. An install over MIDI writes from `0x4000`, over the end of the V22/V23 boot loader, and the pedal
+> goes dark again. This project's installer page, `node tools/op.mjs flash` and the update loader in its packages
+> refuse such a pedal and write nothing; older installers, upstream's among them, do not. On such a pedal Gamut is
+> installed with a command instead, through the chip's USB boot state:
+> [Gamut on a BlackBox with V22 or V23](#gamut-on-a-blackbox-with-v22-or-v23).
 
-> **Status.** Path A's tool has restored one real pedal, from a Mac. Path B (V22 and V23) is verified in simulation
-> only: the kit's files were run against a simulated pedal with M-VAVE's real V22 and V23 packages, and the pedal ended
-> on the exact official image. This matches one community report of a real pedal restored this way
-> ([issue 31](https://github.com/isod89/openpocket/issues/31)). The Undertone team has not run path B on a real pedal,
-> and has not run the Windows launcher on a real pedal.
+> **Status.** Path A's tool has restored one real pedal, from a Mac. On path B the same tool has put the official V23
+> app back on one real pedal whose V23 boot loader was intact, reached through the recovery mode's leave
+> ([below](#a-pedal-on-m-vaves-v22-or-v23)). A pedal that went dark after an install for the old layout is verified in
+> simulation only: the kit's files were run against a simulated pedal with M-VAVE's real V22 and V23 packages, and the
+> pedal ended on the exact official image. This matches one community report of a real pedal restored this way
+> ([issue 31](https://github.com/isod89/openpocket/issues/31)). The Undertone team has not run that case on a real
+> pedal, and has not run the Windows launcher on a real pedal.
 
 ### 1. Find your path
 
@@ -27,7 +30,7 @@ updater after July 2026, or if it came with V22 or V23.
 | Path | The pedal had | Firmware file | The pedal ends on |
 | --- | --- | --- | --- |
 | A | V16, V17 or V20, and never V22 or V23 | `BlackBox_020.fwsc` | Official V20 |
-| B | V22 or V23 at any time, or you are not sure | `BlackBox_023.fwsc` | Official V23. No Gamut yet |
+| B | V22 or V23 at any time, or you are not sure | `BlackBox_023.fwsc` | Official V23 |
 | C | Something else: both files are refused | None | Stop. Keep the backup |
 
 The check in step 4 is the test, and it writes nothing. With the right file it prints
@@ -115,8 +118,9 @@ Unplug the cable. Switch the pedal off, wait 5 seconds, switch it on. The pedal 
 firmware: V20 after path A, V23 after path B. Settings saved on the pedal may be reset. The backup holds what was there
 before.
 
-**Path B: stop here. Do not install Gamut on this pedal yet.** It would go dark again, for the reason in the
-warning at the top of this page.
+**Path B: do not install Gamut on this pedal from the installer page.** It would go dark again, for the reason in the
+warning at the top of this page. The install for such a pedal is a command:
+[Gamut on a BlackBox with V22 or V23](#gamut-on-a-blackbox-with-v22-or-v23).
 
 ### If it does not work
 
@@ -140,7 +144,7 @@ The kit is one zip that unpacks to one folder, `OpenPocket-rescue-kit`. Its numb
 | File | What it is |
 | --- | --- |
 | `RESCUE.bat`, `tools/uboot_rescue.py`, `tools/pocketx_fw.py` | The rescue tool of this repository, unchanged |
-| `tools/pd40_recovery.py` | Reads M-VAVE's recovery mode on a V22 or V23 pedal ([below](#a-pedal-on-m-vaves-v22-or-v23)) |
+| `tools/pd40_recovery.py` | Reads M-VAVE's recovery mode on a V22 or V23 pedal and sends its leave to the USB boot state ([below](#a-pedal-on-m-vaves-v22-or-v23)) |
 | `fingerprint.bat`, `tools/head_fingerprint.py` | Says which firmware a backup or a firmware file belongs to |
 | `extract-flash.bat`, `tools/extract_flash.py` | Takes `flash.bin` out of a package, for `--image` |
 | `firmware/README.txt` | The three file names, their SHA-256, and where to get the files |
@@ -162,7 +166,7 @@ The fingerprint is the SHA-256 of the first `0x4000` bytes of the flash. `d540d2
 `ERROR` about the file: run steps 4 and 5 with `--image BlackBox_023-flash.bin` in place of `--package ...`.
 
 **Checking the download.** The installer page shows the kit's SHA-256 beside its download button. Compare it with
-`certutil -hashfile OpenPocket-rescue-kit-5.zip SHA256` on Windows or `shasum -a 256 OpenPocket-rescue-kit-5.zip` on a
+`certutil -hashfile OpenPocket-rescue-kit-6.zip SHA256` on Windows or `shasum -a 256 OpenPocket-rescue-kit-6.zip` on a
 Mac, with your kit's number in the name.
 
 **Building it.** `node tools/op.mjs kit` (or `make kit`) writes the zip and `manifest.json` into `docs/rescue/`, where
@@ -255,33 +259,41 @@ Exit codes: 0 done, 1 setup problem (libusb, root, files), 2 refused by a safety
 
 ## A pedal on M-VAVE's V22 or V23
 
-Use this for a BlackBox whose V22 or V23 boot loader is intact: a pedal that runs the official V22 or V23, or one whose app
-no longer starts but which still shows `RECOVERY` with the key combination of step 1. On such a pedal nothing else in this repository reaches the
-chip's USB boot state, so `uboot_rescue.py` cannot start. M-VAVE's boot loader has a recovery mode of its own, and
-`tools/pd40_recovery.py` reads it. Whether that mode can lead to the USB boot state is not yet known. The helper never
-writes to the pedal's flash. The same recovery mode can also rewrite the app area, which is how Gamut is installed on such
-a pedal and how M-VAVE's own app is put back: [Gamut on a BlackBox with V22 or V23](#gamut-on-a-blackbox-with-v22-or-v23).
+Use this for a BlackBox whose V22 or V23 boot loader is intact: a pedal that runs the official V22 or V23, one that runs
+Gamut installed as in [the next section](#gamut-on-a-blackbox-with-v22-or-v23), or one whose app no longer starts but
+which still shows `RECOVERY` with the key combination of step 1. M-VAVE's boot loader has a recovery mode of its own, and
+that mode is the way from such a pedal to the chip's USB boot state, where `uboot_rescue.py` and `uboot_install.py`
+work. `tools/pd40_recovery.py` reads the recovery mode and can send its one leave command. It never writes to the
+pedal's flash.
 
-**What a real pedal did.** On a BlackBox on the official V23 the recovery device appeared and answered the sync request
-`0x42`, but the bulk IN endpoint then sent 64 zero bytes in place of the hello reply and nothing after, and within
-seconds the pedal left the bus. The recovery code, read again, never composes a reply of zeros, and showed no timer: it
-ended at its first failed access to its USB controller (the later runs below leave in seconds anyway). The helper therefore no longer sends the sync, reads the hello
-reply also over the control endpoint (vendor request `0x43`, which returns the reply buffer, and `0x44`, which returns
-the start of the frame buffer), and, when the pedal leaves the bus, lists the USB devices to see what it starts next.
+To install Gamut or to put M-VAVE's firmware back, go to the next section: `tools/uboot_install.py` sends the same
+hello and leave by itself. This section is for looking at a pedal without writing, and for the rescue kit, which holds
+the helper and `uboot_rescue.py` only.
 
-On the same pedal the corrected probe then ran twice. Both times the hello was accepted (status 0, state 0, the boot
-area of the official V22 and V23), but its reply came over the control endpoint only: the bulk IN endpoint sent 64 zero
-bytes, then nothing, so the helper refused the leave. And both times the pedal left the recovery mode on its own within
-seconds of the probe, with no leave sent, which the code as read does not explain. The helper therefore now watches the
-bus after every probe and logs when the pedal leaves, and `--accept-control-reply` lets the leave go out in that case.
+**What a real pedal did.** One BlackBox on the official V23, on 23 November 2026:
+
+- The recovery device appeared with the key combination. The hello was accepted (status 0, state 0, the boot area of
+  the official V22 and V23), but its reply came over the control endpoint only: the bulk IN endpoint sent 64 zero
+  bytes, then nothing.
+- The recovery mode ended about 4 seconds after power-on every time, whatever the computer did: with no computer
+  attached, after a probe that sent one hello, and in the middle of a flash write. The likely cause is the chip's
+  long-press reset, which resets a BlackBox about 4.3 s after power-on unless software turns it off
+  (`docs/HARDWARE-HANDBOOK.md`, section 4), and which the recovery code never turns off. That cause is inferred: the
+  reset source was not read on this pedal.
+- The leave worked. After `--leave --accept-inferred --accept-control-reply` the pedal left the bus about 275 ms later
+  and came back as the chip's USB boot state (`4C4A:8057`) about 500 ms after that. `uboot_rescue.py`, already waiting
+  under `sudo`, took it, read the chip key `0x980f` and the flash id `0xeb6014` (1024 KiB), saved a backup and wrote.
+- The USB boot state lasts only a few seconds when nothing talks to it. The tool that uses it must be waiting before
+  the pedal is switched on.
 
 1. **Enter the recovery mode.** Switch the pedal off. Hold HOME, the right footswitch and the knob's PUSH, switch it
    on, and keep holding until the screen shows `RECOVERY`. The Mac then lists `PD40 BOOT Recovery` (USB `3654:7940`)
-   in `ioreg -p IOUSB` or in System Information.
-2. **Read it.** Nothing is written. Run the helper at once: the recovery mode can end within seconds.
+   in `ioreg -p IOUSB` or in System Information. The pedal restarts by itself about 4 seconds after power-on, so start
+   the command of step 2 or 3 first where it can wait, or at once.
+2. **Read it.** Nothing is written.
 
    ```
-   python3 tools/pd40_recovery.py 2>&1 | tee recovery-probe-1.log
+   python3 tools/pd40_recovery.py 2>&1 | tee recovery-probe.log
    ```
 
    Every transfer is printed with its bytes and its time in milliseconds. Expect `hello: status 0 (accepted), state 0`,
@@ -291,75 +303,46 @@ bus after every probe and logs when the pedal leaves, and `--accept-control-repl
    flash id.
 
    After the probe the helper releases the device and lists the USB devices for 60 seconds (`--watch` changes that); it
-   sends nothing more. If the pedal leaves the bus, during the probe or the watch, the helper logs it with the time
-   since the last command it sent and since its first access to the pedal, for example
-   `3654:7940 left the bus: the recovery mode, seen gone 2480 ms after the last command sent (command 1, tag 1) and
-   2510 ms after the first access`, and ends with exit code 4. The devices are listed every 100 ms, so that time is
-   exact to about 100 ms. Its last lines say what came back: the chip's USB boot state (`4C4A:8057`), the recovery mode
-   again, the normal pedal (the stock app, `3654:7756`), or nothing. If the pedal stays in the recovery mode for the
-   whole watch, the helper says so and ends with exit code 0.
-
-   To compare, enter the recovery mode twice more and run the helper each time: once with `--sync` (it sends the sync
-   request before the hello, as the first version did), then once more as above. In these two, release the three
-   controls as soon as the screen shows `RECOVERY`. Send the three logs back.
-3. **Do not send the leave yet.** `--leave --accept-inferred` sends command 6, which may lead to the USB boot state.
-   What the code shows: the recovery mode acts on command 6 only after the computer has read its reply, and then resets
-   the processor core, not the whole chip as OpenPocket's own soft key does. Whether the chip's ROM enters its USB boot
-   state after a core reset is not known. The recovery mode leaves the same way when it fails an access to its USB
-   controller, so a probe that ends with exit code 4 shows the answer without command 6. Until then, do not use
-   `--leave`.
-
-   When the hello reply did not come over the bulk IN endpoint, `--leave --accept-inferred` is refused, with the same
-   bus watch first. To test the leave on such a pedal, add `--accept-control-reply`:
+   sends nothing more. When the pedal leaves the bus, it logs the time since the last command it sent and since its
+   first access, for example `3654:7940 left the bus: the recovery mode, seen gone 2480 ms after the last command sent
+   (command 1, tag 1) and 2510 ms after the first access`, and ends with exit code 4. Its last lines say what came
+   back: the chip's USB boot state (`4C4A:8057`), the recovery mode again, the normal pedal (the stock app,
+   `3654:7756`), or nothing.
+3. **The leave, with the rescue tool waiting.** This is the route for the kit, and the one the real pedal took. Start
+   the rescue tool's read-only run first, in a second Terminal, so that it is waiting:
+   `sudo python3 tools/uboot_rescue.py --package firmware/BlackBox_023.fwsc` in the kit folder, or
+   `make rescue ARGS="--package BlackBox_023.fwsc"` in the repository. Then enter the recovery mode and run at once:
 
    ```
    python3 tools/pd40_recovery.py --leave --accept-inferred --accept-control-reply 2>&1 | tee recovery-leave.log
    ```
 
-   It sends the same single command 6 and nothing else, then reads its reply over the bulk IN endpoint, a second time
-   only after something that is not the reply, and watches the bus. What the log proves:
+   It sends the hello and the single command 6, and watches the bus. Expect `the chip's USB boot state (4C4A:8057)
+   appeared`, and in the other Terminal the rescue tool's chip key, backup and head check, as in the quick start. What
+   the other endings mean:
 
-   - The pedal leaves within milliseconds of the leave's reply read (the `seen gone` line counts from command 6), and
-     the chip's USB boot state appears: command 6 works on this pedal although the hello reply came over the control
-     endpoint, and its core reset reaches the USB boot state (exit code 0).
-   - The pedal leaves within milliseconds but comes back as the normal pedal or the recovery mode (exit code 3): the
-     pedal acts on command 6, but its core reset does not reach the USB boot state.
-   - The pedal leaves seconds later, as in the probe runs without a leave: the departure is the recovery mode ending on
-     its own, not command 6. Compare the time with that of the probe runs.
-   - The pedal stays in the recovery mode for the whole watch (exit code 5): it did not act on command 6, most likely
-     because its reply was never read over the bulk IN endpoint.
-
-   When the logs show that the ROM does stay in its USB boot state, first start the rescue tool's read-only run in a
-   second Terminal, so that it is waiting: `sudo python3 tools/uboot_rescue.py --package firmware/BlackBox_023.fwsc` in
-   the kit folder, or `make rescue ARGS="--package BlackBox_023.fwsc"` in the repository. Then:
-
-   ```
-   python3 tools/pd40_recovery.py --leave --accept-inferred 2>&1 | tee recovery-leave.log
-   ```
-
-   Expect `the chip's USB boot state (4C4A:8057) appeared`, and in the other Terminal the rescue tool's chip key,
-   backup and head check, as in the quick start. If the pedal restarts into its firmware instead (the helper ends with
-   exit code 3), there is no way from this pedal to the USB boot state: stop and write nothing to it.
-
-Without `--accept-inferred`, `--leave` prints why its result is not proven and sends nothing.
+   - Exit code 3: the pedal left after the leave but the USB boot state did not appear. If the pedal's own reset came
+     first, enter the recovery mode again and run the command sooner. If the pedal restarts into its firmware every
+     time, stop and write nothing to it.
+   - Exit code 5: the pedal stayed in the recovery mode. It did not act on command 6.
+   - `REFUSED`: without `--accept-control-reply` the leave is not sent when the hello reply came over the control
+     endpoint only, and without `--accept-inferred` it is never sent. The text says why.
 
 **What is verified and what is not.**
 
 | | Status |
 | --- | --- |
-| The recovery device appears, answers the sync request, and sends 64 zero bytes in place of the hello reply after a sync; the pedal then leaves the bus | Seen on a real BlackBox on V23, with the first version of the helper |
-| The helper's probe, bus watch, timing of a departure, leave (also with `--accept-control-reply`), refusals and handling of bad answers | Verified against a simulated recovery mode that reproduces the zeros after a sync, the departure at one failed access and a departure on its own some seconds after the last access (`tests/test_pd40_recovery.py`, and the kit's own copy in `tests/test_rescue_kit.py`) |
-| The corrected probe on a real pedal, without the sync | Seen twice on a real BlackBox on V23: the hello accepted over the control endpoint only (64 zero bytes, then nothing, on bulk IN), and the pedal left the recovery mode on its own within seconds |
-| When, after the last command, the recovery mode ends on its own, and what the pedal starts then | Not yet measured: the helper now logs it |
-| `--accept-control-reply`: whether the pedal acts on command 6 when the hello reply came over the control endpoint only | Not tried. Verified only against the simulated recovery mode |
+| The key combination, the recovery device, the hello accepted over the control endpoint only | Seen on one real BlackBox on V23 |
+| The recovery mode ending about 4 s after power-on, whatever the computer does | Seen on that pedal in every run. The cause, the chip's long-press reset, is inferred |
+| The leave, also when the hello reply came over the control endpoint only, and the USB boot state after it | Seen on that pedal: gone about 275 ms after the leave, back as `4C4A:8057` about 500 ms later |
+| Any other pedal, and a pedal on V22 | Not tried. V22 and V23 carry the same boot loader, byte for byte |
+| The helper's probe, bus watch, timing of a departure, leave, refusals and handling of bad answers | Verified against a simulated recovery mode (`tests/test_pd40_recovery.py`, and the kit's own copy in `tests/test_rescue_kit.py`) |
 | USB IDs, strings and descriptors of the recovery mode | Verified: byte for byte in the V23 boot loader |
-| The frame and reply format, the CRC-32 (zlib's), the requests `0x43` and `0x44`, command 6 and what it does: it answers, writes `usb_update_mode` to RAM, not to the flash, and resets the processor core once its reply has been read | Read in the V23 boot loader's code, not run |
-| The key combination | Read in the boot loader's code, and seen to show `RECOVERY` on a real pedal |
-| That the chip's ROM enters its USB boot state after that core reset | Not known. A probe that ends with exit code 4 settles it without command 6 |
+| The frame and reply format, the CRC-32 (zlib's), the requests `0x43` and `0x44`, command 6 and what it does: it answers, writes `usb_update_mode` to RAM, not to the flash, and resets the processor core once its reply has been read | Read in the V23 boot loader's code; the leave's effect seen on that pedal |
 | The helper on Linux or Windows | Not tried. On Windows, set `LIBUSB_PATH` to `libusb-1.0.dll` |
 
 **Administrator rights.** The recovery mode's interface is vendor-specific and no macOS driver holds it, so the helper
-should run without `sudo`. `uboot_rescue.py` needs `sudo` on a Mac and an administrator's Command Prompt on Windows, as
+runs without `sudo`. `uboot_rescue.py` needs `sudo` on a Mac and an administrator's Command Prompt on Windows, as
 above.
 
 **Safety rules.** The helper sends two commands only: 1 (hello) and 6 (leave), with no data. It refuses the
@@ -378,19 +361,27 @@ the pedal stayed in the recovery mode after the leave, 130 stopped by Ctrl-C.
 
 ## Gamut on a BlackBox with V22 or V23
 
-**Status: not yet tried on a real pedal.** Everything below runs against a simulated pedal only. The installer page still
-refuses a BlackBox on V22 or V23 and sends nothing to it; see [The installer page's switch](#the-installer-pages-switch).
+**Status.** Gamut runs on one real BlackBox that came from M-VAVE's official V23, with no downgrade. It was installed
+on 23 November 2026 through the chip's USB boot state, by hand: the leave of the section above, `uboot_rescue.py`
+waiting in a second Terminal, and an image put together by hand. `tools/uboot_install.py` does the same steps in one
+command. That command has been run against simulated pedals only, not yet on a real one. The installer page still
+refuses a BlackBox on V22 or V23 and sends nothing to it.
 
-**What blocks it today.** The install needs every reply on the bulk IN endpoint: the recovery mode takes the next frame
-only after its reply was read there. On the one real pedal probed so far, the hello reply came over the control endpoint
-only and the pedal left the recovery mode on its own within seconds ([above](#a-pedal-on-m-vaves-v22-or-v23)). On such
-a pedal `tools/pd40_install.py --verify` and `--write` stop at the hello with `REFUSED` and send nothing more; nothing is
-written. The install can go ahead only once a probe shows the reply on the bulk IN endpoint and the mode staying up.
+The same command also installs on the old flash layout and puts M-VAVE's firmware back on either layout. It reads the
+pedal's boot area, names the layout, and refuses anything else.
 
-This installs Gamut on a BlackBox that runs M-VAVE's official V22 or V23, without going back to V21 or earlier and without
-touching M-VAVE's boot loader. It uses that boot loader's own recovery mode and `tools/pd40_install.py`. The way back is
-the same tool with M-VAVE's `BlackBox_023.fwsc`, which puts the official app back. No full flash backup is needed for
-that way back, because nothing outside the app area is ever written.
+### Which route applies
+
+| The pedal | Install or update Gamut | Back to M-VAVE's firmware |
+| --- | --- | --- |
+| Old head (M-VAVE V16, V17, V20), and it starts | The installer page, over USB MIDI. Nothing changes there | The installer page, with the official file |
+| Old head, restarting in a loop or dark | The quick start with `BlackBox_020.fwsc`, then the installer page. Or `uboot_install.py`, while the pedal is in its USB boot state | The quick start, or `uboot_install.py --official BlackBox_020.fwsc` |
+| V22 or V23 head, boot loader intact (it starts, or shows `RECOVERY` with the three controls) | `uboot_install.py`, this section | `uboot_install.py --official BlackBox_023.fwsc`, this section |
+| V22 or V23 pedal that went dark after an install for the old layout | The quick start, path B, first. It restores the end of the boot loader, which `uboot_install.py` never writes | The quick start, path B |
+| Any other head | Not with `uboot_install.py`: it refuses a boot area it does not know | The installer page or the quick start, as before |
+
+On the old head, `uboot_install.py` has been run against simulated pedals only. Use the installer page there when the
+pedal starts.
 
 ### Why it works
 
@@ -401,173 +392,244 @@ These facts come from reading the V22/V23 boot loader's code (V22 and V23 carry 
 | Boot loader | `[0xA0, 0x38D0)` | `[0xA0, 0x5CA0)` |
 | App area (`app_dir_head`) | `0x4000` | `0x6000` |
 | Stock settings (`VM`), radio (`BTIF`), user area, `key_mac` | `0xA5000`, `0xBE000`, `0xBF000`, `0xFF000` | `0x9F000`, `0xBE000`, `0xBF000`, `0xFF000` |
-| CRC-32 of `[0, app area)` | | `0xB19D96A1` |
+| CRC-32 of the boot area `[0, app area)` | `0x5A2121FF` (V16, V17, V20) | `0xB19D96A1` |
 | Supply levels the boot loader sets | none (VDC14 3, SYSVDD 11 stay) | VDC14 7, SYSVDD 15, VDDIOM 4 |
 
 - **The boot loader starts the app area at `0x6000` after four CRC16 checks only:** the flash header (32 bytes at 0,
   key `0xFFFF`), each head entry up to `app_dir_head`, and the first 32 bytes at `0x6000` under the chip key `0x980F`.
   It does not check the area's data CRC, any length, version or identity. It maps `0x02000000` to the start of the area
-  and calls `0x02000120`, so Gamut runs there unchanged.
-- **Gamut's app area is already laid out for it.** Each package's area is `0x99000` bytes, and its bytes do not depend on
-  where it sits. At `0x6000` it fills `[0x6000, 0x9F000)` exactly and ends where the stock settings begin. The build writes
-  it as a file of its own beside the BlackBox package, `build/apps/gamut/BlackBox_950-v23.bin`; its SHA-256 is in the
-  release pin, `firmware/apps/gamut/release.sha256`.
-- **The recovery mode writes only `[0x6000, 0x9F000)`.** Its flash driver refuses every erase and program outside that
-  range, so it can never change the boot loader, the stock settings, the radio records or `key_mac`. It has no signature
-  and no version check. It accepts an image whose manifest names the pedal's own head (the CRC-32 above) and the entry
-  `0x02000120`.
+  and calls `0x02000120`, so Gamut runs there unchanged. The real pedal confirmed it: Gamut started.
+- **Gamut's app area is the same bytes on both layouts.** Each package's area is `0x99000` bytes, and its bytes do not
+  depend on where it sits. At `0x6000` it fills `[0x6000, 0x9F000)` exactly and ends where the stock settings begin; at
+  `0x4000` it fills `[0x4000, 0x9D000)`. The build writes it as a file of its own beside the BlackBox package,
+  `build/apps/gamut/BlackBox_950-v23.bin`; its SHA-256 is in the release pin, `firmware/apps/gamut/release.sha256`,
+  and `uboot_install.py` installs no other build.
+- **In the USB boot state the whole flash can be read and written**, so the tool, not the pedal, keeps the write
+  inside the app area. `uboot_install.py` composes the image from the pedal's own boot area and the app area, and its
+  writer refuses every erase and write outside `[0x6000, 0x9F000)` on this layout (`[0x4000, 0xA5000)` on the old one).
+  It never changes the boot loader, the stock settings, the radio records, the user area or `key_mac`.
 - **Gamut's own data stays where it is on every pedal:** NAM models from `0xC0000`, its update staging at `0xE0000`,
   presets at `0xF0000`, IRs from `0xF4000`, all inside the stock user area, as on the old head. Gamut never writes the
   stock settings, the radio records or `key_mac`. It reads its data with direct flash reads, not through the mapped
   window, so the window's other start (`0x6000`) changes nothing for it.
 
+### Why not through the recovery mode's own write
+
+M-VAVE's recovery mode can rewrite `[0x6000, 0x9F000)` itself, and an earlier version of this guide installed that
+way with `tools/pd40_install.py --write`. That write cannot finish on this chip, and the tool now refuses it.
+
+On the real pedal the recovery mode ended about 4.3 s after power-on, in the middle of the flash write of block 8,
+and left the app area erased and half written. The pedal's own check of the image, the first pass, took 1.9 s and fits. The write needs
+about 14 s: 153 blocks at about 74 ms each, set by the flash's erase and program times. It cannot continue across
+entries either: each entry clears the recovery state, and the write pass starts again at the first block. The
+protocol has no command that could turn the reset off.
+
 The protocol, as read: frames of 4608 bytes from `SBU2` (command, tag, argument, payload length, payload CRC-32, at most
 4096 bytes of payload) and 64-byte replies from `SBR2` (status, state, next offset, image length, the write range, the
 head's CRC-32).
 
-| Command | State before → after | What it does |
-| --- | --- | --- |
-| 1 hello | any | the reply only |
-| 2 manifest | 0 → 1 | `SKR2`, `0x20000`, `0x07910040`, flash size `0x100000`, `0x6000`, `0x9F000`, the image's length and CRC-32, the CRC-32 of the pedal's `[0, 0x6000)`, the entry `0x02000120`, the block count (at most 153), a free word, three zeros, a CRC-32 over the first 60 bytes and the table, then one CRC-32 per 4 KiB block |
-| 3 block | 1 → 2 | each block checked against the table, in order, and the whole image's CRC-32 after the last. **Nothing is written** |
-| 4, argument 2 | 2 → 3 | erases the sector at `0x6000`: from here the pedal starts no app until the commit |
-| 3 block | 3 → 4 | each block erased, programmed and read back; block 0 is kept in RAM |
-| 4, argument 4 | 4 → 5 | checks the whole image, writes block 0 (the area head) last, checks again |
-| 5 start | 5 | resets into the new app |
-| 6 leave | 0 or 6 | the way toward the chip's USB boot state (`tools/pd40_recovery.py --leave`) |
+| Command | State before → after | What it does | Sent by this repository's tools |
+| --- | --- | --- | --- |
+| 1 hello | any | the reply only | yes |
+| 2 manifest | 0 → 1 | the image's length, CRC-32 and one CRC-32 per 4 KiB block, the CRC-32 of the pedal's `[0, 0x6000)`, the entry `0x02000120` | `pd40_install.py --verify` |
+| 3 block | 1 → 2 | each block checked against the table, in order, and the whole image's CRC-32 after the last. **Nothing is written** | `pd40_install.py --verify` |
+| 4, argument 2 | 2 → 3 | erases the sector at `0x6000`: from here the pedal starts no app until the commit | never |
+| 3 block | 3 → 4 | each block erased, programmed and read back; block 0 is kept in RAM | never |
+| 4, argument 4 | 4 → 5 | checks the whole image, writes block 0 (the area head) last, checks again | never |
+| 5 start | 5 | resets into the new app | never |
+| 6 leave | 0 or 6 | resets the processor core; the chip's ROM then enters its USB boot state | `pd40_recovery.py --leave`, `uboot_install.py` |
+
+`tools/pd40_install.py` keeps the dry run and `--verify`, the pedal's own check of an image, which writes nothing:
+`python3 tools/pd40_install.py build/apps/gamut/BlackBox_950-v23.bin --verify --accept-control-reply`, started the
+moment the screen shows `RECOVERY`. The install does not need it.
 
 ### The supply levels
 
 On this head the boot loader leaves VDC14 at 7, SYSVDD at 15 and VDDIOM at 4, the stock firmware's levels. Gamut keeps
-the levels it finds (`firmware/base/start.h`), and this change does not alter that. On the old head it finds 3 and 11, at
-which it was tuned. When v30 copied the stock firmware's whole power setup (these levels and also the 1.3 V supply moved
-to the DC-DC), a Pocket X measured 77 % processor load instead of 61 % with crackles; which part of that setup caused it
-was never shown (`docs/HARDWARE-HANDBOOK.md`, section 4). The V23 boot loader sets the levels but not the DC-DC.
+the levels it finds (`firmware/base/start.h`). On the old head it finds 3 and 11, at which it was tuned. On the real
+pedal the boot screen read `PWR 7 15 (BOOT LEVELS)`, as expected for this head. When v30 copied the stock firmware's
+whole power setup (these levels and also the 1.3 V supply moved to the DC-DC), a Pocket X measured 77 % processor load
+instead of 61 % with crackles; which part of that setup caused it was never shown (`docs/HARDWARE-HANDBOOK.md`,
+section 4). The V23 boot loader sets the levels but not the DC-DC.
 
 Gamut could set its own levels at its start: the registers are the ones it reads for its boot screen, and
 `firmware/bsp/chip/fm1_sys.h` has the functions that raise them, which v30 used. Lowering them has never been done by any
-firmware of this project (those functions only raise), the
-handbook warns that some units read flash and RAM wrong at the low levels under load, and the higher levels are the ones
-M-VAVE's own firmware runs at all the time. So the levels are left as they are, and the load at them is measured by the
-first-run check below. That measurement can only be made on a pedal.
+firmware of this project (those functions only raise), the handbook warns that some units read flash and RAM wrong at
+the low levels under load, and the higher levels are the ones M-VAVE's own firmware runs at all the time. So the levels
+are left as they are, and the load at them is measured by the first-run check below.
 
-### Before the first write
+### Before the first run
 
-1. The read-only probe of [the section above](#a-pedal-on-m-vaves-v22-or-v23) has run on this pedal, its hello reply
-   came **over the bulk IN endpoint**, the pedal stayed in the recovery mode, and the probe named the head CRC-32
-   `0xb19d96a1`. The install tool needs the replies on that endpoint and refuses otherwise.
-2. You have M-VAVE's `BlackBox_023.fwsc` (from M-VAVE, or the full rescue kit's `firmware` folder). Check it with the dry
-   run below; it must print `M-VAVE's app area from ... (BlackBox_023)` and `every check passed`.
-3. You have built Gamut: `node tools/op.mjs package`, which ends with `release pin: gamut's image and packages are the
-   release's`.
+1. A Mac with Python 3 and libusb (`brew install libusb`). The tool needs `sudo`: macOS keeps its mass-storage driver
+   on the USB boot state. Linux has not been tried. The tool does not run on Windows.
+2. Gamut is built: `node tools/op.mjs package`, which ends with `release pin: gamut's image and packages are the
+   release's`. The tool installs `build/apps/gamut/BlackBox_950-v23.bin` and refuses a file that is not the pin's.
+3. You have M-VAVE's `BlackBox_023.fwsc` for the way back (from M-VAVE, or the full rescue kit's `firmware` folder).
+4. The pedal is plugged straight into the Mac, with no hub, and you know the key hold: pedal off, hold HOME, the right
+   footswitch and the knob's PUSH, switch on, keep holding until the screen shows `RECOVERY`.
 
-`tools/pd40_install.py` needs libusb (`brew install libusb`) and no `sudo`. Keep every output (`2>&1 | tee FILE`).
+The first run downloads JieLi's `wl82loader.bin` once and checks its SHA-256, as the rescue tool does. Keep every output
+(`2>&1 | tee FILE`).
 
 ### The install
 
-1. **Dry run, no pedal needed.** It checks the image and prints every frame the install would send, in order. It opens
-   no USB device.
+The order matters in every run: **start the command first, wait until it says it is waiting, and only then switch the
+pedal on with the three controls held.** The recovery mode ends about 4 seconds after power-on, and the USB boot state
+after it lasts only seconds while nothing talks to it.
+
+1. **The dry run. Nothing is written.**
 
    ```
-   python3 tools/pd40_install.py build/apps/gamut/BlackBox_950-v23.bin 2>&1 | tee gamut-v23-dry.log
-   python3 tools/pd40_install.py BlackBox_023.fwsc 2>&1 | tee official-v23-dry.log
+   sudo python3 tools/uboot_install.py 2>&1 | tee gamut-usb-dry.log       # or: make usb-install
    ```
 
-2. **The pedal's own check, nothing written.** Enter the recovery mode (switch off, hold HOME, the right footswitch and the
-   knob's PUSH, switch on, hold until the screen shows `RECOVERY`), then:
+   It checks the app area, prints `waiting for the pedal; nothing is sent until it appears`, and waits. Do the key
+   hold. Expect, in this order:
 
    ```
-   python3 tools/pd40_install.py build/apps/gamut/BlackBox_950-v23.bin --verify 2>&1 | tee gamut-v23-verify.log
+   [     0 ms] found 3654:7940 'SINCO' 'PD40 BOOT Recovery': M-VAVE's recovery mode
+   [   ... ms] hello: status 0 (accepted), state 0 (no update started)
+   [   ... ms] leave sent: waiting for the chip's USB boot state (USB 4C4A:8057)
+   [   ... ms] the chip's USB boot state appeared ... ms after the leave
+   [   0.0s] pedal found in the chip's USB boot state
+   [   ...s] loader running: chip key 0x980f, flash id 0xeb6014 (1024 KiB)
+   [   ...s] flash read: 1024 KiB
+   [   ...s] backup saved: ...OpenPocket-rescue/blackbox-<time>.dump.bin
+   [   ...s] boot area [0, 0x6000) CRC-32 0xb19d96a1: M-VAVE's V22/V23 head; its app area is in [0x6000, 0x9f000)
+   [   ...s] head [0, 0x6000) matches the image
+   [   ...s] 153 of 153 sectors in [0x6000, 0x9f000) differ
+   [   ...s] run-app sent: the pedal restarts
+
+   Dry run finished, nothing was written. 153 sectors differ ...
    ```
 
-   Expect the hello (`status 0`, `state 0`, the head `0xb19d96a1`), `the manifest: accepted`, then `first pass done: 153
-   blocks and the whole image's CRC-32 accepted, state 2: nothing was written`. Switch the pedal off and on: it starts
-   M-VAVE's V23 as before. Any `REFUSED` here: stop and send the log back.
+   The pedal restarts into the firmware it had. Keep the backup: it is the copy of the whole flash from before Gamut.
+   Any `REFUSED` here: stop and send the log back.
 
-3. **The install.** Enter the recovery mode again, then:
+2. **The write.** The same command with `--write`, and the same key hold once it is waiting:
 
    ```
-   python3 tools/pd40_install.py build/apps/gamut/BlackBox_950-v23.bin --write 2>&1 | tee gamut-v23-write.log
+   sudo python3 tools/uboot_install.py --write 2>&1 | tee gamut-usb-write.log       # or: make usb-install ARGS=--write
    ```
 
-   It runs the first pass again, then `the erase of the sector at 0x6000`, the second pass (every block written and read
-   back), `the commit`, `the start of the new app`, and watches the bus. Expect `1209:0001 appeared: Gamut` and `Gamut
-   started: the install worked`. Do not touch the pedal or the cable until the tool ends.
+   It shows the same lines, saves another backup before the first erase, then counts the sectors it writes (`written
+   16/153` and so on) and ends with `Done: 153 sectors written and verified`. Each sector is erased, written, read back
+   and compared. Do not touch the pedal or the cable until the tool ends.
 
-4. **The first-run check.** On the boot screen, note the line `PWR`: on this head it should read `PWR 7 15 (BOOT
-   LEVELS)`. Then, with the pedal on USB:
+3. **The first-run check.** Switch the pedal off and on. On the boot screen, note the line `PWR`: on this head it should
+   read `PWR 7 15 (BOOT LEVELS)`. Then, with the pedal on USB:
 
    ```
    node tools/op.mjs dsp 2>&1 | tee gamut-v23-dsp.log
    ```
 
    It plays every saved preset for 6 seconds and reads the load, the peak, the late blocks and the safety bypass. Exit
-   code 0 means no preset was late or bypassed. Play through the presets and listen for crackles. Send the boot screen's
-   `PWR` line and the log back either way: they are the first measurement of Gamut at these levels. Late blocks, the
-   bypass or crackles mean Gamut needs its own supply levels on this head before it can be offered; put the official app
-   back meanwhile if they bother you.
+   code 0 means no preset was late or bypassed. Play through the presets and listen for crackles. Late blocks, the
+   bypass or crackles mean Gamut needs its own supply levels on this head; put the official app back meanwhile if they
+   bother you.
 
-Updating Gamut later on this pedal works the same way, with the new `BlackBox_950-v23.bin`. The installer page cannot
-update it: its update loader reads this head, refuses it, and writes nothing.
+Updating Gamut later on this pedal works the same way, with the new release's `BlackBox_950-v23.bin`. The installer
+page cannot update it: its update loader reads this head, refuses it, and writes nothing.
 
-### The way back to M-VAVE's V23
+### If it stops
 
-Enter the recovery mode, then:
+Every run resumes. The tool reads the flash again, compares, and writes only the sectors that still differ. The boot
+area is never written, so the key hold and the recovery mode stay available after any interruption.
 
-```
-python3 tools/pd40_install.py BlackBox_023.fwsc --verify 2>&1 | tee official-v23-verify.log
-python3 tools/pd40_install.py BlackBox_023.fwsc --write 2>&1 | tee official-v23-write.log
-```
-
-(Enter the recovery mode again between the two.) The tool refuses an official package whose head is not the pedal's, and
-any package for the old head. It writes M-VAVE's own app area to `[0x6000, 0x9F000)`. The head was never changed, so the
-pedal then holds what M-VAVE's own V23 update leaves below `0x9F000`, byte for byte. Expect `3654:7756 appeared: the
-normal pedal (the stock V23 app)`. The stock user area from `0xBF000` still holds what Gamut stored there, as after a return to the official
-firmware on the old head.
-
-### If the pedal does not start after it
-
-| What you see | What it means | Do |
+| What the log shows | What it means | Do |
 | --- | --- | --- |
-| The tool stopped before the line `the erase of the sector at 0x6000` | nothing was written | switch the pedal off and on: it starts as before. Send the log back |
-| The tool printed `The app area is erased or half written` | the area head is not written, so the boot loader starts nothing and restarts the chip again and again | the boot loader still reads the three controls on every start: enter the recovery mode and run `--write` again, with Gamut's image or with `BlackBox_023.fwsc` |
-| The tool printed `The new image is written and committed; only the start of the app was not confirmed` | the commit was accepted, so the new image is complete; only the reply to the start command failed | switch the pedal off and on once. If it still starts nothing, enter the recovery mode and run `--write` again |
-| The tool ended with exit code 3 (`the new app did not appear`) | the install finished, but the expected USB device did not come | switch the pedal off and on once. If it still starts nothing, enter the recovery mode and put M-VAVE's app back as above |
-| Gamut starts, then crashes twice in a row | Gamut's boot guard asks for the chip's USB boot state (inferred on this head, proven on the old one) | the simplest: hold the three controls at power-on and put M-VAVE's app back with this tool. Or, if the USB boot state appears, `uboot_rescue.py --package BlackBox_023.fwsc` as in the quick start |
+| It stays at `waiting for the pedal` | neither the recovery mode nor the USB boot state is on the bus | do the key hold again, until the screen shows `RECOVERY`; check the cable and the port. Ctrl-C stops the tool |
+| `the recovery mode ended before the leave was sent` | the pedal's own reset came first | the tool is still waiting: do the key hold again |
+| `ERROR: the chip's USB boot state did not appear` (exit code 3) | the pedal left after the leave and did not come back in the USB boot state | run the command again and do the key hold only once it is waiting. If the pedal restarts into its firmware every time, stop and send the log back |
+| `ERROR: the pedal stayed in the recovery mode` (exit code 5) | it did not act on the leave | nothing was written. Send the log back |
+| `the pedal went away or stopped answering ... waiting for it again (1/10)` | the USB boot state ended in the middle of the run | the tool waits: do the key hold again. It continues where it stopped |
+| `gave up after 10 tries` | the same, ten times | run the command again; it resumes. Send the log back: it shows how long the USB boot state lasts on this pedal |
+| `REFUSED` | a check stopped the run; the line says which. Nothing was written after it | do not try other files. Keep the backup and send the log back |
+| The write stopped part of the way and the pedal no longer starts | the app area is half written | do the key hold and run the same command again. To go back instead, run it with `--official BlackBox_023.fwsc --write` |
 | `RECOVERY` no longer appears with the three controls | the boot loader itself is damaged; this tool never writes it, so something else did | the chip's USB boot state then appears by itself: use the quick start with `BlackBox_023.fwsc` |
-| The recovery mode appears but this tool cannot finish | | the leave to the USB boot state: start `uboot_rescue.py --package BlackBox_023.fwsc` in a second Terminal, then `tools/pd40_recovery.py --leave --accept-inferred`, as in [the section above](#a-pedal-on-m-vaves-v22-or-v23). Whether the ROM stays in its USB boot state after that is not yet known |
+| Gamut starts, then crashes twice in a row | Gamut's boot guard asks for the chip's USB boot state (seen on the old head, inferred on this one) | start the command with `--official BlackBox_023.fwsc --write` and do the key hold, or let it take the USB boot state when the pedal enters it |
 
-**Safety rules of the tool.** Nothing is opened without `--verify` or `--write`. Before anything is sent, the image must
-be a whole number of 4 KiB blocks no longer than `[0x6000, 0x9F000)`, its area head must pass its CRC under the chip key,
-its entry must be `0x02000120`, its files must pass their CRCs, and it must be a BlackBox image. Before the erase, the
-hello must have come over the bulk IN endpoint in state 0, the pedal's head must be the official V22/V23 head (and the
-official package's head the pedal's), and the pedal's own first pass must have accepted every block and the whole image.
-It stops at the first reply that is not status 0 or not the expected state or offset, and sends nothing more.
+### The way back
 
-Exit codes: 0 done (the dry run printed, the pedal's check passed, or the new app appeared), 1 setup problem, no recovery
-device or a failed transfer, 2 refused or a bad answer, 3 the install finished but the new app did not appear, 4 the pedal
-left the recovery mode on its own, 130 stopped by Ctrl-C.
+M-VAVE's firmware, from its official package. The file is never part of this repository:
 
-### The installer page's switch
+```
+sudo python3 tools/uboot_install.py --official BlackBox_023.fwsc 2>&1 | tee official-usb-dry.log
+sudo python3 tools/uboot_install.py --official BlackBox_023.fwsc --write 2>&1 | tee official-usb-write.log
+```
+
+Do the key hold for each run, once it is waiting. The package's boot area must be the pedal's, byte for byte, so the V20
+file is refused on a V22/V23 pedal and the V22/V23 files on an old-head pedal. `BlackBox_022.fwsc` works the same way
+and the pedal then ends on V22. The tool writes the package's app area to `[0x6000, 0x9F000)`. The boot area was never
+changed, so the pedal then holds what M-VAVE's own update leaves below `0x9F000`, byte for byte. The stock user area
+from `0xBF000` still holds what Gamut stored there, as after a return to the official firmware on the old head. On the
+real pedal this restore was done once, with `uboot_rescue.py` and the official V23 image after the recovery-mode write
+had failed: it wrote 9 sectors and took seconds.
+
+A backup of this pedal, saved by an earlier run of this tool or of `uboot_rescue.py`:
+
+```
+sudo python3 tools/uboot_install.py --restore ~/OpenPocket-rescue/blackbox-<time>.dump.bin --write
+```
+
+It writes the backup's app area only, `[0x6000, 0x9F000)` here. The backup's boot area must be the pedal's, and its app
+area must be one the boot loader would start, so a backup taken while the app area was half written is refused.
+Nothing from `0x9F000` up is restored from it.
+
+### A pedal on the old head
+
+The same command works when the pedal's boot area is the old head's (M-VAVE V16, V17 and V20). The old boot loader
+has no recovery mode, so the tool waits for the USB boot state itself: a pedal that restarts in a loop is there
+between crashes, and the installer page's `Enter UBOOT mode` button (Advanced options) sends a pedal that runs Gamut
+there. The tool then writes Gamut's app area to `[0x4000, 0x9D000)`, or with `--official BlackBox_020.fwsc` the
+package's app area from `0x4000`, or with `--restore` the backup's `[0x4000, 0xA5000)`. That range ends where V20's
+stock settings begin. V16's begin at `0xA3000`, inside it, so on such a pedal the V20 package and a backup put their
+own bytes there. This path has been run against simulated pedals only. When the pedal
+starts, the installer page remains the route.
+
+### Safety rules of the tool
+
+- The default is a dry run. Writing needs `--write`.
+- Before anything is opened: Gamut's app area must have the SHA-256 of the release pin and pass the area's own checks
+  (its head under the chip key, the entry `0x02000120`, each file's CRC). An official package must pass every CRC, be
+  a BlackBox package of M-VAVE's, and carry a boot area the tool knows. A backup must be a whole 1 MiB dump with a boot
+  area the tool knows and an app area the boot loader would start.
+- In the recovery mode it sends one hello and one leave, with the helper's checks, and nothing else. A boot area CRC-32
+  it does not know gets no leave.
+- Before any erase: the chip key must be `0x980F` and the flash id `EB 60 14` (seen on the real pedal) or `85 60 14`
+  (the other one the V22/V23 boot loader accepts); the CRC-32 of the pedal's boot area must be `0x5A2121FF` or
+  `0xB19D96A1`; an official package's or a backup's boot area must be the pedal's, byte for byte; the backup of the
+  whole flash must be complete on disk.
+- It never erases or writes below the app area's start (`0x6000`, or `0x4000` on the old head) or from the layout's
+  limit up (`0x9F000`, or `0xA5000`). The writer refuses such a command whatever the plan says, and only a fixed list
+  of loader commands can be sent, as in `uboot_rescue.py`.
+
+Exit codes: 0 done, 1 setup problem or a failed transfer, 2 refused by a check, 3 the pedal left after the leave but
+the USB boot state did not appear, 5 the pedal stayed in the recovery mode after the leave, 130 stopped by Ctrl-C.
+
+### The installer page
 
 The page refuses a BlackBox on official V22 or later and sends nothing to it, because its update loader writes from
-`0x4000` and would overwrite the end of this boot loader. That refusal stays until the install above is proven on a pedal.
-One constant, `V23_RECOVERY_INSTALL` in `docs/pxota.js`, then changes the refusal's words so that they send the user to
-this install; with it the page still sends nothing to such a pedal. It is `false` today.
+`0x4000` and would overwrite the end of this boot loader. Its refusal names this section. A pedal on this head that
+runs Gamut reports Gamut, not the official firmware, so the page's own check does not see the head; its update loader
+then reads the head, refuses it and writes nothing. Update with `uboot_install.py`.
 
 ### What is verified and what is not
 
 | | Status |
 | --- | --- |
-| Gamut's `-v23.bin` is its BlackBox package's app area, byte for byte, and fits `[0x6000, 0x9F000)` | Verified by `tests/test_both_heads.py` and the release pin |
-| The tool's dry run, its checks of the image, the manifest, the frames, the order of the commands, the refusals | Verified by `tests/test_pd40_install.py` |
-| The install of Gamut's area and the way back to M-VAVE's, on a simulated V23 flash: nothing below `0x6000` or from `0x9F000` up changes, block 0 is written last, the boot loader's four checks then pass, the official way back restores every byte | Verified against a simulated recovery mode that runs the write commands as read (`tests/recovery_sim.py`), on a synthetic V23 head, and on M-VAVE's real V23 `flash.bin` when its package is given to the test |
-| A failure after the erase, and the install run again | Verified against the same simulation |
-| The protocol's write commands, their checks and states, the manifest's layout and CRC | Read in the V23 boot loader's code, not run |
-| That the replies come over the bulk IN endpoint on a real pedal, and that the mode stays up for a whole install | Not so far: on the one pedal probed, the hello reply came over the control endpoint only and the mode ended on its own within seconds. The tool then refuses at the hello and writes nothing |
-| That the boot loader starts Gamut at `0x6000`, and that Gamut runs there | Read, not tried |
-| Gamut's processor load and sound at the V23 supply levels | Not known: the first-run check measures it |
+| The route: the key hold, the leave, the USB boot state taken by a tool that was waiting, the flash read and backed up, 153 sectors written and verified, Gamut started | Done on one real BlackBox from official V23, by hand with `pd40_recovery.py`, `uboot_rescue.py` and a hand-made image |
+| The way back on that pedal | Done once with `uboot_rescue.py` and the official V23 image, after the recovery-mode write had failed: 9 sectors |
+| The boot loader starts Gamut at `0x6000`; the boot screen reads `PWR 7 15 (BOOT LEVELS)` | Seen on that pedal |
+| `uboot_install.py` itself: the one command, its image composition, its guards, the leave and the claim in one process | Verified against simulated pedals only (`tests/test_uboot_install.py`): not yet run on a real pedal |
+| Its plan on real data | Computed from that pedal's backups, with no pedal attached: 153 sectors differ for Gamut over official V23, 9 for official V23 over the half-written area, and the V20 package, a backup with another head and the half-written backup are refused |
+| The old head with `uboot_install.py` | Simulated only. `uboot_rescue.py` has restored one real old-head pedal |
+| A pedal whose reset also cuts the USB boot state short | Not known. On the one pedal the state lasted for the whole read and write once a tool held it. If it is cut, the tool resumes at the next key hold |
+| Other V22 or V23 pedals, a pedal on V22, a flash with the id `85 60 14` | Not tried |
+| A recovery-mode write | Cannot finish on the pedal tried; `pd40_install.py --write` refuses. Its `--verify` passed on that pedal in 1.9 s |
+| Gamut's processor load and sound at the V23 supply levels | The first-run check measures it; no result is recorded here |
 | The stock V23 app with Gamut's data in its user area | Not known |
+| Linux | Not tried |
 
 ## BlackBox V21 factory sounds
 

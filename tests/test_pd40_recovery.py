@@ -218,9 +218,10 @@ class Pd40Recovery(unittest.TestCase):
         rc, shown = self.run_tool(bus, "--leave")
         self.assertEqual(rc, 2, shown)
         self.assertIn("resets the processor core", shown)
-        self.assertIn("not the chip reset that OpenPocket's own soft key uses", shown)
         self.assertIn("once the computer\nhas read that answer", shown)
-        self.assertIn("is not known", shown)
+        self.assertIn("On the\none real pedal tried", shown)
+        self.assertIn("No other pedal has been tried", shown)
+        self.assertIn("tools/uboot_install.py", shown)
         self.assertIn("Nothing was sent to the pedal", shown)
         self.assertEqual((bus.opened, sim.frames, sim.requests), (0, [], []), "the device was not even opened")
         with self.assertRaises(SystemExit), contextlib.redirect_stderr(io.StringIO()):
