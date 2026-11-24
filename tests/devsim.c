@@ -236,6 +236,7 @@ int main(int argc, char **argv)
                 stock = 0;
                 cur_id = "ota-OpenPocket_900";
                 printf("#port OpenPocket Update\n");
+                fflush(stdout);
             }
         } else {
             int rc = ldr_session();
