@@ -80,6 +80,7 @@ let r = await run(s.access, fast);
 ok(r.code === 1 && /Bluetooth is off/.test(r.last.verdict.reason), "firmware text: OFF in a normal boot fails");
 ok(r.last.level === "full" && r.last.boot.clockMs === 30000 && r.last.lastBoot.failed === false, "DIAG reaches the parser through the real editor code");
 ok(/^LINK 1 n2 A 060504030201 I48 /.test(r.last.link), "the link line comes through");
+ok(r.last.c1?.faults === 0 && r.last.c1.raw === "C1 OK", "the second core's line comes through: no fault");
 
 s.ble("failed 5 3");
 r = await run(s.access, fast);
@@ -109,6 +110,14 @@ r = await rising(nothing);
 ok(r.code === 1 && /saw no advertisement/.test(r.last.verdict.reason), "rising counters and no sighting: fail");
 r = await rising({ ok: false, why: "the Bluetooth adapter is not usable" });
 ok(r.code === 3 && r.last.verdict.result === "unknown", "a scanner that could not run decides nothing");
+
+s.ble("c1fault");
+r = await rising();
+ok(r.last.c1.faults === 1 && r.last.c1.core === 1 && r.last.c1.pc === 0x01C6B0D6 && r.last.c1.sp === 0x01C1FA40 && r.last.c1.r.length === 16
+  && r.last.c1.r[0] === 0xFFFFFFF0 && r.last.c1.r[15] === 0x01C20000, "a fault of the second core: its PC, SP and r0..r15 through the real text code, at their widest");
+ok(/second core faulted \(PC 01C6B0D6\)/.test(r.last.verdict.reason), "the verdict mentions the retired core");
+r = await run(s.access, ["--interval", "0.01", "--count", "1"]);
+ok(/2nd core   retired after 1 fault: PC 01C6B0D6, RETS 01C6B000, SP 01C1FA40, DBG 00000010, core 1's registers r0\.\.r15 FFFFFFF0 /.test(r.text), "the plain report gives the registers");
 
 s.ble("safe");
 r = await run(s.access, fast);

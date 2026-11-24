@@ -39,8 +39,8 @@ sounds (pull request #26).
 **Roberto Antonacci ([steponme82](https://github.com/steponme82))**: the BlackBox button lights (#17), and from his fork
 [ettorebox](https://github.com/steponme82/ettorebox): the build-time fold of the Bluetooth library (`tools/jlfold.py`, commit
 `375a253`), the web editor's NAM import in browsers with no second window or script-opened file picker, such as MIDIWeb on
-an iPhone (commit `f25a720`), the USB MIDI messages' arrival time (commit `10e2c7c`), and the footswitch numbers CC 116, 118
-and 119 (commits `c324798`, `5675bcc`).
+an iPhone (commit `f25a720`), the USB MIDI messages' arrival time (commit `10e2c7c`), the footswitch numbers CC 116, 118
+and 119 (commits `c324798`, `5675bcc`), and the second core's fault record with its registers (commit `409771d`).
 
 Sound models: the names refer to the gear that inspired each voicing (circuit analyses published by ElectroSmash,
 Electric Druid, R.G. Keen / GEOFEX, Rob Robinette, Duncan's Tone Stack Calculator; speaker data sheets; manufacturers'

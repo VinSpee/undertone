@@ -80,6 +80,17 @@ export function parseLast(raw) {
   return out;
 }
 
+// the second core's fault line (firmware/apps/gamut/ble/ble_diag.h ble_c1_text): "C1 OK", or its last fault's record; null
+// when an older image sent no such line
+export function parseC1(raw) {
+  if (!raw || !raw.startsWith("C1 ")) return null;
+  if (raw === "C1 OK") return { raw, faults: 0 };
+  const m = /^C1 FAULT (\d+) CORE (\d+) DBG ([0-9A-F]+) PC ([0-9A-F]+) RETS ([0-9A-F]+) SP ([0-9A-F]+) R((?: [0-9A-F]+){16})$/.exec(raw);
+  if (!m) return { raw, faults: null };
+  return { raw, faults: +m[1], core: +m[2], dbg: parseInt(m[3], 16), pc: parseInt(m[4], 16), rets: parseInt(m[5], 16), sp: parseInt(m[6], 16),
+    r: m[7].trim().split(" ").map((v) => parseInt(v, 16)) };
+}
+
 const hex = (v) => (v ?? 0).toString(16).toUpperCase().padStart(8, "0");
 
 function lastBootWords(reading) {
@@ -131,6 +142,7 @@ export function judge(readings, scan) {
   const notes = [];
   if (ble.t <= first.ble.t) notes.push("The library's software timers did not fire (t stands still).");
   if (ble.s > 0) notes.push(`The link scheduler asked for a slot timer this image lacks (s ${ble.s}).`);
+  if (now.c1?.faults) notes.push(`The second core faulted (PC ${hex(now.c1.pc)}) and was retired: the sound runs on one core.`);
   if (ble.vm && ble.vm.found !== 7) notes.push(`Not all stored radio records were found (V ${ble.vm.found.toString(16)}, 7 expected): the radio has zeros for the missing trims.`);
   const judged = (result, reason) => ({ result, reason: [reason, ...notes].join(" "), notes });
   if (!scan) return judged("running", `${rate}. That is not proof of packets on the air: add --scan.`);
@@ -151,8 +163,8 @@ async function read(access, timing) {
     return dev ? { time, level: "identity", id: dev.id, port: dev.name, product: dev.product } : { time, level: "silent", port: ports[0].name };
   }
   try {
-    const [boot, last, ble, link, trace] = await ed.diag();
-    return { time, level: "full", info, boot: parseBoot(boot), lastBoot: parseLast(last), ble: parseBle(ble), link, trace };
+    const [boot, last, ble, link, trace, c1] = await ed.diag();
+    return { time, level: "full", info, boot: parseBoot(boot), lastBoot: parseLast(last), ble: parseBle(ble), link, trace, c1: parseC1(c1) };
   } catch (e) {
     if (e.code !== "timeout") throw e;
     const r = await ed.request(C.PING).catch(() => null);
@@ -176,6 +188,8 @@ function show(r, prev, say) {
   say(`bluetooth  ${ble.raw}`);
   if (r.link) say(`link       ${r.link}`);
   if (r.trace) say(`trace      ${r.trace}`);
+  if (r.c1?.faults) say(`2nd core   retired after ${r.c1.faults} fault${r.c1.faults > 1 ? "s" : ""}: PC ${hex(r.c1.pc)}, RETS ${hex(r.c1.rets)}, SP ${hex(r.c1.sp)}, DBG ${hex(r.c1.dbg)}, core ${r.c1.core}'s registers r0..r15 ${r.c1.r.map(hex).join(" ")} (firmware/build-ble/symbols.txt names the addresses)`);
+  else if (r.c1?.faults === null) say(`2nd core   ${r.c1.raw}`);
   if (ble.state !== "advertising") return;
   const before = prev?.level === "full" && prev.ble.state === "advertising" ? prev.ble : null;
   for (const k of ["i", "e", "r", "t", "s"]) say(`  ${k.padEnd(5)}${String(ble[k]).padEnd(10)}${(before ? `+${ble[k] - before[k]}` : "").padEnd(9)}${MEANING[k]}`);

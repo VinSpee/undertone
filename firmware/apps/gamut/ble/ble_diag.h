@@ -45,3 +45,24 @@ static void ble_last_text(char *out, const ble_boot_t *b)
     }
     *o = 0;
 }
+
+/* the second core's last fault (fm1_cpu1.h fm1_cpu1_fault), "C1 OK" while it has none, else (out: 224 bytes, for the widest
+ * values) "C1 FAULT 1 CORE 1 DBG 10 PC 1C6B0D6 RETS 1C6B000 SP 1C1FA40 R 1C20000 0 ... (r0..r15)": how many faults, which core
+ * took the exception and whose frame the registers are, the debug unit's message, the PC, RETS, SP and r0..r15 at the fault.
+ * The core is retired, not started again (ported from ettorebox's C1R line, Roberto Antonacci, commit 409771d) */
+static void ble_c1_text(char *out, uint32_t count, uint32_t core, uint32_t dbg, uint32_t pc, uint32_t rets, uint32_t sp,
+                        const uint32_t *r)
+{
+    char *o = out;
+    uint32_t i;
+    if (!count) { ble__put(o, "C1 OK")[0] = 0; return; }
+    o = ble__put(o, "C1 FAULT "); o = ble__dec(o, count);
+    o = ble__put(o, " CORE "); o = ble__dec(o, core);
+    o = ble__put(o, " DBG "); o = ble__hex(o, dbg);
+    o = ble__put(o, " PC "); o = ble__hex(o, pc);
+    o = ble__put(o, " RETS "); o = ble__hex(o, rets);
+    o = ble__put(o, " SP "); o = ble__hex(o, sp);
+    o = ble__put(o, " R");
+    for (i = 0; i < 16u; i++) { *o++ = ' '; o = ble__hex(o, r[i]); }
+    *o = 0;
+}

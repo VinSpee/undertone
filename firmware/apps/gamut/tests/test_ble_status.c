@@ -136,5 +136,20 @@ int main(void)
         ble_last_text(l, &b);
         if (strlen(l) > 211u) { printf("FAIL last boot: the widest line is %u long, ED_DIAG_LEN is 224\n", (unsigned)strlen(l)); bad++; }
     }
+    { /* the second core's fault line (ble_diag.h ble_c1_text, from fm1_cpu1.h's record) */
+        char l[224];
+        uint32_t r[16], i;
+        for (i = 0; i < 16u; i++) r[i] = i;
+        r[15] = 0x01C20000u;
+        ble_c1_text(l, 0u, 0u, 0u, 0u, 0u, 0u, r);
+        if (strcmp(l, "C1 OK")) { printf("FAIL c1 line, no fault: %s\n", l); bad++; }
+        ble_c1_text(l, 1u, 1u, 0x10u, 0x01C6B0D6u, 0x01C6B000u, 0x01C1FA40u, r);
+        if (strcmp(l, "C1 FAULT 1 CORE 1 DBG 10 PC 1C6B0D6 RETS 1C6B000 SP 1C1FA40 R 0 1 2 3 4 5 6 7 8 9 A B C D E 1C20000")) {
+            printf("FAIL c1 line, a fault: %s\n", l); bad++;
+        }
+        for (i = 0; i < 16u; i++) r[i] = 0xFFFFFFFFu;
+        ble_c1_text(l, 99u, 1u, 0xFFFFFFFFu, 0xFFFFFFFFu, 0xFFFFFFFFu, 0xFFFFFFFFu, r);
+        if (strlen(l) > 223u) { printf("FAIL c1 line: the widest is %u long, ED_DIAG_LEN is 224\n", (unsigned)strlen(l)); bad++; }
+    }
     return bad != 0;
 }
