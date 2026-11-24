@@ -28,10 +28,10 @@ INK, LIME, AMBER = (11, 11, 10), (196, 245, 66), (232, 163, 61)
 # token -> {theme: colour}; theme is "dark", "light" or None when the terminal did not say. Text is the terminal's own
 # foreground. Lime is a ground for ink (15:1) or, as a line, a deeper lime that holds 3:1 on the light ground.
 TOKENS = {
-    "soft": {"dark": (169, 166, 155), "light": (85, 83, 77), None: (128, 125, 117)},
+    "soft": {"dark": (169, 166, 155), "light": (85, 83, 77), None: (119, 119, 119)},
     "line": {"dark": (85, 83, 77), "light": (201, 198, 187), None: (128, 125, 117)},
     "lamp": {"dark": LIME, "light": (86, 125, 10), None: (109, 154, 20)},
-    "warn": {"dark": (240, 180, 90), "light": (122, 74, 0), None: (176, 122, 26)},
+    "warn": {"dark": (240, 180, 90), "light": (122, 74, 0), None: (170, 105, 0)},
 }
 GROUNDS = {"on_lamp": LIME, "on_warn": AMBER}  # always with ink on top
 SIXTEEN = {"soft": "90", "line": "90", "lamp": "32", "warn": "33", "on_lamp": "30;102", "on_warn": "30;43"}
@@ -90,7 +90,6 @@ PEDAL = (
 )
 HELD = {"P": "◉", "H": "▣", "F": "◉"}
 LABELS = ("push", "home", "right foot")
-ART_ASCII = str.maketrans("╭╮╰╯─│┌┐└┘◯◉▣▪", "++++-|++++Oo#.")
 
 
 @dataclass
@@ -383,6 +382,7 @@ def depth_from_env(env):
 
 
 # ---------------------------------------------------------------- what the tools' lines mean
+REFUSED = "do not unplug: your pedal is being updated"
 PHASES = {"looking": "looking for your pedal", "again": "your pedal restarted. waiting for it", "found": "found it",
           "reading": "reading your pedal", "saving": "saving a copy of your pedal", "checking": "checking",
           "writing": "writing", "restarting": "restarting your pedal"}
@@ -520,7 +520,7 @@ class AnsiView:
         the pedal stops the wait (Outcome code 130)."""
         progress = Progress(write)
         t, stop, lines, box = run_in_background(job_fn)
-        started, shown_bar, found_at, done, asked = self.clock(), 0.0, None, False, None
+        started, shown_bar, found_at, done, asked, refused = self.clock(), 0.0, None, False, None, False
         while not done:
             while True:
                 try:
@@ -535,7 +535,10 @@ class AnsiView:
                 progress.feed(line)
                 if progress.phase == "found" and was != "found":
                     found_at = self.clock()
-            waiting = progress.phase in ("looking", "again")
+                if progress.phase == "writing" and was != "writing":
+                    break
+            under_way = write and progress.phase != "looking"
+            waiting = progress.phase in ("looking", "again") and not under_way
             if progress.phase == "writing":
                 target = progress.fraction
                 shown_bar += (target - shown_bar) * (0.35 if self.caps.motion else 1.0)
@@ -546,13 +549,16 @@ class AnsiView:
                 status = ("ok", PHASES["found"], 0)
             else:
                 status = ("spin", progress.sentence(self.caps), 0)
-            warn = hint if waiting and self.clock() - started > HINT_AFTER else ()
+            warn = (REFUSED,) if refused and under_way else hint if waiting and self.clock() - started > HINT_AFTER else ()
             self.draw(replace(screen, status=status, warn=warn, choices=(),
                               foot="wait" if waiting else "busy"))
             key = self.keys.read(FRAME_S if self.caps.motion else 0.25)
-            if key in ("back", "quit") and waiting and not stop.is_set():
-                asked = key
-                stop.set()
+            if key in ("back", "quit"):
+                if under_way:
+                    refused = True
+                elif waiting and not stop.is_set():
+                    asked = key
+                    stop.set()
         t.join()
         if "error" in box:
             raise box["error"]
@@ -667,6 +673,7 @@ class Guide:
         self.result = Result()
         self.kind = start if start in RESTART else None
         self.images, self.source, self.outcome, self.need_file = {}, None, None, None
+        self.writing = False
         self.trail = []
 
     def go(self):
@@ -692,12 +699,21 @@ class Guide:
     def work(self, screen, kind, write=False):
         """One run of a tool behind a screen. Its closing line goes to the log; its backup is kept for the end."""
         job = Job(kind, write, self.images, self.source, self.opts)
+        self.writing = write
         o = self.view.work(screen, lambda log, say, stop: self.run_job(job, log, say, stop), self.log, write,
                            self.hint())
+        self.writing = False
         self.log.write(o.text)
         if o.backup:
             self.result.backup = o.backup
         return o
+
+    def resume_note(self):
+        """What to tell the person when the screens end in the middle of a write."""
+        where = self.result.backup or Path(self.opts.backup_dir).expanduser()
+        return ["Your pedal was being updated and may not start yet.",
+                f"Plug it in and run: undertone {self.kind}  (it continues where it stopped)",
+                f"copy of your pedal: {where}"]
 
     def hint(self):
         return ("Still looking. Plug straight into this computer, no hub.",
@@ -806,7 +822,7 @@ class Guide:
         if o.code == 130:
             return self.stopped(o, "rescue_ready")
         if o.code:
-            return self.failed(o, "rescue_write")
+            return self.failed(o, "confirm")
         self.result.lines = [o.text, "Next: unplug the cable, switch the pedal off, wait 5 seconds and switch it on."]
         lines = ["Unplug it, then switch it off and on again."]
         if file != u.PATH_FILE["A"]:
@@ -854,7 +870,7 @@ class Guide:
         if o.code == 130:
             return self.stopped(o, "install")
         if o.code:
-            return self.failed(o, "install_write")
+            return self.failed(o, "confirm")
         self.result.lines = [o.text, ui.FIRST_RUN.format(levels=o.layout.levels)]
         return self.end(Screen("gamut is on your pedal", ["Switch it off and on again to start Gamut."]))
 
@@ -990,18 +1006,27 @@ def main(argv, start="menu"):
     caps = capabilities(os.environ, sys.stdout)
     if caps and ur.WINDOWS and not enable_windows_ansi():
         caps = None
+    guide = None
     try:
         if caps:
             keys = WindowsKeys() if ur.WINDOWS else UnixKeys(sys.stdin.fileno())
             if not ur.WINDOWS:
                 caps.theme = keys.background() or caps.theme
             with AnsiView(sys.stdout, keys, caps) as view:
-                result = Guide(view, opts, start).go()
+                guide = Guide(view, opts, start)
+                result = guide.go()
         else:
-            result = Guide(PlainView(sys.stdout), opts, start).go()
+            guide = Guide(PlainView(sys.stdout), opts, start)
+            result = guide.go()
     except KeyboardInterrupt:
         print("\nstopped; running undertone again starts over, and a rescue resumes where it stopped")
+        if guide and guide.writing:
+            print(*guide.resume_note(), sep="\n")
         return 130
+    except Exception:
+        if guide and guide.writing:
+            print(*guide.resume_note(), sep="\n", file=sys.stderr)
+        raise
     if result.restart:                         # the password: start again under sudo, at the chosen task
         u.as_root(["--start", result.restart])
     if not result.lines and not result.backup:

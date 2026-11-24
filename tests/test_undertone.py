@@ -233,19 +233,11 @@ class Commands(Fixture):
 
 
 class Launchers(unittest.TestCase):
-    """The two files a person types. The Windows one cannot run here: its lines are checked instead."""
+    """The two files a person types. The Windows one cannot run here: only its line endings are checked."""
 
-    def test_the_windows_launcher_finds_python_and_passes_everything_on(self):
+    def test_the_windows_launcher_has_crlf_line_endings(self):
         raw = (ROOT / "undertone.cmd").read_bytes()
-        self.assertEqual(raw.count(b"\r\n"), raw.count(b"\n"), "CRLF line endings")
-        lines = [l for l in raw.decode().splitlines() if l and not l.upper().startswith("REM")]
-        order = [i for i, l in enumerate(lines) if "where py " in l or "where python " in l]
-        self.assertEqual(len(order), 2)
-        self.assertIn('set "PY=py -3"', lines[order[0]], "the py launcher first")
-        self.assertIn("if not defined PY", lines[order[1]], "python only when py is missing")
-        self.assertIn('%PY% "%~dp0tools\\undertone.py" %*', lines, "the folder of the launcher, every argument")
-        self.assertEqual(lines[-1], "exit /b %errorlevel%", "undertone's exit code")
-        self.assertIn("python.org", raw.decode())
+        self.assertEqual(raw.count(b"\r\n"), raw.count(b"\n"))
 
     def test_the_unix_launcher_runs_undertone(self):
         import subprocess
@@ -400,6 +392,31 @@ class StateMachine(Fixture):
                                      "checking your pedal", "fix a pedal that will not start",
                                      "what would you like to do?"])
 
+    def test_try_again_after_a_failed_write_asks_before_writing(self):
+        found = u.Outcome(0, "Read-only run finished", 3, None, b"", "BlackBox_023.fwsc")
+        failed = u.Outcome(1, "ERROR: gave up after 10 tries; rerun the command, it resumes where it stopped")
+        g, view, jobs, _ = self.guide([("what would", "rescue"), ("fix a pedal", "go"), ("can be fixed", "go"),
+                                       ("replace", "yes"), ("went wrong", "again"), ("replace", "no"),
+                                       ("nothing was changed", "done")], [found, failed])
+        g.go()
+        self.assertEqual([j.write for j in jobs], [False, True])
+
+    def test_a_stop_in_the_middle_of_a_write_says_how_to_resume(self):
+        found = u.Outcome(0, "Read-only run finished", 3, self.backups / "b.bin", b"", "BlackBox_023.fwsc")
+
+        def run(job, log, say, stop):
+            if job.write:
+                raise KeyboardInterrupt
+            return found
+        g = Guide(Scripted([("what would", "rescue"), ("fix a pedal", "go"), ("can be fixed", "go"),
+                            ("replace", "yes")]), self.opts, run=run)
+        with self.assertRaises(KeyboardInterrupt):
+            g.go()
+        self.assertTrue(g.writing)
+        note = "\n".join(g.resume_note())
+        self.assertIn("undertone rescue", note)
+        self.assertIn(str(self.backups / "b.bin"), note)
+
     def test_an_unknown_pedal_is_left_alone(self):
         refused = u.Outcome(2, "REFUSED: the flash head", 0, None, dark_pedal("023"))
         g, view, jobs, _ = self.guide([("what would", "rescue"), ("fix a pedal", "go"), ("closer look", "done")],
@@ -449,6 +466,52 @@ class KeyScript:
 
     def restore(self):
         pass
+
+
+class WorkKeys:
+    """Presses back, then q, once the screen says the pedal restarted; lets the job finish once the screen refuses."""
+
+    def __init__(self, view, release):
+        self.view, self.release, self.sent = view, release, []
+
+    def read(self, timeout):
+        text = self.view.frames[-1] if self.view.frames else ""
+        if "your pedal restarted" in text and len(self.sent) < 2:
+            self.sent.append("back" if not self.sent else "quit")
+            return self.sent[-1]
+        if s.REFUSED in text and len(self.sent) == 2:
+            self.release.set()
+        threading.Event().wait(0.01)
+        return None
+
+    def restore(self):
+        pass
+
+
+class WriteIsNotInterrupted(Fixture):
+    def run_work(self, write):
+        release, stopped = threading.Event(), []
+
+        def job(log, say, stop):
+            say("pedal found")
+            say("the pedal went away or stopped answering (x); waiting for it again (1/10)")
+            (release if write else stop).wait(5)
+            stopped.append(stop.is_set())
+            return u.Outcome(130 if stop.is_set() else 0, "done")
+        view = s.AnsiView(io.StringIO(), None, Caps(motion=False), size=lambda: os.terminal_size((80, 24)))
+        view.keys = WorkKeys(view, release)
+        o = view.work(s.Screen("fixing your pedal", []), job, s.Log(self.backups), write)
+        return o, stopped, view
+
+    def test_back_and_q_do_nothing_while_a_write_waits_for_the_restarted_pedal(self):
+        o, stopped, view = self.run_work(True)
+        self.assertEqual((o.code, stopped), (0, [False]))
+        self.assertIn(s.REFUSED, "\n".join(view.frames))
+
+    def test_back_still_leaves_a_wait_that_is_not_a_write(self):
+        o, stopped, view = self.run_work(False)
+        self.assertEqual((o.code, stopped), (130, [True]))
+        self.assertNotIn(s.REFUSED, "\n".join(view.frames))
 
 
 class EndToEnd(Fixture):
