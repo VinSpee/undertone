@@ -1,0 +1,10 @@
+#!/bin/sh
+# SPDX-License-Identifier: GPL-3.0-only
+# undertone: rescue, install or check a BlackBox over its USB cable, on macOS or Linux (tools/undertone.py; the guide is
+# docs/RESCUE.md). With no command it shows its guided screens. It needs Python 3 and, on a Mac, libusb.
+here=$(cd "$(dirname "$0")" && pwd)
+if command -v python3 >/dev/null 2>&1; then
+  exec python3 "$here/tools/undertone.py" "$@"
+fi
+echo "undertone needs Python 3: https://www.python.org/downloads/ . Nothing was sent to the pedal." >&2
+exit 1

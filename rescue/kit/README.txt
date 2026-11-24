@@ -32,40 +32,59 @@ Path B. The pedal ran M-VAVE V22 or V23 at any time, or you are not sure.
         File: firmware\BlackBox_023.fwsc  (BlackBox_022.fwsc works the same)
 Path C. Both files are refused. Stop. Do not try other files. Keep the backup.
 
-If you do not know, start with path B. The check tells you: it either prints
-"head [0, 0x4000) matches the image" or ends with "REFUSED". After REFUSED,
-run the check again with the other file.
+You do not have to choose: put the files you have in the firmware folder.
+undertone reads the pedal first and uses the file that matches it. If none
+matches, it says which file the pedal needs, or that you are on path C.
 
-The commands
-------------
+The command
+-----------
 Unplug the pedal, type the line, and plug the pedal in when it says it is
-waiting. Use the path A file name in place of the path B one if that is yours.
+waiting (or, in its screens, when it says it is looking for your pedal).
+
+Mac or Linux (Terminal, in this folder; Linux has not been tested):
+  ./undertone
+It asks for your computer password (nothing shows while you type).
 
 Windows (Command Prompt opened as administrator, in this folder; not
 PowerShell):
-  1. Check:    RESCUE.bat --package firmware\BlackBox_023.fwsc
-  2. Restore:  RESCUE.bat --write --package firmware\BlackBox_023.fwsc
+  undertone
 If Windows offers to format a drive, click Cancel. Never click Format.
 
-Mac or Linux (Terminal, in this folder; Linux has not been tested):
-  1. Check:    sudo python3 tools/uboot_rescue.py --package firmware/BlackBox_023.fwsc
-  2. Restore:  sudo python3 tools/uboot_rescue.py --write --package firmware/BlackBox_023.fwsc
+Choose "fix a pedal that will not start". First it checks the pedal and saves
+a backup; nothing is written. Then it asks before it writes anything. When it
+is done, unplug the cable, switch the pedal off, wait 5 seconds and switch it
+on. If a run stops in the middle, run it again: it continues.
 
-Run the restore only after the check printed "head [0, 0x4000) matches the
-image" and ended with "Read-only run finished, nothing was written". The
-restore ends with "Done". Then unplug the cable, switch the pedal off, wait
-5 seconds and switch it on. If a run stops in the middle, run the same line
-again: it continues.
+The same without the screens, for a script or if you prefer to type:
+  ./undertone rescue          (Windows: undertone rescue)
+It shows the tool's own lines and asks you to type yes before the restore.
+"./undertone check" only reads the pedal and saves a backup.
+
+Under the hood, undertone runs tools/uboot_rescue.py, the same tool as
+before. These lines still work and do the same as undertone rescue:
+  Mac:      sudo python3 tools/uboot_rescue.py --package firmware/BlackBox_023.fwsc
+            sudo python3 tools/uboot_rescue.py --write --package firmware/BlackBox_023.fwsc
+  Windows:  RESCUE.bat --package firmware\BlackBox_023.fwsc
+            RESCUE.bat --write --package firmware\BlackBox_023.fwsc
 
 After path B, DO NOT INSTALL OPENPOCKET ON THE PEDAL FROM THE INSTALLER PAGE.
 An installer that does not know the V22/V23 layout writes over the end of that
 boot loader, and the pedal goes dark again. On such a pedal Gamut is installed
-with a command of the repository instead, tools/uboot_install.py, which never
-writes the boot loader: see the guide's section "Gamut on a BlackBox with V22
-or V23". It has worked on one real pedal.
+with undertone install from the Undertone repository instead (it runs
+tools/uboot_install.py, which never writes the boot loader): see the guide's
+section "Gamut on a BlackBox with V22 or V23". This kit holds that tool for
+the way back to M-VAVE's firmware (./undertone install --official
+firmware/BlackBox_023.fwsc), but not Gamut's own file.
 
 Other files here
 ----------------
+undertone, undertone.cmd, tools/undertone.py, tools/undertone_screens.py
+    The command above, for Mac and Linux, and for Windows. It runs the tools
+    below and changes nothing in what they do to a pedal.
+tools/uboot_rescue.py, RESCUE.bat
+    The rescue tool, and its Windows launcher.
+tools/uboot_install.py, tools/pd40_install.py
+    The tool behind undertone install (Mac only), and the checks it uses.
 fingerprint.bat  (Mac: python3 tools/head_fingerprint.py)
     Reads your newest backup and says which firmware the pedal had. With a
     file name it reads that file: a backup, or a firmware file (.fwsc).
