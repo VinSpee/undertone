@@ -89,8 +89,11 @@ jobs:
         run: |
           for t in ${{ matrix.targets }}; do cargo build --locked --release --target "$t"; done
           out="$RUNNER_TEMP/program/${{ matrix.asset }}" && mkdir -p "$RUNNER_TEMP/program" && bins=()
+          # one file per target: on Windows the shell also finds undertone.exe as undertone, so .exe is looked at first
           for t in ${{ matrix.targets }}; do
-            for f in "target/$t/release/undertone" "target/$t/release/undertone.exe"; do [ -f "$f" ] && bins+=("$f"); done
+            for f in "target/$t/release/undertone.exe" "target/$t/release/undertone"; do
+              if [ -f "$f" ]; then bins+=("$f"); break; fi
+            done
           done
           if [ "${#bins[@]}" -gt 1 ]; then lipo -create -output "$out" "${bins[@]}"; else cp "${bins[0]}" "$out"; fi
           "$out" version
