@@ -184,7 +184,7 @@ RAM**. v40 did the same for Gamut (then called OpenPocket; `tools/ramcode.py`), 
   `i e r t s` counters since the start, `V` the stored radio records found (bit mask, area, crystal trim), the baseband
   registers `CON IEN IPND STAT`, the interrupt lines `IC45 IC29`, the block enable `BEN`. While it is starting or has
   failed, the step and stage instead.
-- **Timers** added from the interrupt (the link scheduler's timeouts) are handled under a lock (`ble_os.c`).
+- **Timers** the link scheduler adds from the interrupt are claimed with the interrupts off, and its usr timeouts run from the 10 kHz tick ([BLE-TEST.md](BLE-TEST.md), `ble_os.c`).
 
 ### Memory
 
