@@ -10,6 +10,7 @@ Undertone is GPL-3.0-only (`LICENSE`), except the parts below, which keep their 
 | `firmware/sdk/` (I2S and DAC drivers as LLVM bitcode, SPL, cfg files) | JieLi AC79 SDK V1.2.0 (fw-AC79_AIoT_SDK) | Apache-2.0 (`LICENSES/Apache-2.0.txt`) |
 | `firmware/px_cacheram.h` (data-cache ways as RAM, for the NAM network's vector-unit buffers) | [melodee](https://github.com/keremimo/melodee) `firmware/hal/fm1_cache.h`, Kerem Kilic (Ellic Studio), after the AC79 SDK's cache way setup | GPL-3.0 |
 | `third_party/jieli-ble/` (JieLi's Bluetooth LE controller, 33 objects of `btctrler.a` and 3 of `cpu.a`, as published LLVM bitcode, used only by the Bluetooth test image `make ble`) | JieLi AC79 SDK V1.2.0 (fw-AC79_AIoT_SDK, commit `0617f4c`), `cpu/wl82/liba/`; see `third_party/jieli-ble/README.md` | Apache-2.0 (`third_party/jieli-ble/LICENSE-JieLi-Apache-2.0`, `LICENSES/Apache-2.0.txt`) |
+| `tools/jlfold.py` (the Bluetooth test image's controller library folded at build time) | [ettorebox](https://github.com/steponme82/ettorebox) `tools/jlfold.py`, Roberto Antonacci, commit `375a253`; reduced to its `fold` command and the LE controller's names | GPL-3.0 |
 | `firmware/apps/gamut/ble/ble_cfg.c` | values and names from the same SDK's `apps/common/config/log_config/lib_btctrler_config.c` | Apache-2.0 |
 | `firmware/fonts.h` (bitmaps generated from Inter) | [Inter](https://rsms.me/inter/), Rasmus Andersson | SIL OFL 1.1 (`LICENSES/OFL-1.1-Inter.txt`) |
 | `assets/loops/*.wav` (guitar loops for the simulator), and `docs/assets/audio/riff.m4a` (`riff.wav` as AAC, which the site's home page plays) | cut from [Guitar-TECHS](https://zenodo.org/records/14963133), credits in `assets/loops/ATTRIBUTION.md` | CC BY 4.0 |
@@ -34,6 +35,8 @@ pull request #22), and v42's web editor in four sections (#23), the pedal's rewo
 (#24) and USB audio (#25).
 **Ivan Shevchuk ([Testing7B](https://github.com/Testing7B))**: v42's check and restore of the BlackBox V21 factory
 sounds (pull request #26).
+**Roberto Antonacci ([steponme82](https://github.com/steponme82))**, from his fork [ettorebox](https://github.com/steponme82/ettorebox):
+the build-time fold of the Bluetooth library (`tools/jlfold.py`, commit `375a253`).
 
 Sound models: the names refer to the gear that inspired each voicing (circuit analyses published by ElectroSmash,
 Electric Druid, R.G. Keen / GEOFEX, Rob Robinette, Duncan's Tone Stack Calculator; speaker data sheets; manufacturers'
