@@ -186,6 +186,9 @@ There are two kinds of traffic on the one cable, and they never meet:
    before an update, and the update still works.
 2. **Musical messages** (Program Change, Control Change, clock and transport) go into a 64-entry ring that `usb.c` fills and
    `firmware/apps/gamut/px_midi_io.h` empties every pass of the main loop. Nothing sends SysEx into that ring and nothing in it is SysEx.
+   Each message carries the time it came in, in the main loop's milliseconds (`fm1_ms`, set from `ms_now()` at every USB
+   poll, `firmware/px_usb.h`); the clock above is timed from those stamps. Earlier builds never set that time, so every
+   stamp was 0 and MIDI clock over USB never changed the delay.
 
 One fix came with this: until now nothing emptied that ring. `usb.c` leaves the host's USB packet unread while the ring is nearly
 full, so a DAW sending clock or notes would, after a few dozen messages, also have stopped the editor's and the installer's SysEx,

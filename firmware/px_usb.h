@@ -75,6 +75,8 @@ void fm1_timer5_irq(void)                       /* 10 kHz; USB at 2 kHz */
 #endif
     if (++px_t5_sub >= 5u) {
         px_t5_sub = 0;
+        fm1_ms = ms_now();                      /* usb.c stamps each MIDI message with fm1_ms: the main loop's clock, so MIDI
+                                                 * clock and taps measure time (it was never advanced: every stamp was 0) */
 #if OP_UADEV
         uad_poll();
 #endif
