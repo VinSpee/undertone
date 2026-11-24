@@ -32,13 +32,15 @@
  *   in   "#ble adv I T"          advertising; the counters i and t
  *   in   "#ble failed S C"       FAILED, step S, code C
  *   in   "#ble safe"             the boot after a watchdog reset in the first 6 s: safe mode, Bluetooth off
+ *   in   "#ble c1fault"          a fault of the second core, with its registers
  *   edsim [FLASH.bin] [--persist FILE] [--dump OUT.bin]
  * --persist FILE: the flash lives in FILE (read at the start when it exists, written again after each change);
  * --dump OUT.bin: the flash is written to OUT.bin when stdin closes.
  * Built with -DOP_BLE_TEST=1 it also answers DIAG, as the Bluetooth test image does, from the real text code (ble_diag.h):
  *   in   "#ble adv I T"          advertising; the counters i and t
  *   in   "#ble failed S C"       FAILED, step S, code C
- *   in   "#ble safe"             the boot after a watchdog reset in the first 6 s: safe mode, Bluetooth off */
+ *   in   "#ble safe"             the boot after a watchdog reset in the first 6 s: safe mode, Bluetooth off
+ *   in   "#ble c1fault"          a fault of the second core, with its registers */
 #define _GNU_SOURCE
 #include <stdint.h>
 #include <stdio.h>
@@ -156,14 +158,18 @@ static void nm_changed(uint32_t s) { (void)s; }
 static void ir_changed(uint32_t s) { (void)s; }
 #if OP_BLE_TEST
 #include "../firmware/apps/gamut/ble/ble_diag.h"
-#define ED_DIAG_LINES 4u
+#define ED_DIAG_LINES 6u
 #define ED_DIAG_LEN 224u
+#define ED_OUT_BYTES 1536u
 static uint32_t sim_safe, sim_rst = 0x40u;
+static uint32_t sim_c1_count, sim_c1_r[16];      /* the second core's fault record (fm1_cpu1.h): "#ble c1fault" */
 static void ed_diag_line(uint32_t i, char *out)
 {
     if (i == 0u) ble_boot_text(out, 30000u, sim_safe, 8u, sim_rst, 0u);
     else if (i == 1u) ble_last_text(out, &ble_last);
     else if (i == 3u) { static const uint8_t last[3] = {2, 24, 127}, peer[6] = {1, 2, 3, 4, 5, 6}; ble_link_text(out, 1u, 2u, peer, 48u, 0u, 400u, 7u, 1u, 0x13u, last, 3u, "lmp_hci_reset"); }
+    else if (i == 4u) out[0] = 0;                 /* (the trace: the image's ble_midi.c, not simulated) */
+    else if (i == 5u) ble_c1_text(out, sim_c1_count, 1u, 0x10u, 0x01C6B0D6u, 0x01C6B000u, 0x01C1FA40u, sim_c1_r);
     else if (ble_state == BLE_ADV) ble_adv_text(out, 7u, 0xA3u, 0x12ABu, 0x2001u, 0x101u, 0u, 0x80u, 3u, 3u, 1u);
     else ble_status_full(out);
 }
@@ -173,6 +179,7 @@ static void sim_ble(const char *l)
     if (sscanf(l, "adv %d %d", &a, &b) == 2) { ble_state = BLE_ADV; ble_cnt_irq_ev = (uint32_t)a; ble_cnt_timer = (uint32_t)b; }
     else if (sscanf(l, "failed %d %d", &a, &b) == 2) ble_fail((uint32_t)a, b);
     else if (!strcmp(l, "safe")) { ble_state = BLE_OFF; sim_safe = 1; sim_rst = 4u; ble_last = (ble_boot_t){ .failed = 1, .stage = 7, .blocks = 9 }; }
+    else if (!strcmp(l, "c1fault")) { sim_c1_count++; for (a = 0; a < 16; a++) sim_c1_r[a] = 0xFFFFFFF0u + (uint32_t)a; sim_c1_r[15] = 0x01C20000u; }
 }
 #endif
 #include "../firmware/apps/gamut/ui_colors.h"         /* (BLK_COL, for the editor) */

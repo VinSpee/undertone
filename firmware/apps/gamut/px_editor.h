@@ -38,7 +38,10 @@ enum { ED_INFO = 1, ED_CAT_BLOCK, ED_CAT_TYPE, ED_TEXTS, ED_STATE, ED_SET, ED_OR
        ED_IR_LIST, ED_IR_WRITE, ED_IR_COMMIT, ED_IR_ERASE,     /* v38: 24..27 */
        ED_USB_AUDIO };                                         /* v42: 28 */
 
-static uint8_t ed_out[1024];
+#ifndef ED_OUT_BYTES
+#define ED_OUT_BYTES 1024u  /* a reply, the SysEx frame included (an image with a long DIAG sets more) */
+#endif
+static uint8_t ed_out[ED_OUT_BYTES];
 static uint32_t ed_n;
 static struct { uint8_t on, owed; uint32_t last_ms, hash, push_ms; } ed_w;   /* owed: a push is due whatever the hash says */
 

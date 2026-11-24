@@ -91,8 +91,10 @@ static uint8_t fm1_cpu1_on;                     /* started and answering: CPU0 m
 static inline void fm1_cpu1_sync(void) { FM1_CPU1_SYNC(); }   /* a barrier between the cores (a job's own sharing) */
 static uint8_t fm1_cpu1_gave_up;                /* why it is off (FM1_CPU1_*), 0 = it is not */
 
-/* its faults (fm1_cpu1_fault_c): CPU0 reads count */
-static struct { volatile uint32_t count; uint32_t echoes, cpu, dbg, emu, pc, rets; } fm1_cpu1_fault;
+/* its faults (fm1_cpu1_fault_c): CPU0 reads count. pc, rets, sp and r0..r15 are the exception frame of the core that took
+ * the exception (cpu): CPU1's own when it took it, CPU0's when the debug unit raised CPU1's error there. They say which
+ * register held a bad address. The core is retired, not started again, so the last fault's record stays */
+static struct { volatile uint32_t count; uint32_t echoes, cpu, dbg, emu, pc, rets, sp, r[16]; } fm1_cpu1_fault;
 
 /* one core until power-off. Not static, as fm1_crash: the compiler must not assume a zero start */
 #define FM1_CPU1_BAR_MAGIC 0x52414231u          /* "1BAR" */
@@ -348,6 +350,9 @@ static int fm1_cpu1_fault_c(const uint32_t *f)
     fm1_cpu1_fault.emu = cpu ? FM1_C1_EMU_MSG : FM1_EMU_MSG;     /* the faulting core's EMU_MSG */
     fm1_cpu1_fault.pc = f[16];
     fm1_cpu1_fault.rets = f[25];
+    fm1_cpu1_fault.sp = f[24];
+    for (uint32_t i = 0; i < 16u; i++)          /* frame: r0..r15 first (fm1_vec.S, as fm1_fault_c reads it) */
+        fm1_cpu1_fault.r[i] = f[i];
     fm1_cpu1_fault.count++;                     /* (before DBG_MSG clears: see the echo above) */
     was = FM1_DBG_WR_EN & 1u;                   /* (writing 0xE7 toggles the unlock) */
     if (!was)

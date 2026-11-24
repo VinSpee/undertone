@@ -139,13 +139,14 @@ node tools/op.mjs log --wait 40 --scan 30    # after a flash: wait for the boot,
 node tools/op.mjs log --follow --json        # keep reading, one JSON object per reading
 ```
 
-The request is `DIAG` ([EDITOR-PROTOCOL.md](EDITOR-PROTOCOL.md)), which only this image answers, so the normal firmware is byte for byte what it was. It reads memory and the same registers as the status text, and writes nothing. Its three lines are:
+The request is `DIAG` ([EDITOR-PROTOCOL.md](EDITOR-PROTOCOL.md)), which only this image answers, so the normal firmware is byte for byte what it was. It reads memory and the same registers as the status text, and writes nothing. Its lines include:
 
 | Line | Example | Meaning |
 | --- | --- | --- |
 | this boot | `UP 137120 SAFE 0 STAGE 8 RST 1 GUARD 0` | the pedal's clock in ms, which wraps every 179 s, so it is the uptime only in the first 179 s; safe mode; boot stage (8 = OK); reset source bits (`POWER-ON`, `VDDIO LOW`, `WATCHDOG`, `VCM`, `LONG PRESS`, `1.2V`, `SOFT`, from bit 0); failed boots counted |
 | last boot | `LAST OK`, or `LAST FAILED STAGE 7 BLOCKS 9 LOAD 42 PEAK 61 NAN 0 CPU1 1 LOOPS 0 CRASH VEC 3F PC 2000DC8 RETS 2001234 DBG 0 EMU 0 UP 4100` | the fields of the `LAST BOOT FAILED` screen; `CRASH ...` only after a crash |
 | status | `ADV i12 e5 ...`, `FAILED 5 3  step timeout ...`, `STARTING 4`, `OFF` | the text the status area scrolls, from the same function |
+| second core | `C1 OK`, or `C1 FAULT 1 CORE 1 DBG 10 PC 1C6B0D6 RETS 1C6B000 SP 1C1FA40 R 1C20000 0 ...` | the second core's last fault, after which it was retired and the sound went on with one core: the debug unit's message, PC, RETS, SP and r0..r15 from the exception frame of the core that took it (`CORE`), so the register that held a bad address can be found. The core is not started again |
 
 It cannot read a pedal that is not running its main loop. While the red crash screen or the 12 s `LAST BOOT FAILED` report is up, USB is down; the next boot gives the same report through this channel. A pedal stuck before USB service stays silent: only the screen shows what it is doing. With firmware that has no `DIAG`, the command gives the version and the DSP load and says what is missing. Exit codes: 0 pass or running, 1 fail, 3 undecided. `RUNNING` means the radio events rise; only a sighting by the scan is `PASS`.
 

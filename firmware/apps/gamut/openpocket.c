@@ -116,8 +116,9 @@ static void ir_changed(uint32_t s)   /* v38: a user IR was written or erased: th
 }
 #if OP_BLE_TEST             /* the log channel (firmware/apps/gamut/ble/ble_diag.h): only this image answers DIAG, the normal firmware does not change */
 #define ED_STATS 8u         /* PING also gives the Bluetooth heap's and tasks' lowest free bytes */
-#define ED_DIAG_LINES 5u
+#define ED_DIAG_LINES 6u
 #define ED_DIAG_LEN 224u
+#define ED_OUT_BYTES 1536u   /* DIAG's six lines of up to 223 characters fit one reply */
 static void ed_diag_line(uint32_t i, char *out);
 #endif
 #include "ui_colors.h"      /* BLK_COL: the blocks' colours, for the web editor (the pedal's screen has its own palette: ui_palette.h) */
@@ -146,7 +147,9 @@ static void ed_diag_line(uint32_t i, char *out)
     else if (i == 1u) ble_last_text(out, &ble_last);
     else if (i == 2u) ble_test_line(out);
     else if (i == 3u) ble_midi_line(out);
-    else ble_trace_line(out);
+    else if (i == 4u) ble_trace_line(out);
+    else ble_c1_text(out, fm1_cpu1_fault.count, fm1_cpu1_fault.cpu, fm1_cpu1_fault.dbg, fm1_cpu1_fault.pc, fm1_cpu1_fault.rets,
+                     fm1_cpu1_fault.sp, fm1_cpu1_fault.r);
 }
 #endif
 
