@@ -9,7 +9,7 @@ log, and the flash the pedal ends with.
 
   python3 undertone-cli/protocol/tests/fixtures/record.py      rewrites transcripts.json beside this file
 """
-import hashlib, json, sys, tempfile, zlib
+import hashlib, io, json, re, sys, tempfile, zlib
 from dataclasses import replace
 from pathlib import Path
 from unittest import mock
@@ -24,6 +24,7 @@ import pocketx_fw as fw
 import pxpkg
 import uboot_install as ui
 import uboot_rescue as ur
+import undertone as u
 
 M64 = (1 << 64) - 1
 
@@ -138,6 +139,8 @@ class Bench:
             return None
         self.claimed = True
         return self.uboot
+
+    open_pedal = open_uboot                     # uboot_rescue.wait_for_pedal's name for it
 
     def transcript(self):
         return [line for r in self.recoveries for line in r.transcript] + self.uboot.transcript
@@ -258,6 +261,60 @@ def record_package(raw):
     return entry
 
 
+# ---------------------------------------------------------------- undertone's commands, as a person runs them
+FIRMWARE = BACKUPS / "firmware"
+
+
+def firmware():
+    """The kit's firmware folder with a package for each layout (BlackBox_020 and BlackBox_023), and their images."""
+    FIRMWARE.mkdir(exist_ok=True)
+    images = {}
+    for v, image in (("020", flash_image(0x4000, noise(10, 0x8000), 0xA5000)), ("023", IMAGES["new"])):
+        (FIRMWARE / f"BlackBox_{v}.fwsc").write_bytes(pxpkg.ufw(image, b"OTA" * 100, f"BlackBox_{v}"))
+        images[v] = image
+    return images
+
+
+def shown(text):
+    """The window's text, without what differs from run to run: the times, the backup's and the folders' paths."""
+    text = re.sub(r"\[\s*\d+\.\ds\]", "[time]", text)
+    text = re.sub(r"\S*blackbox-\d{8}-\d{6}\.dump\.bin", "BACKUP", text)
+    return text.replace(str(FIRMWARE), "FIRMWARE")
+
+
+def command(name, flash, starts, answer, *argv):
+    """undertone's command `name` with `argv`, on a pedal that holds `flash`, the person typing `answer`."""
+    bench = Bench(flash, starts)
+    a = u.parser().parse_args([name, *argv, "--backup-dir", str(BACKUPS)])
+    a.opts = u.Options(None, str(BACKUPS), 10)
+    out = io.StringIO()
+    with mock.patch.object(u, "FIRMWARE", FIRMWARE), mock.patch.object(ur, "get_loader", lambda p=None: LOADER), \
+            mock.patch.object(u, "rescue_transport", lambda: bench), mock.patch.object(u, "install_transport", lambda: bench), \
+            mock.patch.object(ui, "LAYOUTS", LAYOUTS), mock.patch.object(ur.time, "sleep", bench.sleep):
+        code = u.COMMANDS[name](a, u.Out(out), lambda prompt: answer)
+    transfers = "\n".join(bench.transcript()).encode()
+    return {"code": code, "shown": shown(out.getvalue()).splitlines(),
+            "transcript": hashlib.sha256(transfers).hexdigest(),
+            "flash": hashlib.sha256(bytes(bench.uboot.flash)).hexdigest()}
+
+
+def commands():
+    images = firmware()
+    dark = bytearray(noise(20, ur.FLASH_SIZE))
+    dark[:len(images["023"])] = images["023"]
+    dark[0x4000:0xA3000] = noise(21, 0xA3000 - 0x4000)
+    dark = bytes(dark)
+    on_v23 = SOURCES["new"] + noise(99, ur.FLASH_SIZE - len(SOURCES["new"]))   # the V23 head, another app
+    return {
+        "rescue": command("rescue", dark, ("uboot", "uboot"), "yes"),
+        "rescue-not-confirmed": command("rescue", dark, ("uboot",), "no"),
+        "rescue-refused": command("rescue", noise(22, ur.FLASH_SIZE), ("uboot",), "yes"),
+        "install-official": command("install", on_v23, ("recovery", "recovery"), "YES ",
+                                    "--official", str(FIRMWARE / "BlackBox_023.fwsc")),
+        "check": command("check", on_v23, ("recovery",), ""),
+    }
+
+
 def main():
     fixtures = {
         "rescue-read-only": rescue(False),
@@ -271,6 +328,7 @@ def main():
     out = Path(__file__).with_name("transcripts.json")
     out.write_text(json.dumps(fixtures, indent=1) + "\n")
     Path(__file__).with_name("packages.json").write_text(json.dumps(packages(), indent=1) + "\n")
+    Path(__file__).with_name("commands.json").write_text(json.dumps(commands(), indent=1) + "\n")
     print(f"wrote {out}: " + ", ".join(f"{k} {len(v['transcript'])} transfers" for k, v in fixtures.items()))
 
 

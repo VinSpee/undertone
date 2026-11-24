@@ -9,6 +9,7 @@ use std::collections::BTreeSet;
 use std::fmt;
 use std::sync::Arc;
 
+pub mod bot;
 pub mod crc;
 pub mod fw;
 pub mod install;

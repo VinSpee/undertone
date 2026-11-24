@@ -369,7 +369,7 @@ impl SimRecovery {
         self.next_device = match self.o.after_reset {
             After::Uboot => Some(UBOOT),
             After::Recovery => Some(RECOVERY),
-            After::App => Some((0x3654, 0x7756)),
+            After::App => Some(crate::recovery::APP),
             After::Nothing => None,
         };
     }
