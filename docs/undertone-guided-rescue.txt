@@ -2,7 +2,7 @@ The guided rescue of `undertone`, run by tests/test_undertone.py on a simulated 
 
 +--------------------------------------------------------------------------------+
 |                                                                                |
-|          ▐▌ undertone                                    rescue kit 7          |
+|          ▐▌ undertone                                    rescue kit 8          |
 |          ────────────────────────────────────────────────────────────          |
 |                                                                                |
 |          what would you like to do?                                            |
@@ -29,7 +29,7 @@ The guided rescue of `undertone`, run by tests/test_undertone.py on a simulated 
 
 +--------------------------------------------------------------------------------+
 |                                                                                |
-|          ▐▌ undertone                                    rescue kit 7          |
+|          ▐▌ undertone                                    rescue kit 8          |
 |          ────────────────────────────────────────────────────────────          |
 |                                                                                |
 |          fix a pedal that will not start                                       |
@@ -56,7 +56,7 @@ The guided rescue of `undertone`, run by tests/test_undertone.py on a simulated 
 
 +--------------------------------------------------------------------------------+
 |                                                                                |
-|          ▐▌ undertone                                    rescue kit 7          |
+|          ▐▌ undertone                                    rescue kit 8          |
 |          ────────────────────────────────────────────────────────────          |
 |                                                                                |
 |          checking your pedal                                                   |
@@ -83,7 +83,7 @@ The guided rescue of `undertone`, run by tests/test_undertone.py on a simulated 
 
 +--------------------------------------------------------------------------------+
 |                                                                                |
-|          ▐▌ undertone                                    rescue kit 7          |
+|          ▐▌ undertone                                    rescue kit 8          |
 |          ────────────────────────────────────────────────────────────          |
 |                                                                                |
 |          checking your pedal                                                   |
@@ -110,7 +110,7 @@ The guided rescue of `undertone`, run by tests/test_undertone.py on a simulated 
 
 +--------------------------------------------------------------------------------+
 |                                                                                |
-|          ▐▌ undertone                                    rescue kit 7          |
+|          ▐▌ undertone                                    rescue kit 8          |
 |          ────────────────────────────────────────────────────────────          |
 |                                                                                |
 |          your pedal can be fixed                                               |
@@ -137,7 +137,7 @@ The guided rescue of `undertone`, run by tests/test_undertone.py on a simulated 
 
 +--------------------------------------------------------------------------------+
 |                                                                                |
-|          ▐▌ undertone                                    rescue kit 7          |
+|          ▐▌ undertone                                    rescue kit 8          |
 |          ────────────────────────────────────────────────────────────          |
 |                                                                                |
 |          replace the software?                                                 |
@@ -164,7 +164,7 @@ The guided rescue of `undertone`, run by tests/test_undertone.py on a simulated 
 
 +--------------------------------------------------------------------------------+
 |                                                                                |
-|          ▐▌ undertone                                    rescue kit 7          |
+|          ▐▌ undertone                                    rescue kit 8          |
 |          ────────────────────────────────────────────────────────────          |
 |                                                                                |
 |          replace the software?                                                 |
@@ -191,7 +191,7 @@ The guided rescue of `undertone`, run by tests/test_undertone.py on a simulated 
 
 +--------------------------------------------------------------------------------+
 |                                                                                |
-|          ▐▌ undertone                                    rescue kit 7          |
+|          ▐▌ undertone                                    rescue kit 8          |
 |          ────────────────────────────────────────────────────────────          |
 |                                                                                |
 |          fixing your pedal                                                     |
@@ -218,7 +218,7 @@ The guided rescue of `undertone`, run by tests/test_undertone.py on a simulated 
 
 +--------------------------------------------------------------------------------+
 |                                                                                |
-|          ▐▌ undertone                                    rescue kit 7          |
+|          ▐▌ undertone                                    rescue kit 8          |
 |          ────────────────────────────────────────────────────────────          |
 |                                                                                |
 |          fixing your pedal                                                     |
@@ -245,7 +245,7 @@ The guided rescue of `undertone`, run by tests/test_undertone.py on a simulated 
 
 +--------------------------------------------------------------------------------+
 |                                                                                |
-|          ▐▌ undertone                                    rescue kit 7          |
+|          ▐▌ undertone                                    rescue kit 8          |
 |          ────────────────────────────────────────────────────────────          |
 |                                                                                |
 |          fixing your pedal                                                     |
@@ -272,7 +272,7 @@ The guided rescue of `undertone`, run by tests/test_undertone.py on a simulated 
 
 +--------------------------------------------------------------------------------+
 |                                                                                |
-|          ▐▌ undertone                                    rescue kit 7          |
+|          ▐▌ undertone                                    rescue kit 8          |
 |          ────────────────────────────────────────────────────────────          |
 |                                                                                |
 |          fixing your pedal                                                     |
@@ -299,7 +299,7 @@ The guided rescue of `undertone`, run by tests/test_undertone.py on a simulated 
 
 +--------------------------------------------------------------------------------+
 |                                                                                |
-|          ▐▌ undertone                                    rescue kit 7          |
+|          ▐▌ undertone                                    rescue kit 8          |
 |          ────────────────────────────────────────────────────────────          |
 |                                                                                |
 |          fixing your pedal                                                     |
@@ -326,7 +326,7 @@ The guided rescue of `undertone`, run by tests/test_undertone.py on a simulated 
 
 +--------------------------------------------------------------------------------+
 |                                                                                |
-|          ▐▌ undertone                                    rescue kit 7          |
+|          ▐▌ undertone                                    rescue kit 8          |
 |          ────────────────────────────────────────────────────────────          |
 |                                                                                |
 |          ● your pedal is fixed                                                 |

@@ -76,17 +76,20 @@ carries `1.0.0`. To use another tag such as `rc`, change `"tag"` in `.changeset/
 
 ## The release's files
 
-The jobs `files` and `release` of `.github/workflows/release.yml` make the draft's files. They run after the tag step
+The jobs `program`, `files` and `release` of `.github/workflows/release.yml` make the draft's files. They run after the tag step
 found a tag without a release, and for a pushed tag.
 
-1. `files`, with read access only: it checks out the tag and builds as the `build` workflow does. `node tools/op.mjs
+1. `program`, with read access only: it builds `undertone` as one program (`undertone-cli/`) for each system, one Mac
+   program for both kinds of Mac, and keeps each as a workflow artifact. A system whose build does not finish, for
+   example when GitHub has no macOS runner free, is left out of the release, and the release goes on without it.
+2. `files`, with read access only: it checks out the tag and builds as the `build` workflow does. `node tools/op.mjs
    all` builds Gamut and every app of `firmware/apps`; a firmware with a pin fails when its packages are not the
    pinned release's bytes. It then runs the host tests with the packages built. `node tools/op.mjs kit` builds the rescue kit.
    The job then compares the files on disk with their pins: each pinned firmware's image and packages with its
    `firmware/apps/<name>/release.sha256`, the kit with `rescue/kit.sha256`. STARTER has no pin. Then
-   `node .github/scripts/assets.mjs` assembles the files, and the job keeps them as the workflow artifact
-   `release-files`.
-2. `release`, the only job of these two that can write: it creates the draft release with those files
+   `node .github/scripts/assets.mjs` assembles the files, with the programs the `program` job built, and the job keeps
+   them as the workflow artifact `release-files`.
+3. `release`, the only job of these three that can write: it creates the draft release with those files
    (`node .github/scripts/release.mjs --draft TAG DIR`). It refuses a tag that has a release already, draft or
    published, and never replaces or edits one. After the upload it checks that the draft holds every file at its size.
 
@@ -98,6 +101,8 @@ The files of a release:
 | `manifest.json`, `PocketX_9NN.fwsc`, `BlackBox_9NN.fwsc` | Gamut's manifest and its package for each pedal | `firmware/` |
 | `<app>-manifest.json`, `<app>-PocketX_9NN.fwsc`, `<app>-BlackBox_9NN.fwsc` | The same for each other firmware of the catalog, such as PALETTE | `firmware/apps/<app>/` |
 | `OpenPocket-rescue-kit-<N>.zip` | The rescue kit without M-VAVE's files ([rescue/README.md](../rescue/README.md)) | Not from the release: the site builds its own kit |
+| `undertone-macos`, `undertone-windows-x86_64.exe`, `undertone-linux-x86_64`, `undertone-linux-arm64` | `undertone` as one program for each system ([docs/RESCUE.md](RESCUE.md#undertone-as-one-program)); those the `program` job built | `undertone/` |
+| `undertone-SHA256SUMS` | The SHA-256 of each program; the Rescue card offers the programs it lists | `undertone/SHA256SUMS` |
 | `site.sha256` | The checksum list the site serves the release from: one line per file, its SHA-256, its path on the site and its asset name ([site/README.md](../site/README.md)) | |
 | `SHA256SUMS` | The SHA-256 of every other asset, for `sha256sum -c SHA256SUMS` | |
 
@@ -106,8 +111,8 @@ starter app and the MIDI test channel are built but not released. A release's as
 files carry the app's name. Each SHA-256 comes from the build, not from a download of the release.
 
 To make the files without a release, run the workflow by hand from the Actions tab, on any branch or tag. It runs the
-`files` job only and keeps the files as the artifact `release-files`; it creates no tag and no release. Locally, after
-`node tools/op.mjs all` and `node tools/op.mjs kit`:
+`program` and `files` jobs only and keeps the files as the artifact `release-files`; it creates no tag and no release.
+Locally, after `node tools/op.mjs all` and `node tools/op.mjs kit`:
 
 ```
 node .github/scripts/assets.mjs OUT_DIR

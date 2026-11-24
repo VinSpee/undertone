@@ -118,7 +118,14 @@ fn every_screen_is_composed_as_python_composes_it() {
             f["size"][0].as_u64().unwrap() as u16,
             f["size"][1].as_u64().unwrap() as u16,
         );
-        let frame = look::compose(&screen, &caps, cols, rows, f["tick"].as_f64().unwrap(), "7");
+        let frame = look::compose(
+            &screen,
+            &caps,
+            cols,
+            rows,
+            f["tick"].as_f64().unwrap(),
+            crate::kit::version(),
+        );
         let plain: Vec<String> = look::plain(&frame).split('\n').map(String::from).collect();
         assert_eq!(plain, strings(&f["plain"]), "frame {i}: {}", screen.title);
         let palette = Palette {

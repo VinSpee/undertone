@@ -67,6 +67,18 @@ before. These lines still work and do the same as undertone rescue:
   Windows:  RESCUE.bat --package firmware\BlackBox_023.fwsc
             RESCUE.bat --write --package firmware\BlackBox_023.fwsc
 
+One program instead (new)
+-------------------------
+undertone also comes as one program that needs nothing installed, not even
+Python or libusb: undertone-macos, undertone-windows-x86_64.exe,
+undertone-linux-x86_64 or undertone-linux-arm64, from the Rescue card of the
+installer page. Put it in this folder, beside the firmware folder, and start
+it here in place of undertone: it shows the same screens and asks the same
+questions. It has not been run on a real pedal yet: the undertone above is
+the tested way. The guide's section "undertone as one program" says how to
+start it on each system, where a Mac or Windows asks about a downloaded
+program that is not signed.
+
 After path B, DO NOT INSTALL OPENPOCKET ON THE PEDAL FROM THE INSTALLER PAGE.
 An installer that does not know the V22/V23 layout writes over the end of that
 boot loader, and the pedal goes dark again. On such a pedal Gamut is installed

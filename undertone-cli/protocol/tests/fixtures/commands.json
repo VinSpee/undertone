@@ -4,7 +4,7 @@
   "shown": [
    "",
    "undertone - rescue a pedal that will not start",
-   "rescue kit 7",
+   "rescue kit 8",
    "",
    "Step 1 of 2: a read-only check. It saves a backup of the whole pedal and writes nothing.",
    "Unplug the pedal. When this says it is waiting, plug it straight into this computer, with no hub.",
@@ -58,7 +58,7 @@
   "shown": [
    "",
    "undertone - rescue a pedal that will not start",
-   "rescue kit 7",
+   "rescue kit 8",
    "",
    "Step 1 of 2: a read-only check. It saves a backup of the whole pedal and writes nothing.",
    "Unplug the pedal. When this says it is waiting, plug it straight into this computer, with no hub.",
@@ -87,7 +87,7 @@
   "shown": [
    "",
    "undertone - rescue a pedal that will not start",
-   "rescue kit 7",
+   "rescue kit 8",
    "",
    "Step 1 of 2: a read-only check. It saves a backup of the whole pedal and writes nothing.",
    "Unplug the pedal. When this says it is waiting, plug it straight into this computer, with no hub.",
@@ -113,7 +113,7 @@
   "shown": [
    "",
    "undertone - put Gamut on a pedal",
-   "rescue kit 7",
+   "rescue kit 8",
    "",
    "Step 1 of 2: a dry run with M-VAVE's app area from BlackBox_023.fwsc (BlackBox_023), for M-VAVE's V22/V23 head. It saves a backup and writes nothing.",
    "When this says it is waiting: on a BlackBox with M-VAVE's V22 or V23 head, switch it off, hold HOME, the right footswitch and the knob's PUSH, switch it on and keep holding until the screen shows RECOVERY. A pedal already in the chip's USB boot state is taken as it is.",
@@ -209,7 +209,7 @@
   "shown": [
    "",
    "undertone - check a pedal",
-   "rescue kit 7",
+   "rescue kit 8",
    "",
    "A read-only check: it finds the pedal, saves a backup of the whole pedal and writes nothing.",
    "When this says it is waiting: on a BlackBox with M-VAVE's V22 or V23 head, switch it off, hold HOME, the right footswitch and the knob's PUSH, switch it on and keep holding until the screen shows RECOVERY. A pedal already in the chip's USB boot state is taken as it is.",
