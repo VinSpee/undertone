@@ -754,12 +754,17 @@ static void save_confirm(void)
 /* hold FX: the MIDI settings (docs/MIDI.md). KNOB changes the selected row, PUSH moves to the next row and, after the
  * last one, leaves; HOME leaves. The settings are saved (a flash write, as SAVE) only if something changed.
  * v42: a fourth row, USB AUDIO (docs/USB-AUDIO.md): the row shows mi_ua, and the setting (px_ua_on) follows only on
- * leaving, because a change takes the pedal off USB for a second. */
+ * leaving, because a change takes the pedal off USB for a second.
+ * A fifth row, USB PORT (docs/MIDI.md, "A footswitch by cable"): COMPUTER or FOOTSWITCH, the port the USB MIDI host of a
+ * footswitch by cable. It acts at once, so the usb line under the rows says what the host finds, and it is never saved. */
+enum { MI_CHAN, MI_SEND, MI_CLOCK,
 #if OP_UAUDIO
-enum { MI_CHAN, MI_SEND, MI_CLOCK, MI_UAUDIO, MI_ROWS };
-#else
-enum { MI_CHAN, MI_SEND, MI_CLOCK, MI_ROWS };
+       MI_UAUDIO,
 #endif
+#if OP_USB_HOST
+       MI_PORT,
+#endif
+       MI_ROWS };
 static uint32_t mi_row, mi_shown_hash = ~0u;
 static uint8_t mi_orig, mi_ua;
 static void midi_persist(void);                 /* openpocket.c: writes the settings to the store */
@@ -776,14 +781,20 @@ static void midi_draw(void)
     uint32_t h = mi_row | (uint32_t)px_midi_cfg_pack(&mid_cfg) << 4 | (uint32_t)mid_usb_up << 12 |
                  (uint32_t)mid_last[0] << 13 | (uint32_t)mid_last[1] << 16 | (uint32_t)mid_last[2] << 23 | (uint32_t)mi_ua << 31;
     h ^= (uint32_t)mid_c1_off * 0x27D4EB2Fu;
+#if OP_USB_HOST
+    h ^= (uint32_t)(px_usb_foot | px_uh.st << 1) * 0x9E3779B1u;
+#endif
     if (h == mi_shown_hash) return;
     mi_shown_hash = h;
+    static const char *const NAME[MI_ROWS] = {"channel", "send", "clock > delay",
 #if OP_UAUDIO
-    static const char *const NAME[MI_ROWS] = {"channel", "send", "clock > delay", "usb audio"};
-#else
-    static const char *const NAME[MI_ROWS] = {"channel", "send", "clock > delay"};
+                                              "usb audio",
 #endif
-    char v[MI_ROWS][8];
+#if OP_USB_HOST
+                                              "usb port",
+#endif
+    };
+    char v[MI_ROWS][12];
     if (mid_cfg.chan) { v[0][0] = (char)(mid_cfg.chan >= 10 ? '0' + mid_cfg.chan / 10 : ' '); v[0][1] = (char)('0' + mid_cfg.chan % 10); v[0][2] = 0; }
     else { v[0][0] = 'o'; v[0][1] = 'm'; v[0][2] = 'n'; v[0][3] = 'i'; v[0][4] = 0; }
     v[1][0] = v[2][0] = 0;
@@ -793,27 +804,41 @@ static void midi_draw(void)
     v[MI_UAUDIO][0] = 0;
     b_str(v[MI_UAUDIO], mi_ua ? "on" : "off");
 #endif
-    for (uint32_t r = 0; r < MI_ROWS; r++) {       /* (v42: four rows of 30 px; three of 36 before) */
-        uint32_t y = 36u + r * 30u;
+#if OP_USB_HOST
+    v[MI_PORT][0] = 0;
+    b_str(v[MI_PORT], px_usb_foot ? "footswitch" : "computer");
+#endif
+    for (uint32_t r = 0; r < MI_ROWS; r++) {       /* (five rows of 26 px; v42 four of 30, three of 36 before) */
+        uint32_t y = 36u + r * 26u;
         uint16_t bg = r == mi_row ? C_KEY : C_GROUND;
-        lcd_rect(0, y, 240, 28, bg);
-        if (r == mi_row) lcd_rect(2, y + 7u, 3, 14, C_HOUSING);
-        ft_box(8, y + 7u, 130, NAME[r], &GF_LB, r == mi_row ? C_HOUSING : C_LABEL, bg, 0);
-        ft_box(140, y + 3u, 92, v[r], &GF_MD, C_HOUSING, bg, 2);
+        lcd_rect(0, y, 240, 24, bg);
+        if (r == mi_row) lcd_rect(2, y + 5u, 3, 14, C_HOUSING);
+        ft_box(8, y + 4u, 92, NAME[r], &GF_LB, r == mi_row ? C_HOUSING : C_LABEL, bg, 0);
+        ft_box(100, y + 2u, 132, v[r], &GF_MD, C_HOUSING, bg, 2);
     }
-    ui_lamp_line(162, mid_usb_up ? "usb: host connected" : "usb: no host", &GF_LB, mid_usb_up, mid_usb_up ? C_HOUSING : C_LABEL);
+    const char *usb = mid_usb_up ? "usb: host connected" : "usb: no host";
+    int lit = mid_usb_up;
+#if OP_USB_HOST
+    if (px_usb_foot) {                             /* what the host finds (px_usbhost.h) */
+        static const char *const FOOT[] = {"usb: starting", "usb: no footswitch", "usb: not a midi device",
+                                           "usb: low speed device", "usb: footswitch connected", "usb: footswitch lost"};
+        usb = FOOT[px_uh.st <= PXU_LOST ? px_uh.st : 0];
+        lit = px_uh.st == PXU_OK;
+    }
+#endif
+    ui_lamp_line(170, usb, &GF_LB, lit, lit ? C_HOUSING : C_LABEL);
     char l[24]; l[0] = 0;
     if (mid_last[0] == PXM_PC) { b_str(l, "last: PC "); b_num(l, mid_last[1] + 1u); }
     else if (mid_last[0] == PXM_CC) { b_str(l, "last: CC "); b_num(l, mid_last[1]); b_str(l, " = "); b_num(l, mid_last[2]); }
     else b_str(l, "last: none");
-    ft_box(0, 186, 240, l, &GF_LB, C_HOUSING, C_GROUND, 1);
+    ft_box(0, 188, 240, l, &GF_LB, C_HOUSING, C_GROUND, 1);
     /* v41: the second core retired (one core left until a power cycle: presets that need both go to BYP), and why */
     char c[32]; c[0] = 0;
     if (mid_c1_off) {
         static const char *const WHY[] = {"", "misread", "late", "until power-off", "fault", "silent"};
         b_str(c, "core 2 off: "); b_str(c, mid_c1_off <= 5u ? WHY[mid_c1_off] : "?");
     }
-    ft_box(0, 204, 240, c, &GF_LB, C_AMBER, C_GROUND, 1);
+    ft_box(0, 205, 240, c, &GF_LB, C_AMBER, C_GROUND, 1);
 }
 static void midi_close(void)
 {
@@ -828,7 +853,12 @@ static void midi_knob(int dd)
     if (mi_row == MI_CHAN) mid_cfg.chan = (uint8_t)((mid_cfg.chan + 17u + (uint32_t)(dd > 0 ? 1 : 16)) % 17u);
     else if (mi_row == MI_SEND) mid_cfg.send ^= 1u;
     else if (mi_row == MI_CLOCK) mid_cfg.clock ^= 1u;
-    else mi_ua ^= 1u;
+#if OP_UAUDIO
+    else if (mi_row == MI_UAUDIO) mi_ua ^= 1u;
+#endif
+#if OP_USB_HOST
+    else if (mi_row == MI_PORT) px_usb_foot ^= 1u;   /* (px_uh_service, openpocket.c, makes the change on the next pass) */
+#endif
 }
 static void midi_push(void) { if (++mi_row >= MI_ROWS) midi_close(); }
 

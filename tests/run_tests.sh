@@ -17,6 +17,8 @@
 #    the controller and a computer: with the setting off the descriptors are the earlier device's byte for byte; with
 #    it on, the descriptors, the requests, 10 minutes of each stream with the clocks apart (no gap, no repeat)
 #    and the MIDI input ring with an app's reader of it (firmware/base/midi.h): unread, it blocks the installer's SysEx
+#  - USB footswitch by cable (the pedal its USB MIDI host): felucca-bsp's descriptor parser on the M-VAVE Chocolate's
+#    layout, the packets passed, the screen's state (firmware/px_usbhost.h), the host's clock across TIMER4's wrap
 #  - LED map + lights driver (led_probe.h, px_leds.h): PC7 enable after the first byte, the 595 timing, the table
 #  - package reader: tools/pocketx_fw.py on packages built to the old (0x4000) and the V22 (0x6000) layout: info, unpack, pack
 #  - packages: tools/pxpkg.py rebuilds the official PocketX_016 app area byte for byte (needs the official file)
@@ -84,6 +86,8 @@ if cmp -s build/usb_desc_off.txt build/usb_desc_ref.txt; then echo "USB AUDIO of
 else echo "USB AUDIO off: the descriptors differ from the earlier device's"; diff build/usb_desc_ref.txt build/usb_desc_off.txt; exit 1; fi
 build/test_usb_audio > build/usb_audio.log || { cat build/usb_audio.log; exit 1; }
 tail -1 build/usb_audio.log
+echo "== USB footswitch by cable (the descriptor parser on the Chocolate's layout, the packets passed, the screen's state, the host's clock)"
+base_test test_usb_host $CC -O1 -Wall -Wno-unused-function -Ifirmware tests/test_usb_host.c
 echo "== LED map and the lights driver (LED_PROBE build, issue #8)"
 mkdir -p build/lp && $CC -O1 -Wall -Wno-unused-function -Ifirmware -o build/lpsim tests/lpsim.c && build/lpsim build/lp
 echo "== simulated pedal"

@@ -15,6 +15,10 @@
  * endpoint 4, isochronous): the computer records the pedal's sound and plays through its output. 16-bit stereo at
  * 44.1 kHz. With the setting off the USB device is the same as before, byte for byte (tests/test_usb_audio.c).
  *
+ * With OP_USB_HOST 1 the port can also be the USB MIDI host of a footswitch by cable, an M-VAVE Chocolate (felucca-bsp's
+ * chip/usb_host.c; px_usbhost.h; docs/MIDI.md, "A footswitch by cable"), while the app asks for it (px_uh_service). Never at
+ * power-on: the installer, the editor over USB and the rescue always find the USB device first.
+ *
  * A part of the base firmware (docs/BASE-FIRMWARE.md). The including file provides: ed_service(now), the app's own SysEx
  * service, which runs before the installer's and may be empty (px_editor.h is OpenPocket's); a_collect and the audio's
  * state (base/audio.h); the boot guard and op_diag (base/board.h, base/diag.h). It may define OP_FLASH_OWN (the flash
@@ -36,6 +40,13 @@ static uint32_t uad_lo = 52u, uad_hi = 108u, uad_prime = 80u, uad_tgt = 208u;
 #define UA_PRIME uad_prime
 #define UO_TGT uad_tgt
 #endif
+#endif
+#if OP_USB_HOST
+#define FELUCCA_USB_HOST 1
+#include "px_usbhost.h"
+static volatile uint32_t px_uh_ms;              /* the host's clock: milliseconds that never start again as ms_now does */
+static pxu_ms_t px_uh_clk;                      /* (advanced by the USB interrupt, px_usbhost.h pxu_ms_add) */
+#define UH_MS px_uh_ms
 #endif
 #define FELUCCA_USB_PRODUCT "OpenPocket"
 #define FELUCCA_USB_MANUFACTURER "OpenPocket"
@@ -80,6 +91,9 @@ void fm1_timer5_irq(void)                       /* 10 kHz; USB at 2 kHz */
         px_t5_sub = 0;
         fm1_ms = ms_now();                      /* usb.c stamps each MIDI message with fm1_ms: the main loop's clock, so MIDI
                                                  * clock and taps measure time (it was never advanced: every stamp was 0) */
+#if OP_USB_HOST
+        px_uh_ms += pxu_ms_add(&px_uh_clk, fm1_ticks(), FM1_TICKS_PER_US * 1000u);
+#endif
 #if OP_UADEV
         uad_poll();
 #endif
@@ -231,3 +245,19 @@ static void px_usb_service(uint32_t now)        /* every main-loop pass */
         }
     }
 }
+
+#if OP_USB_HOST
+typedef char pxu_msg_check[(UH_MSG_ON == PXU_MSG_ON && UH_MSG_OFF == PXU_MSG_OFF && UH_MSG_MIDI == PXU_MSG_MIDI &&
+                            UH_MSG_NOMIDI == PXU_MSG_NOMIDI && UH_MSG_LOW == PXU_MSG_LOW && UH_MSG_LOST == PXU_MSG_LOST) ? 1 : -1];
+/* every main-loop pass, after px_usb_service: foot 1 makes the port the host of a footswitch, 0 the USB device again (within a
+ * pass, usb_retry); u follows what the host sees. As host it finds the footswitch with blocking control transfers on this
+ * loop (some 150 ms when one is plugged in) and puts its channel messages in the ring USB MIDI fills: the app reads them as a
+ * computer's. The port does not power the footswitch: VBUS comes from outside (an OTG adapter with a charging input) */
+static void px_uh_service(uint32_t foot, pxu_t *u)
+{
+    usb_host_switch(foot);
+    usb_host_task(px_uh_ms);
+    pxu_msg(u, usb_host_message());
+    if (usb_host_active()) pxu_line(u, fm1_usb_line(), px_uh_ms);
+}
+#endif

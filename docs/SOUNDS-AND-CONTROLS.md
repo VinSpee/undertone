@@ -183,7 +183,7 @@ In the top plate of PLAY: the **battery** (v36), from the chip's own VBAT/4 chan
 figure too at 15 %; `usb` when the 5 V supply is there); the diagnostics page shows the same reading in volts.
 
 ## MIDI over USB-C (test build v37; [MIDI.md](MIDI.md))
-**Hold FX** for 0.8 s: the MIDI page (CHANNEL OMNI or 1 to 16, SEND, CLOCK > DELAY, USB AUDIO: [USB-AUDIO.md](USB-AUDIO.md)). Program Change 0 to 51 loads slot 1 to 52;
+**Hold FX** for 0.8 s: the MIDI page (CHANNEL OMNI or 1 to 16, SEND, CLOCK > DELAY, USB AUDIO: [USB-AUDIO.md](USB-AUDIO.md), USB PORT for a footswitch by cable: [MIDI.md](MIDI.md#a-footswitch-by-cable)). Program Change 0 to 51 loads slot 1 to 52;
 Control Change sets the sound; the pedal sends Program Change and Control Change for what you do on it.
 
 | Block | On / off | Model | Setting 1 | 2 | 3 | 4 | 5 |

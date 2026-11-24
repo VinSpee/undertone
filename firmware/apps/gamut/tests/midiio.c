@@ -285,6 +285,25 @@ int main(void)
         px_midi_service();
         ok(PRESET.on[PX_B_DRIVE] == !was, "after a preset change the toggle flips what the new preset has");
     }
+    {   /* USB PORT on FOOTSWITCH: chip/usb_host.c puts the footswitch's packets in usb.c's ring, so they act as a computer's;
+         * nothing is sent to it and no computer is shown; back on COMPUTER the pedal's changes go out as before */
+        reset();
+        px_usb_foot = 1;                                /* (usb_midi_out_ready: the footswitch's OUT endpoint is up) */
+        midi_enqueue(pc(0, 11), 1); px_midi_service();
+        int pcok = cur_preset == 11;
+        steps = 0;
+        midi_enqueue(cc(0, PXM_CC_NEXT, 127), 2); midi_enqueue(cc(0, PXM_CC_NEXT, 0), 3); px_midi_service();
+        ok(pcok && steps == 1 && cur_preset == 12, "FOOTSWITCH: its Program Change and CC 118 act as a computer's");
+        while (pop_out()) {}
+        cur_preset = 9; load_preset(9); PRESET.on[PX_B_DELAY] ^= 1;   /* the pedal's own changes, SEND on */
+        px_midi_service();
+        ok(pop_out() == 0 && mid_usb_up == 0, "FOOTSWITCH: nothing is sent to the footswitch, and no computer is shown");
+        px_usb_foot = 0;
+        px_midi_service(); while (pop_out()) {}
+        cur_preset = 12; load_preset(12);
+        px_midi_service();
+        ok(mid_usb_up == 1 && pop_out() == pc(0, 12) && pop_out() == 0, "COMPUTER again: a preset change on the pedal is sent, as before");
+    }
     printf("\n%s\n", failed ? "MIDI glue tests FAILED" : "all MIDI glue tests passed");
     return failed ? 1 : 0;
 }

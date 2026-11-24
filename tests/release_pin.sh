@@ -18,7 +18,8 @@
 # record with its registers and SP (firmware/bsp/chip/fm1_cpu1.h), and its layout: the chain along a line, the selected
 # block's label beside the 58 px preset number, the tuner's 81 px note over a scale, footers of a control and what it
 # does, the update's step dots, and its own screens for a start, a failed start's report, a crash and the rescue mode
-# (firmware/apps/gamut/ui_boot.h).
+# (firmware/apps/gamut/ui_boot.h), and the MIDI page's USB PORT row, the pedal the USB MIDI host of a footswitch by cable
+# (firmware/px_usb.h, firmware/px_usbhost.h).
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 NAME="$1"
 case "$NAME" in ""|*[!a-z0-9-]*) echo "usage: tests/release_pin.sh NAME [SUMS]   (NAME: a folder of firmware/apps)"; exit 2;; esac

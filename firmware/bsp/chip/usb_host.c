@@ -30,6 +30,11 @@ enum { S_DEVCTL = 15, S_TXTYPE = 24, S_TXINTERVAL = 25, S_RXTYPE = 26, S_RXINTER
 enum { UH_MSG_NONE, UH_MSG_ON, UH_MSG_OFF, UH_MSG_MIDI, UH_MSG_NOMIDI, UH_MSG_LOW, UH_MSG_LOST };
 #define UH_FIRST_ADDR 1u
 #define UH_MAX_ERRORS 16u
+/* The host's millisecond clock for its waits and timeouts. It must count on across any wrap of the application's own
+ * clock: an application whose fm1_ms jumps back gives its own (OpenPocket's Gamut: px_usb.h px_uh_ms). */
+#ifndef UH_MS
+#define UH_MS fm1_ms
+#endif
 
 static uint8_t uh_rx[64 + 4] __attribute__((aligned(4)));
 static uint8_t uh_cfg[320];                                  /* a configuration, cut short if longer */
@@ -62,15 +67,15 @@ static uint32_t usb_host_message(void)
 /* ------------------------------------------------ main loop: control --- */
 static void uh_wait(uint32_t ms)                        /* main loop only */
 {
-    uint32_t t = fm1_ms;
-    while (fm1_ms - t < ms)
+    uint32_t t = UH_MS;
+    while (UH_MS - t < ms)
         fm1_wdt_feed();
 }
 
 /* CSR0 (host) until want_set bits are all set and want_clr are all clear: >= 0 the CSR0, < 0 a stall / error / timeout */
 static int uh_csr0(uint32_t want_set, uint32_t want_clr)
 {
-    uint32_t t = fm1_ms, v;
+    uint32_t t = UH_MS, v;
     for (;;) {
         v = sie_rd(S_CSR0);
         if (v & 0x04u) {                                /* RxStall */
@@ -83,7 +88,7 @@ static int uh_csr0(uint32_t want_set, uint32_t want_clr)
         }
         if ((v & want_set) == want_set && !(v & want_clr))
             return (int)v;
-        if (fm1_ms - t > 500u)
+        if (UH_MS - t > 500u)
             return -3;
         fm1_wdt_feed();
     }
@@ -193,11 +198,11 @@ static int uh_hub_port_probe(uint8_t p, uint32_t st, uh_midi_t *m)
         return 0;
     if (uh_ctl(addr, 0x23, 3, 4, p, 0, 0, mps) < 0)    /* SET_FEATURE(PORT_RESET) */
         return 0;
-    t = fm1_ms;
+    t = UH_MS;
     for (;;) {
         if (uh_ctl(addr, 0xA3, 0, 0, p, 4, b, mps) >= 4 && (b[2] & 0x10u))   /* C_PORT_RESET */
             break;
-        if (fm1_ms - t > 500u)
+        if (UH_MS - t > 500u)
             return 0;
         uh_wait(10);
     }
@@ -239,7 +244,7 @@ static int uh_hub_probe(uint8_t addr, uint8_t mps, uint8_t cfgval, uh_midi_t *m)
     uh.hub_mps = mps;
     uh.hub_ports = ports;
     uh.hub_poll_port = 1;
-    uh.hub_poll_ms = fm1_ms;
+    uh.hub_poll_ms = UH_MS;
     for (p = 1; p <= ports; p++) {
         if (!uh_hub_status(p, b))
             return 0;
@@ -452,7 +457,7 @@ static void uh_tx_poll(void)
 {
     uint32_t csr = sie_rd(S_TXCSR1), n = 0;
     if (uh.tx_count) {
-        if ((csr & 0x20u) || fm1_ms - uh.tx_ms >= 500u) {
+        if ((csr & 0x20u) || UH_MS - uh.tx_ms >= 500u) {
             uh_fail();
             return;
         }
@@ -479,7 +484,7 @@ static void uh_tx_poll(void)
     }
     if (!n) return;
     uh.tx_count = (uint8_t)(n / 4u);
-    uh.tx_ms = fm1_ms;
+    uh.tx_ms = UH_MS;
     fm1_usb_ep_send(1, ep1tx, n);
     sie_wr(S_TXCSR1, 0x01u);
 }
