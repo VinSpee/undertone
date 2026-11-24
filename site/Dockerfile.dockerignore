@@ -5,9 +5,15 @@
 !docs
 !site
 !rescue
+!tools/undertone.py
+!tools/undertone_screens.py
 !tools/uboot_rescue.py
+!tools/uboot_install.py
+!tools/pd40_install.py
 !tools/pocketx_fw.py
 !tools/pd40_recovery.py
+!undertone
+!undertone.cmd
 !RESCUE.bat
 !LICENSE
 docs/firmware

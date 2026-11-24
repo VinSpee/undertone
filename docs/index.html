@@ -298,8 +298,8 @@ h2{font-size:clamp(40px,6.4vw,104px);line-height:.88;font-weight:900;font-variat
       <div>
         <h3 class="steps-h">What the rescue does</h3>
         <ol class="steps">
-          <li><div><b>The first run only reads</b>It checks the pedal, saves a backup of the whole flash and writes nothing.<code><span class="t">uboot_rescue.py</span> <span class="t">--package</span> <span class="t">…</span></code></div></li>
-          <li><div><b>The second run restores</b>Only after the check has passed, with the official file that matches the firmware the pedal had: V22 or V23 at any time, or not sure, takes one file; V16, V17 or V20 the other.<code><span class="t">uboot_rescue.py</span> <span class="t">--write</span> <span class="t">--package</span> <span class="t">…</span></code></div></li>
+          <li><div><b>It checks first</b>It reads the pedal, saves a backup of the whole flash and writes nothing.<code><span class="t">undertone</span></code></div></li>
+          <li><div><b>Then it restores, if you say yes</b>Only after the check has passed, with the official file that matches the firmware the pedal had. It asks before it writes anything.<code><span class="t">undertone rescue</span></code></div></li>
         </ol>
         <p class="small"><a href="install.html#rescueCard">The full steps for a Mac or Windows PC, with the exact commands</a></p>
       </div>
