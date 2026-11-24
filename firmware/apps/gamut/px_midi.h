@@ -7,6 +7,7 @@
  *   px_midi_cc_apply a Control Change -> the preset (and the MASTER volume)
  *   px_midi_tx_next  the next message the pedal sends so the host follows the pedal (Program Change, then CCs)
  *   px_midi_clock_*  MIDI clock -> a quarter-note time, for the delay TIME
+ *   px_midi_tap      CC 116's taps -> a quarter-note time, for the delay TIME (CC 118 / 119 step the preset: px_midi_io.h)
  *
  * Needs px_dsp.h (px_preset_t, px_ntypes, px_dly_value_for_ms). SysEx never comes here: usb.c routes it to the
  * update / editor code, and only channel voice messages and clock reach the ring this file reads.
@@ -235,4 +236,29 @@ static uint32_t px_midi_clock_tick(px_midi_clock_t *c, uint32_t ms)
     if (c->prev_q && (q > c->prev_q ? q - c->prev_q : c->prev_q - q) <= 3u) { c->prev_q = q; return q; }
     c->prev_q = q;
     return 0;
+}
+
+/* ---- three Control Changes outside the map, for a controller's footswitches (from ettorebox, Roberto Antonacci: commits
+ * c324798 and 5675bcc). At 64 and up: CC 116 is a tap of the delay's tempo, CC 118 and 119 step to the next and the
+ * previous preset as the pedal's footswitches do. A footswitch's release (below 64) does nothing. */
+#define PXM_CC_TAP  116u
+#define PXM_CC_NEXT 118u
+#define PXM_CC_PREV 119u
+/* Two taps 200 ms to 2 s apart give their interval, and from the third tap on the mean of the last three intervals. A pause
+ * of more than 2 s starts over; a tap less than 200 ms after the last is a bounce (or a second message of one press) */
+typedef struct { uint32_t ms, n, at, iv[3]; } px_midi_tap_t;   /* the last tap, the taps in this run (up to 4), the next interval's place */
+/* one tap at time `ms`; returns the quarter note in ms (200..2000), or 0 */
+static uint32_t px_midi_tap(px_midi_tap_t *t, uint32_t ms)
+{
+    const uint32_t d = ms - t->ms;
+    uint32_t k, s = 0, i;
+    if (!t->n || d > 2000u) { t->n = 1; t->at = 0; t->ms = ms; return 0; }
+    if (d < 200u) return 0;
+    t->ms = ms;
+    t->iv[t->at] = d;
+    t->at = (t->at + 1u) % 3u;
+    if (t->n < 4u) t->n++;
+    k = t->n - 1u;
+    for (i = 0; i < k; i++) s += t->iv[i];
+    return (s + k / 2u) / k;
 }

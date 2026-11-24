@@ -5,7 +5,7 @@
  * midi_in_q (4-byte USB-MIDI event packets, with the millisecond they arrived) and sends what is put in midi_out_q.
  * SysEx never takes this road: it goes to the update code (ota.c) and the editor (px_editor.h) only.
  * The including file provides px_midi.h, usb.c's rings, PRESET, cur_preset, load_preset, master_vol, ui_mode / ui_item /
- * ui_nitems (ui.h), st_midi, st_usb and st_commit (px_store.h), and ms_now.
+ * ui_nitems and ui_preset_step (ui.h), st_midi, st_usb and st_commit (px_store.h), and ms_now.
  *
  * The ring must be emptied: usb.c leaves the host's USB packet unread (NAK) while the ring is nearly full, and the
  * editor's and installer's SysEx come in the same packets. Nothing drained it before this file.
@@ -14,6 +14,7 @@
 
 static px_midi_tx_t mid_tx;
 static px_midi_clock_t mid_clk;
+static px_midi_tap_t mid_tap;
 
 static void midi_persist(void)                  /* the page's HOME: save the settings (the sound is not touched) */
 {
@@ -37,6 +38,13 @@ static void px_midi_ble_write(const uint8_t *p, uint32_t n)
 }
 #endif
 
+/* a quarter note in ms, from MIDI clock or CC 116's taps: the delay's TIME, the nearest step */
+static void mid_quarter(uint32_t q, int *touched)
+{
+    int v = px_dly_value_for_ms(PRESET.type[PX_B_DELAY], (float)q);
+    if (PRESET.p[PX_B_DELAY][0] != v) { PRESET.p[PX_B_DELAY][0] = (uint8_t)v; *touched = 1; }
+}
+
 /* one received event packet, from either road; *touched: the sound changed */
 static void px_midi_in(uint32_t pkt, uint32_t ms, int free_ui, int *touched)
 {
@@ -44,10 +52,7 @@ static void px_midi_in(uint32_t pkt, uint32_t ms, int free_ui, int *touched)
     if (m.type == PXM_IGNORE) return;
     if (m.type == PXM_CLOCK) {
         uint32_t q = mid_cfg.clock && free_ui ? px_midi_clock_tick(&mid_clk, ms) : 0u;
-        if (q) {
-            int v = px_dly_value_for_ms(PRESET.type[PX_B_DELAY], (float)q);
-            if (PRESET.p[PX_B_DELAY][0] != v) { PRESET.p[PX_B_DELAY][0] = (uint8_t)v; *touched = 1; }
-        }
+        if (q) mid_quarter(q, touched);
         return;
     }
     if (m.type == PXM_START || m.type == PXM_STOP) { px_midi_clock_reset(&mid_clk); return; }
@@ -60,6 +65,11 @@ static void px_midi_in(uint32_t pkt, uint32_t ms, int free_ui, int *touched)
             if ((int)ui_item >= ui_nitems()) ui_item = 0;
             *touched = 1;
         }
+    } else if (m.d1 == PXM_CC_TAP) {                  /* a tap of the delay's tempo */
+        uint32_t q = m.d2 >= 64u && free_ui ? px_midi_tap(&mid_tap, ms) : 0u;
+        if (q) mid_quarter(q, touched);
+    } else if (m.d1 == PXM_CC_NEXT || m.d1 == PXM_CC_PREV) {   /* the next / the previous preset, as the footswitches */
+        if (m.d2 >= 64u && free_ui) { ui_preset_step(m.d1 == PXM_CC_NEXT ? 1 : -1); *touched = 1; }
     } else {
         uint32_t mv = master_vol;
         int mset = 0;
