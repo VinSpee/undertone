@@ -105,6 +105,7 @@ fn command(scenario: &str, cmd: Cmd, flash: Vec<u8>, starts: &[Start], answer: &
         attempts: 10,
         layouts: layouts(),
         heads: install::HEADS.to_vec(),
+        windows: false,
     };
     let code = match cmd {
         Cmd::Rescue => commands::cmd_rescue(&mut ctx, None, None),

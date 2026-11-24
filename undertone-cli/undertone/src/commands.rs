@@ -54,6 +54,8 @@ pub struct Ctx<'a> {
     /// The flash layouts and recovery heads undertone knows (the tests give synthetic ones).
     pub layouts: Vec<Layout>,
     pub heads: Vec<(u32, &'static str)>,
+    /// Whether this computer is Windows, where only the chip's USB boot state is reachable.
+    pub windows: bool,
 }
 
 impl Ctx<'_> {
@@ -70,7 +72,7 @@ impl Ctx<'_> {
             heads: self.heads.clone(),
             backups: self.backups.clone(),
             attempts: self.attempts,
-            boot_state_only: cfg!(windows),
+            boot_state_only: self.windows,
         };
         let out = std::cell::RefCell::new(&mut *self.out);
         let mut log = |m: &str| out.borrow_mut().log(m);
@@ -358,7 +360,7 @@ pub fn install_source(root: &Path, from: InstallFrom, layouts: &[Layout]) -> Res
 
 pub fn cmd_install(ctx: &mut Ctx, from: InstallFrom) -> i32 {
     ctx.out.header("put Gamut on a pedal");
-    if cfg!(windows) {
+    if ctx.windows {
         let e = Error::Setup(
             "this tool does not run on Windows: M-VAVE's recovery mode has not been tried there. undertone rescue \
              restores the official firmware (docs/RESCUE.md)"
@@ -435,7 +437,7 @@ pub fn cmd_check(ctx: &mut Ctx) -> i32 {
     ctx.out.header("check a pedal");
     ctx.out
         .line("A read-only check: it finds the pedal, saves a backup of the whole pedal and writes nothing.");
-    ctx.out.line(if cfg!(windows) {
+    ctx.out.line(if ctx.windows {
         "Plug the pedal straight into this computer, with no hub."
     } else {
         KEY_HOLD

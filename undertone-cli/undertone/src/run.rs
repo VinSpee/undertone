@@ -120,7 +120,7 @@ pub fn run(job: Job, env: &mut Env, log: &mut dyn FnMut(&str), say: &mut dyn FnM
             let msc = if install_route {
                 install::boot_state(bus, layouts, heads, &mut l2, &mut s1)?
             } else {
-                uboot::wait_for_pedal(bus, cfg!(windows), &mut l2)?
+                uboot::wait_for_pedal(bus, env.boot_state_only, &mut l2)?
             };
             l3("pedal found");
             Ok(msc)

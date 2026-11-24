@@ -185,6 +185,7 @@ fn main() -> ExitCode {
         attempts: common.attempts,
         layouts: undertone_protocol::install::layouts(),
         heads: undertone_protocol::install::HEADS.to_vec(),
+        windows: cfg!(windows),
     };
     code(match &command {
         Command::Rescue { package, image, .. } => commands::cmd_rescue(&mut ctx, package.as_deref(), image.as_deref()),
