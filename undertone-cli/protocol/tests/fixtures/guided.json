@@ -1,0 +1,1454 @@
+{
+ "rescue": {
+  "screens": [
+   {
+    "ask": {
+     "title": "what would you like to do?",
+     "lines": [
+      "Undertone works on your pedal over its USB cable."
+     ],
+     "choices": [
+      [
+       "rescue",
+       "fix a pedal that will not start"
+      ],
+      [
+       "install",
+       "put gamut on my pedal"
+      ],
+      [
+       "check",
+       "check my pedal"
+      ]
+     ],
+     "selected": 0,
+     "pedal": false,
+     "status": null,
+     "warn": [],
+     "problem": false,
+     "finished": false,
+     "aside": [],
+     "foot": "choose"
+    },
+    "key": "rescue"
+   },
+   {
+    "ask": {
+     "title": "fix a pedal that will not start",
+     "lines": [
+      "First a safe check: undertone saves a copy of your pedal.",
+      "Nothing changes until you say so."
+     ],
+     "choices": [
+      [
+       "go",
+       "start the check"
+      ],
+      [
+       "back",
+       "back"
+      ]
+     ],
+     "selected": 0,
+     "pedal": false,
+     "status": null,
+     "warn": [],
+     "problem": false,
+     "finished": false,
+     "aside": [],
+     "foot": "choose"
+    },
+    "key": "go"
+   },
+   {
+    "work": {
+     "title": "checking your pedal",
+     "lines": [
+      "Unplug your pedal, then plug it straight into this computer."
+     ],
+     "choices": [],
+     "selected": 0,
+     "pedal": false,
+     "status": null,
+     "warn": [],
+     "problem": false,
+     "finished": false,
+     "aside": [],
+     "foot": "choose"
+    },
+    "write": false,
+    "hint": [
+     "Still looking. Plug straight into this computer, no hub.",
+     "A pedal that will not start shows up between restarts."
+    ],
+    "phases": [
+     "looking",
+     "found",
+     "reading",
+     "saving",
+     "checking",
+     "restarting"
+    ],
+    "code": 0,
+    "text": "Read-only run finished, nothing was written. 155 sectors differ from the image. Backup: BACKUP"
+   },
+   {
+    "ask": {
+     "title": "your pedal can be fixed",
+     "lines": [
+      "Undertone puts M-VAVE V23 back on it."
+     ],
+     "choices": [
+      [
+       "go",
+       "fix it now"
+      ],
+      [
+       "later",
+       "not now"
+      ]
+     ],
+     "selected": 0,
+     "pedal": false,
+     "status": null,
+     "warn": [],
+     "problem": false,
+     "finished": false,
+     "aside": [],
+     "foot": "choose"
+    },
+    "key": "go"
+   },
+   {
+    "ask": {
+     "title": "replace the software?",
+     "lines": [
+      "This replaces the software on your pedal.",
+      "A copy is saved first. Continue?"
+     ],
+     "choices": [
+      [
+       "no",
+       "no"
+      ],
+      [
+       "yes",
+       "yes"
+      ]
+     ],
+     "selected": 0,
+     "pedal": false,
+     "status": null,
+     "warn": [],
+     "problem": false,
+     "finished": false,
+     "aside": [],
+     "foot": "choose"
+    },
+    "key": "yes"
+   },
+   {
+    "work": {
+     "title": "fixing your pedal",
+     "lines": [
+      "Unplug your pedal, then plug it back in.",
+      "Leave the cable alone while undertone works."
+     ],
+     "choices": [],
+     "selected": 0,
+     "pedal": false,
+     "status": null,
+     "warn": [],
+     "problem": false,
+     "finished": false,
+     "aside": [],
+     "foot": "choose"
+    },
+    "write": true,
+    "hint": [
+     "Still looking. Plug straight into this computer, no hub.",
+     "A pedal that will not start shows up between restarts."
+    ],
+    "phases": [
+     "looking",
+     "found",
+     "reading",
+     "saving",
+     "checking",
+     "writing",
+     "restarting"
+    ],
+    "code": 0,
+    "text": "Done: 155 sectors written and verified. Power-cycle the pedal. Backup: BACKUP"
+   },
+   {
+    "ask": {
+     "title": "your pedal is fixed",
+     "lines": [
+      "Unplug it, then switch it off and on again.",
+      "To add Gamut later, use undertone, not the installer page."
+     ],
+     "choices": [
+      [
+       "done",
+       "done"
+      ],
+      [
+       "guide",
+       "open the guide"
+      ]
+     ],
+     "selected": 0,
+     "pedal": false,
+     "status": null,
+     "warn": [],
+     "problem": false,
+     "finished": true,
+     "aside": [
+      "copy of your pedal:",
+      "BACKUP"
+     ],
+     "foot": "choose"
+    },
+    "key": "done"
+   }
+  ],
+  "opened": [],
+  "code": 0,
+  "restart": null,
+  "lines": [
+   "Done: 155 sectors written and verified. Power-cycle the pedal. Backup: BACKUP",
+   "Next: unplug the cable, switch the pedal off, wait 5 seconds and switch it on.",
+   "Do not install Gamut on it from an installer page: use undertone install."
+  ],
+  "backup": true,
+  "flash": "89e430c5eea2bc93089de8284e34ff358b30245d4756f891d7d2e3400f829c28"
+ },
+ "rescue-not-now": {
+  "screens": [
+   {
+    "ask": {
+     "title": "what would you like to do?",
+     "lines": [
+      "Undertone works on your pedal over its USB cable."
+     ],
+     "choices": [
+      [
+       "rescue",
+       "fix a pedal that will not start"
+      ],
+      [
+       "install",
+       "put gamut on my pedal"
+      ],
+      [
+       "check",
+       "check my pedal"
+      ]
+     ],
+     "selected": 0,
+     "pedal": false,
+     "status": null,
+     "warn": [],
+     "problem": false,
+     "finished": false,
+     "aside": [],
+     "foot": "choose"
+    },
+    "key": "rescue"
+   },
+   {
+    "ask": {
+     "title": "fix a pedal that will not start",
+     "lines": [
+      "First a safe check: undertone saves a copy of your pedal.",
+      "Nothing changes until you say so."
+     ],
+     "choices": [
+      [
+       "go",
+       "start the check"
+      ],
+      [
+       "back",
+       "back"
+      ]
+     ],
+     "selected": 0,
+     "pedal": false,
+     "status": null,
+     "warn": [],
+     "problem": false,
+     "finished": false,
+     "aside": [],
+     "foot": "choose"
+    },
+    "key": "go"
+   },
+   {
+    "work": {
+     "title": "checking your pedal",
+     "lines": [
+      "Unplug your pedal, then plug it straight into this computer."
+     ],
+     "choices": [],
+     "selected": 0,
+     "pedal": false,
+     "status": null,
+     "warn": [],
+     "problem": false,
+     "finished": false,
+     "aside": [],
+     "foot": "choose"
+    },
+    "write": false,
+    "hint": [
+     "Still looking. Plug straight into this computer, no hub.",
+     "A pedal that will not start shows up between restarts."
+    ],
+    "phases": [
+     "looking",
+     "found",
+     "reading",
+     "saving",
+     "checking",
+     "restarting"
+    ],
+    "code": 0,
+    "text": "Read-only run finished, nothing was written. 155 sectors differ from the image. Backup: BACKUP"
+   },
+   {
+    "ask": {
+     "title": "your pedal can be fixed",
+     "lines": [
+      "Undertone puts M-VAVE V23 back on it."
+     ],
+     "choices": [
+      [
+       "go",
+       "fix it now"
+      ],
+      [
+       "later",
+       "not now"
+      ]
+     ],
+     "selected": 0,
+     "pedal": false,
+     "status": null,
+     "warn": [],
+     "problem": false,
+     "finished": false,
+     "aside": [],
+     "foot": "choose"
+    },
+    "key": "later"
+   },
+   {
+    "ask": {
+     "title": "nothing was changed",
+     "lines": [
+      "Your pedal is as it was. The copy stays saved."
+     ],
+     "choices": [
+      [
+       "done",
+       "done"
+      ],
+      [
+       "guide",
+       "open the guide"
+      ]
+     ],
+     "selected": 0,
+     "pedal": false,
+     "status": null,
+     "warn": [],
+     "problem": false,
+     "finished": true,
+     "aside": [
+      "copy of your pedal:",
+      "BACKUP"
+     ],
+     "foot": "choose"
+    },
+    "key": "done"
+   }
+  ],
+  "opened": [],
+  "code": 0,
+  "restart": null,
+  "lines": [
+   "Nothing was written to your pedal."
+  ],
+  "backup": true,
+  "flash": "3ebc8b2d7d40108347c19f4ccd3337dc1dad79b87593c73ddd316eea1fd7583f"
+ },
+ "rescue-cannot": {
+  "screens": [
+   {
+    "ask": {
+     "title": "what would you like to do?",
+     "lines": [
+      "Undertone works on your pedal over its USB cable."
+     ],
+     "choices": [
+      [
+       "rescue",
+       "fix a pedal that will not start"
+      ],
+      [
+       "install",
+       "put gamut on my pedal"
+      ],
+      [
+       "check",
+       "check my pedal"
+      ]
+     ],
+     "selected": 0,
+     "pedal": false,
+     "status": null,
+     "warn": [],
+     "problem": false,
+     "finished": false,
+     "aside": [],
+     "foot": "choose"
+    },
+    "key": "rescue"
+   },
+   {
+    "ask": {
+     "title": "fix a pedal that will not start",
+     "lines": [
+      "First a safe check: undertone saves a copy of your pedal.",
+      "Nothing changes until you say so."
+     ],
+     "choices": [
+      [
+       "go",
+       "start the check"
+      ],
+      [
+       "back",
+       "back"
+      ]
+     ],
+     "selected": 0,
+     "pedal": false,
+     "status": null,
+     "warn": [],
+     "problem": false,
+     "finished": false,
+     "aside": [],
+     "foot": "choose"
+    },
+    "key": "go"
+   },
+   {
+    "work": {
+     "title": "checking your pedal",
+     "lines": [
+      "Unplug your pedal, then plug it straight into this computer."
+     ],
+     "choices": [],
+     "selected": 0,
+     "pedal": false,
+     "status": null,
+     "warn": [],
+     "problem": false,
+     "finished": false,
+     "aside": [],
+     "foot": "choose"
+    },
+    "write": false,
+    "hint": [
+     "Still looking. Plug straight into this computer, no hub.",
+     "A pedal that will not start shows up between restarts."
+    ],
+    "phases": [
+     "looking",
+     "found",
+     "reading",
+     "saving",
+     "checking"
+    ],
+    "code": 2,
+    "text": "REFUSED: the flash head [0, 0x4000) is not the image's head: this package belongs to another layout; nothing was written"
+   },
+   {
+    "ask": {
+     "title": "this pedal needs a closer look",
+     "lines": [
+      "Nothing was changed, and a copy of your pedal is saved.",
+      "The guide says how to ask for help."
+     ],
+     "choices": [
+      [
+       "done",
+       "done"
+      ],
+      [
+       "guide",
+       "open the guide"
+      ]
+     ],
+     "selected": 0,
+     "pedal": false,
+     "status": null,
+     "warn": [],
+     "problem": true,
+     "finished": false,
+     "aside": [
+      "copy of your pedal:",
+      "BACKUP"
+     ],
+     "foot": "choose"
+    },
+    "key": "guide"
+   },
+   {
+    "ask": {
+     "title": "this pedal needs a closer look",
+     "lines": [
+      "Nothing was changed, and a copy of your pedal is saved.",
+      "The guide is open in your browser."
+     ],
+     "choices": [
+      [
+       "done",
+       "done"
+      ],
+      [
+       "guide",
+       "open the guide"
+      ]
+     ],
+     "selected": 0,
+     "pedal": false,
+     "status": null,
+     "warn": [],
+     "problem": true,
+     "finished": false,
+     "aside": [
+      "copy of your pedal:",
+      "BACKUP"
+     ],
+     "foot": "choose"
+    },
+    "key": "done"
+   }
+  ],
+  "opened": [
+   "https://github.com/VinSpee/undertone/blob/main/docs/RESCUE.md"
+  ],
+  "code": 2,
+  "restart": null,
+  "lines": [
+   "No official file fits this pedal. Keep the copy and ask for help: https://github.com/VinSpee/undertone/blob/main/docs/RESCUE.md#if-it-does-not-work"
+  ],
+  "backup": true,
+  "flash": "1ca6aa31fba6fa9919e5eb21e1e286fe35599c4fc1bd09ac7025fff890787ea9"
+ },
+ "rescue-fails-then-no": {
+  "screens": [
+   {
+    "ask": {
+     "title": "what would you like to do?",
+     "lines": [
+      "Undertone works on your pedal over its USB cable."
+     ],
+     "choices": [
+      [
+       "rescue",
+       "fix a pedal that will not start"
+      ],
+      [
+       "install",
+       "put gamut on my pedal"
+      ],
+      [
+       "check",
+       "check my pedal"
+      ]
+     ],
+     "selected": 0,
+     "pedal": false,
+     "status": null,
+     "warn": [],
+     "problem": false,
+     "finished": false,
+     "aside": [],
+     "foot": "choose"
+    },
+    "key": "rescue"
+   },
+   {
+    "ask": {
+     "title": "fix a pedal that will not start",
+     "lines": [
+      "First a safe check: undertone saves a copy of your pedal.",
+      "Nothing changes until you say so."
+     ],
+     "choices": [
+      [
+       "go",
+       "start the check"
+      ],
+      [
+       "back",
+       "back"
+      ]
+     ],
+     "selected": 0,
+     "pedal": false,
+     "status": null,
+     "warn": [],
+     "problem": false,
+     "finished": false,
+     "aside": [],
+     "foot": "choose"
+    },
+    "key": "go"
+   },
+   {
+    "work": {
+     "title": "checking your pedal",
+     "lines": [
+      "Unplug your pedal, then plug it straight into this computer."
+     ],
+     "choices": [],
+     "selected": 0,
+     "pedal": false,
+     "status": null,
+     "warn": [],
+     "problem": false,
+     "finished": false,
+     "aside": [],
+     "foot": "choose"
+    },
+    "write": false,
+    "hint": [
+     "Still looking. Plug straight into this computer, no hub.",
+     "A pedal that will not start shows up between restarts."
+    ],
+    "phases": [
+     "looking",
+     "found",
+     "reading",
+     "saving",
+     "checking",
+     "restarting"
+    ],
+    "code": 0,
+    "text": "Read-only run finished, nothing was written. 155 sectors differ from the image. Backup: BACKUP"
+   },
+   {
+    "ask": {
+     "title": "your pedal can be fixed",
+     "lines": [
+      "Undertone puts M-VAVE V23 back on it."
+     ],
+     "choices": [
+      [
+       "go",
+       "fix it now"
+      ],
+      [
+       "later",
+       "not now"
+      ]
+     ],
+     "selected": 0,
+     "pedal": false,
+     "status": null,
+     "warn": [],
+     "problem": false,
+     "finished": false,
+     "aside": [],
+     "foot": "choose"
+    },
+    "key": "go"
+   },
+   {
+    "ask": {
+     "title": "replace the software?",
+     "lines": [
+      "This replaces the software on your pedal.",
+      "A copy is saved first. Continue?"
+     ],
+     "choices": [
+      [
+       "no",
+       "no"
+      ],
+      [
+       "yes",
+       "yes"
+      ]
+     ],
+     "selected": 0,
+     "pedal": false,
+     "status": null,
+     "warn": [],
+     "problem": false,
+     "finished": false,
+     "aside": [],
+     "foot": "choose"
+    },
+    "key": "yes"
+   },
+   {
+    "work": {
+     "title": "fixing your pedal",
+     "lines": [
+      "Unplug your pedal, then plug it back in.",
+      "Leave the cable alone while undertone works."
+     ],
+     "choices": [],
+     "selected": 0,
+     "pedal": false,
+     "status": null,
+     "warn": [],
+     "problem": false,
+     "finished": false,
+     "aside": [],
+     "foot": "choose"
+    },
+    "write": true,
+    "hint": [
+     "Still looking. Plug straight into this computer, no hub.",
+     "A pedal that will not start shows up between restarts."
+    ],
+    "phases": [
+     "looking",
+     "found",
+     "reading",
+     "saving",
+     "checking",
+     "writing",
+     "again"
+    ],
+    "code": 1,
+    "text": "ERROR: gave up after 1 tries; rerun the command, it resumes where it stopped"
+   },
+   {
+    "ask": {
+     "title": "something went wrong",
+     "lines": [
+      "Your pedal kept restarting before undertone finished.",
+      "Try again: it continues where it stopped."
+     ],
+     "choices": [
+      [
+       "again",
+       "try again"
+      ],
+      [
+       "guide",
+       "open the guide"
+      ],
+      [
+       "done",
+       "done"
+      ]
+     ],
+     "selected": 0,
+     "pedal": false,
+     "status": null,
+     "warn": [],
+     "problem": true,
+     "finished": false,
+     "aside": [],
+     "foot": "choose"
+    },
+    "key": "again"
+   },
+   {
+    "ask": {
+     "title": "replace the software?",
+     "lines": [
+      "This replaces the software on your pedal.",
+      "A copy is saved first. Continue?"
+     ],
+     "choices": [
+      [
+       "no",
+       "no"
+      ],
+      [
+       "yes",
+       "yes"
+      ]
+     ],
+     "selected": 0,
+     "pedal": false,
+     "status": null,
+     "warn": [],
+     "problem": false,
+     "finished": false,
+     "aside": [],
+     "foot": "choose"
+    },
+    "key": "no"
+   },
+   {
+    "ask": {
+     "title": "your pedal may not start",
+     "lines": [
+      "It may be partly updated.",
+      "Run undertone again: it continues where it stopped."
+     ],
+     "choices": [
+      [
+       "done",
+       "done"
+      ],
+      [
+       "guide",
+       "open the guide"
+      ]
+     ],
+     "selected": 0,
+     "pedal": false,
+     "status": null,
+     "warn": [],
+     "problem": true,
+     "finished": false,
+     "aside": [
+      "copy of your pedal:",
+      "BACKUP"
+     ],
+     "foot": "choose"
+    },
+    "key": "done"
+   }
+  ],
+  "opened": [],
+  "code": 1,
+  "restart": null,
+  "lines": [
+   "Your pedal was being updated and may not start yet.",
+   "Plug it in and run: undertone rescue  (it continues where it stopped)"
+  ],
+  "backup": true,
+  "flash": "c9a82151ad25c12b378b7eb1565c8a10c0da75409f6770f31334cc2d640777ce"
+ },
+ "install": {
+  "screens": [
+   {
+    "ask": {
+     "title": "what would you like to do?",
+     "lines": [
+      "Undertone works on your pedal over its USB cable."
+     ],
+     "choices": [
+      [
+       "rescue",
+       "fix a pedal that will not start"
+      ],
+      [
+       "install",
+       "put gamut on my pedal"
+      ],
+      [
+       "check",
+       "check my pedal"
+      ]
+     ],
+     "selected": 0,
+     "pedal": false,
+     "status": null,
+     "warn": [],
+     "problem": false,
+     "finished": false,
+     "aside": [],
+     "foot": "choose"
+    },
+    "key": "install"
+   },
+   {
+    "ask": {
+     "title": "put gamut on your pedal",
+     "lines": [
+      "First a safe check: undertone saves a copy of your pedal.",
+      "Nothing changes until you say so."
+     ],
+     "choices": [
+      [
+       "go",
+       "start the check"
+      ],
+      [
+       "back",
+       "back"
+      ]
+     ],
+     "selected": 0,
+     "pedal": false,
+     "status": null,
+     "warn": [],
+     "problem": false,
+     "finished": false,
+     "aside": [],
+     "foot": "choose"
+    },
+    "key": "go"
+   },
+   {
+    "work": {
+     "title": "hold the three lit buttons",
+     "lines": [
+      "Switch your pedal off. Hold these three, switch it on,",
+      "and keep holding until its screen says RECOVERY."
+     ],
+     "choices": [],
+     "selected": 0,
+     "pedal": true,
+     "status": null,
+     "warn": [],
+     "problem": false,
+     "finished": false,
+     "aside": [],
+     "foot": "choose"
+    },
+    "write": false,
+    "hint": [
+     "Still looking. Plug straight into this computer, no hub.",
+     "Hold all three until its screen says RECOVERY."
+    ],
+    "phases": [
+     "looking",
+     "found",
+     "reading",
+     "saving",
+     "checking",
+     "restarting"
+    ],
+    "code": 0,
+    "text": "Dry run finished, nothing was written. 9 sectors differ from Gamut's app area of the test. The pedal restarts into its firmware. Backup: BACKUP"
+   },
+   {
+    "ask": {
+     "title": "ready to put gamut on",
+     "lines": [
+      "Your pedal is checked, and a copy is saved."
+     ],
+     "choices": [
+      [
+       "go",
+       "put gamut on"
+      ],
+      [
+       "later",
+       "not now"
+      ]
+     ],
+     "selected": 0,
+     "pedal": false,
+     "status": null,
+     "warn": [],
+     "problem": false,
+     "finished": false,
+     "aside": [],
+     "foot": "choose"
+    },
+    "key": "go"
+   },
+   {
+    "ask": {
+     "title": "replace the software?",
+     "lines": [
+      "This replaces the software on your pedal.",
+      "A copy is saved first. Continue?"
+     ],
+     "choices": [
+      [
+       "no",
+       "no"
+      ],
+      [
+       "yes",
+       "yes"
+      ]
+     ],
+     "selected": 0,
+     "pedal": false,
+     "status": null,
+     "warn": [],
+     "problem": false,
+     "finished": false,
+     "aside": [],
+     "foot": "choose"
+    },
+    "key": "yes"
+   },
+   {
+    "work": {
+     "title": "once more: hold the three",
+     "lines": [
+      "Switch your pedal off. Hold these three, switch it on,",
+      "and keep holding until its screen says RECOVERY."
+     ],
+     "choices": [],
+     "selected": 0,
+     "pedal": true,
+     "status": null,
+     "warn": [],
+     "problem": false,
+     "finished": false,
+     "aside": [],
+     "foot": "choose"
+    },
+    "write": true,
+    "hint": [
+     "Still looking. Plug straight into this computer, no hub.",
+     "Hold all three until its screen says RECOVERY."
+    ],
+    "phases": [
+     "looking",
+     "found",
+     "reading",
+     "saving",
+     "checking",
+     "writing",
+     "restarting"
+    ],
+    "code": 0,
+    "text": "Done: 9 sectors written and verified, on M-VAVE's V22/V23 head. Backup: BACKUP"
+   },
+   {
+    "ask": {
+     "title": "gamut is on your pedal",
+     "lines": [
+      "Switch it off and on again to start Gamut."
+     ],
+     "choices": [
+      [
+       "done",
+       "done"
+      ],
+      [
+       "guide",
+       "open the guide"
+      ]
+     ],
+     "selected": 0,
+     "pedal": false,
+     "status": null,
+     "warn": [],
+     "problem": false,
+     "finished": true,
+     "aside": [
+      "copy of your pedal:",
+      "BACKUP"
+     ],
+     "foot": "choose"
+    },
+    "key": "done"
+   }
+  ],
+  "opened": [],
+  "code": 0,
+  "restart": null,
+  "lines": [
+   "Done: 9 sectors written and verified, on M-VAVE's V22/V23 head. Backup: BACKUP",
+   "First-run check (docs/RESCUE.md): power-cycle the pedal. The boot screen's line PWR shows the supply levels the boot\nloader left; on this pedal it should read `PWR 7 15 (BOOT LEVELS)`. Then, with the pedal on USB:\n    node tools/op.mjs dsp 2>&1 | tee gamut-dsp.log\nIt plays every saved preset for 6 s and reads the load, the peak, the late blocks and the bypass; exit 0 means no\npreset was late or bypassed. Play through each preset and listen for crackles."
+  ],
+  "backup": true,
+  "flash": "1c2a1fd357b2bdb9f10ed894f48fb04f9b6cd83a2dea7edd161e6c08769efaef"
+ },
+ "check": {
+  "screens": [
+   {
+    "ask": {
+     "title": "what would you like to do?",
+     "lines": [
+      "Undertone works on your pedal over its USB cable."
+     ],
+     "choices": [
+      [
+       "rescue",
+       "fix a pedal that will not start"
+      ],
+      [
+       "install",
+       "put gamut on my pedal"
+      ],
+      [
+       "check",
+       "check my pedal"
+      ]
+     ],
+     "selected": 0,
+     "pedal": false,
+     "status": null,
+     "warn": [],
+     "problem": false,
+     "finished": false,
+     "aside": [],
+     "foot": "choose"
+    },
+    "key": "check"
+   },
+   {
+    "ask": {
+     "title": "check your pedal",
+     "lines": [
+      "Undertone reads your pedal and saves a copy.",
+      "Nothing changes."
+     ],
+     "choices": [
+      [
+       "go",
+       "start the check"
+      ],
+      [
+       "back",
+       "back"
+      ]
+     ],
+     "selected": 0,
+     "pedal": false,
+     "status": null,
+     "warn": [],
+     "problem": false,
+     "finished": false,
+     "aside": [],
+     "foot": "choose"
+    },
+    "key": "go"
+   },
+   {
+    "work": {
+     "title": "connect your pedal",
+     "lines": [
+      "Plug it straight into this computer, with no hub.",
+      "If it starts, hold these three as you switch it on."
+     ],
+     "choices": [],
+     "selected": 0,
+     "pedal": true,
+     "status": null,
+     "warn": [],
+     "problem": false,
+     "finished": false,
+     "aside": [],
+     "foot": "choose"
+    },
+    "write": false,
+    "hint": [
+     "Still looking. Plug straight into this computer, no hub.",
+     "Hold all three until its screen says RECOVERY."
+    ],
+    "phases": [
+     "looking",
+     "found",
+     "reading",
+     "saving",
+     "checking",
+     "restarting"
+    ],
+    "code": 0,
+    "text": "Check finished, nothing was written. Backup: BACKUP"
+   },
+   {
+    "ask": {
+     "title": "undertone does not know this pedal",
+     "lines": [
+      "It now runs M-VAVE's own software.",
+      "A copy of your pedal is saved."
+     ],
+     "choices": [
+      [
+       "done",
+       "done"
+      ],
+      [
+       "guide",
+       "open the guide"
+      ]
+     ],
+     "selected": 0,
+     "pedal": false,
+     "status": null,
+     "warn": [],
+     "problem": false,
+     "finished": true,
+     "aside": [
+      "copy of your pedal:",
+      "BACKUP"
+     ],
+     "foot": "choose"
+    },
+    "key": "done"
+   }
+  ],
+  "opened": [],
+  "code": 0,
+  "restart": null,
+  "lines": [
+   "head: not known to this kit",
+   "layout: M-VAVE's V22/V23 head",
+   "app area: M-VAVE's own firmware"
+  ],
+  "backup": true,
+  "flash": "6195a33eb52fba39e698f31b3a06efce59c26660636badc6f0ed01aceee5fb4b"
+ },
+ "password": {
+  "screens": [
+   {
+    "ask": {
+     "title": "what would you like to do?",
+     "lines": [
+      "Undertone works on your pedal over its USB cable."
+     ],
+     "choices": [
+      [
+       "rescue",
+       "fix a pedal that will not start"
+      ],
+      [
+       "install",
+       "put gamut on my pedal"
+      ],
+      [
+       "check",
+       "check my pedal"
+      ]
+     ],
+     "selected": 0,
+     "pedal": false,
+     "status": null,
+     "warn": [],
+     "problem": false,
+     "finished": false,
+     "aside": [],
+     "foot": "choose"
+    },
+    "key": "check"
+   },
+   {
+    "ask": {
+     "title": "check your pedal",
+     "lines": [
+      "Undertone reads your pedal and saves a copy.",
+      "Nothing changes."
+     ],
+     "choices": [
+      [
+       "go",
+       "start the check"
+      ],
+      [
+       "back",
+       "back"
+      ]
+     ],
+     "selected": 0,
+     "pedal": false,
+     "status": null,
+     "warn": [],
+     "problem": false,
+     "finished": false,
+     "aside": [],
+     "foot": "choose"
+    },
+    "key": "go"
+   },
+   {
+    "ask": {
+     "title": "undertone needs your password",
+     "lines": [
+      "Your computer asks for it once, to reach the pedal.",
+      "Nothing shows while you type."
+     ],
+     "choices": [
+      [
+       "go",
+       "continue"
+      ],
+      [
+       "back",
+       "back"
+      ]
+     ],
+     "selected": 0,
+     "pedal": false,
+     "status": null,
+     "warn": [],
+     "problem": false,
+     "finished": false,
+     "aside": [],
+     "foot": "choose"
+    },
+    "key": "go"
+   }
+  ],
+  "opened": [],
+  "code": 0,
+  "restart": "check",
+  "lines": [],
+  "backup": false,
+  "flash": "6195a33eb52fba39e698f31b3a06efce59c26660636badc6f0ed01aceee5fb4b"
+ },
+ "back-and-quit": {
+  "screens": [
+   {
+    "ask": {
+     "title": "what would you like to do?",
+     "lines": [
+      "Undertone works on your pedal over its USB cable."
+     ],
+     "choices": [
+      [
+       "rescue",
+       "fix a pedal that will not start"
+      ],
+      [
+       "install",
+       "put gamut on my pedal"
+      ],
+      [
+       "check",
+       "check my pedal"
+      ]
+     ],
+     "selected": 0,
+     "pedal": false,
+     "status": null,
+     "warn": [],
+     "problem": false,
+     "finished": false,
+     "aside": [],
+     "foot": "choose"
+    },
+    "key": "install"
+   },
+   {
+    "ask": {
+     "title": "put gamut on your pedal",
+     "lines": [
+      "First a safe check: undertone saves a copy of your pedal.",
+      "Nothing changes until you say so."
+     ],
+     "choices": [
+      [
+       "go",
+       "start the check"
+      ],
+      [
+       "back",
+       "back"
+      ]
+     ],
+     "selected": 0,
+     "pedal": false,
+     "status": null,
+     "warn": [],
+     "problem": false,
+     "finished": false,
+     "aside": [],
+     "foot": "choose"
+    },
+    "key": "back"
+   },
+   {
+    "ask": {
+     "title": "what would you like to do?",
+     "lines": [
+      "Undertone works on your pedal over its USB cable."
+     ],
+     "choices": [
+      [
+       "rescue",
+       "fix a pedal that will not start"
+      ],
+      [
+       "install",
+       "put gamut on my pedal"
+      ],
+      [
+       "check",
+       "check my pedal"
+      ]
+     ],
+     "selected": 0,
+     "pedal": false,
+     "status": null,
+     "warn": [],
+     "problem": false,
+     "finished": false,
+     "aside": [],
+     "foot": "choose"
+    },
+    "key": "check"
+   },
+   {
+    "ask": {
+     "title": "check your pedal",
+     "lines": [
+      "Undertone reads your pedal and saves a copy.",
+      "Nothing changes."
+     ],
+     "choices": [
+      [
+       "go",
+       "start the check"
+      ],
+      [
+       "back",
+       "back"
+      ]
+     ],
+     "selected": 0,
+     "pedal": false,
+     "status": null,
+     "warn": [],
+     "problem": false,
+     "finished": false,
+     "aside": [],
+     "foot": "choose"
+    },
+    "key": "back"
+   },
+   {
+    "ask": {
+     "title": "what would you like to do?",
+     "lines": [
+      "Undertone works on your pedal over its USB cable."
+     ],
+     "choices": [
+      [
+       "rescue",
+       "fix a pedal that will not start"
+      ],
+      [
+       "install",
+       "put gamut on my pedal"
+      ],
+      [
+       "check",
+       "check my pedal"
+      ]
+     ],
+     "selected": 0,
+     "pedal": false,
+     "status": null,
+     "warn": [],
+     "problem": false,
+     "finished": false,
+     "aside": [],
+     "foot": "choose"
+    },
+    "key": "quit"
+   }
+  ],
+  "opened": [],
+  "code": 0,
+  "restart": null,
+  "lines": [],
+  "backup": false,
+  "flash": "6195a33eb52fba39e698f31b3a06efce59c26660636badc6f0ed01aceee5fb4b"
+ }
+}
