@@ -6,8 +6,8 @@ launchers `undertone` and `undertone.cmd`), and it needs Python 3 and, on a Mac,
 the same command as one Rust program that needs nothing installed. The Python command is the specification and stays
 the fallback until the owner has proven the program on a real pedal.
 
-This first stage holds the workspace, this design and the CI. The program answers only `undertone version` and sends
-nothing to a pedal. [Stages](#stages) lists what follows.
+So far the folder holds the workspace, this design, the CI and the protocol library with its tests. The program
+answers only `undertone version` and sends nothing to a pedal. [Stages](#stages) lists what follows.
 
 ## Layout
 
@@ -28,9 +28,9 @@ Few dependencies, each pinned with `=` in `Cargo.toml` and locked in `Cargo.lock
 - **USB on macOS and Linux: `rusb` with its `vendored` feature.** It builds libusb 1.0.27 from source into the
   program, so it needs no Homebrew and no system library. On Linux it finds devices through netlink and does not load
   libudev. Windows does not use it (see [Windows](#windows)).
-- **USB on Windows: `windows-sys`** (stage 2), for `CreateFileW` and `DeviceIoControl` with
+- **USB on Windows: `windows-sys`** (stage 3), for `CreateFileW` and `DeviceIoControl` with
   `IOCTL_SCSI_PASS_THROUGH_DIRECT`, as `tools/uboot_rescue.py` calls them through ctypes.
-- **Screens: `ratatui` with `crossterm`** (stage 3). crossterm reads keys and sets the terminal mode on macOS, Linux
+- **Screens: `ratatui` with `crossterm`** (stage 4). crossterm reads keys and sets the terminal mode on macOS, Linux
   and Windows, which the Python screens do by hand with termios and msvcrt.
 - **Arguments: `clap`** with only the derive, help, usage and error-context features. The commands and options are
   those of `tools/undertone.py`.
@@ -58,7 +58,7 @@ wait on a fake clock as the Python simulators do.
 **The write needs a confirmation.** Every function that can erase or write takes a `Confirmed` value. Its field is
 private and it has one constructor, which takes the report of the read-only run and the person's answer, and returns a
 value only for "yes" (typed on the command line, or the "yes" choice of the guided "replace the software?" screen). It
-carries the SHA-256 of the source that run compared, and the write refuses any other source. The write consumes it, so
+carries the SHA-256 of the source that run compared, and the write refuses any other source. A run that writes consumes it, so
 a retry after a failed write needs a new answer: the re-confirmation rule is enforced by the type, not by a check that
 could be forgotten. The protocol crate has `#![forbid(unsafe_code)]`.
 
@@ -202,23 +202,34 @@ unit and the symbols stripped.
 
 ## Tests
 
-- **Frames, byte for byte.** Unit tests build every command and frame and compare them with the Python tools' own
-  bytes: the CDBs and data that `tests/test_uboot_rescue.py` and `tests/test_uboot_install.py` send to their
-  simulated pedals, and the frame headers of the owner's real dry run (hello
-  `534255320100000001000000000000000000000000000000`, leave `534255320600000002000000000000000000000000000000`, and
-  the hello reply read from the reply buffer). The CRC-16, the CRC-32, JieLi's cipher and the reply parser are tested
-  on the same recorded bytes.
-- **A simulated pedal.** A port of `tests/uboot_sim.py` (NOR flash that a write can only clear, an erase that sets a
-  sector to `0xFF`, the loader's 3 s watchdog on a fake clock, a pedal that drops off the bus after N commands) and of
-  `tests/recovery_sim.py` (the V23 recovery code packet by packet, with the real pedal's zero-byte replies). It
-  implements the transport traits, and it keeps every command it saw.
-- **The same scenarios as the Python tests.** The rescue's read-only run, restore, refusal of the other path's file and
-  resume; the install on both layouts and the way back; the refusals of a wrong chip key, flash id, head or file; and
-  that the simulated pedal saw no erase or write without a confirmation.
-- **The same transcript as Python.** A script in `tests/` runs each scenario with the Python tool against the Python
-  simulator and records the commands it sent; the Rust test runs the same scenario against the Rust simulator and must
-  send the same commands. Test images come from `tests/fw_layouts.py`, never M-VAVE's files.
-- **The screens.** Each state's screen as plain text compared with the Python screens' text; pictures of the
+- **The same transfers as Python.** `protocol/tests/fixtures/record.py` runs `tools/uboot_rescue.py` and
+  `tools/uboot_install.py`, unchanged, against the Python tests' simulated pedals (`tests/uboot_sim.py`,
+  `tests/recovery_sim.py`, the bus of `tests/test_uboot_install.py`) and writes every transfer, every log line, the
+  result and the flash the pedal ends with to `transcripts.json`. `protocol/tests/transcripts.rs` runs the same
+  scenarios, with the same inputs, through the port and the ported simulators, and must match all four byte for
+  byte: the rescue's read-only run, its restore, its resume after the pedal drops off the bus, and the install's dry
+  run and write on each flash layout, from the boot state and from the recovery mode. CI records the transcripts again
+  and fails when they changed, so a change to the Python tools cannot leave the port behind unnoticed. Test images are
+  noise and `tests/fw_layouts.py`'s images, never M-VAVE's files.
+- **Packages read as Python reads them.** `protocol/tests/packages.rs` compares, for good, damaged and foreign
+  packages, the identity, every CRC check in order, and what the rescue and the install make of each, word for word
+  (`packages.json`, from the same script).
+- **The safety rules.** `protocol/tests/safety.rs`: nothing is erased or written without a `Confirmed`; only "yes"
+  makes one; a confirmation for one file writes no other; a run that wrote, or a check that only identified the
+  pedal, cannot be confirmed; the backup is saved before the image is compared; a wrong chip key, flash size, vendor,
+  flash id, head or boot area is refused before any erase; no erase or write outside the window; the recovery mode
+  never gets a write command, nor a leave after a bad hello or in another state; the two failures after the leave are
+  told apart, and the owner's 70-second leave is waited for.
+- **The real pedal's bytes.** The hello and leave frame headers of the owner's dry run
+  (`534255320100000001000000000000000000000000000000` and `534255320600000002000000000000000000000000000000`) and the
+  hello reply its reply buffer held, which reads as the V22/V23 head; the simulated recovery mode answers with that
+  reply byte for byte.
+- **The simulated pedals** (`protocol/src/sim.rs`, behind the `sim` feature for the program's own tests) are ports of
+  `tests/uboot_sim.py` (NOR flash that a write can only clear, an erase that sets a sector to `0xFF`, the loader's 3 s
+  watchdog on a fake clock, a pedal that drops off the bus after N commands), of `tests/recovery_sim.py`'s hello and
+  leave packet by packet, of the bus that `tests/test_uboot_install.py` puts the pedal on, and of the image and package
+  builders `tests/fw_layouts.py` and `tools/pxpkg.py`.
+- **The screens** (stage 4). Each state's screen as plain text compared with the Python screens' text; pictures of the
   full-screen view at 80 x 24 and 100 x 30, dark and light, rendered through a pseudo-terminal and set beside the
   Python gallery; the guided rescue and install driven by key presses against the simulated pedal.
 
@@ -227,17 +238,18 @@ Windows.
 
 ## Stages
 
-Each is its own pull request, complete and green, branched from main:
+Each is its own pull request, complete and green, stacked on the one before while that one waits to merge:
 
 1. This design, the workspace and the CI.
-2. The protocol: the framing, the commands, the checks and the plans, with the byte-for-byte tests and the simulated
-   pedal; the USB transports for libusb and Windows' SCSI pass-through; the commands `rescue`, `install` and `check`
-   with their plain output. The write cannot be reached without a `Confirmed`.
-3. The guided screens over that protocol, with the Python screens' states, copy and look: one screen at a time, the
+2. The protocol library: the framing, the commands, the checks and the plans, with the byte-for-byte tests, the safety
+   tests and the simulated pedals. The write cannot be reached without a `Confirmed`.
+3. The program's USB transports (libusb on macOS and Linux, SCSI pass-through on Windows), the rights each system
+   needs, and the commands `rescue`, `install` and `check` with the Python command's plain output and questions.
+4. The guided screens over that protocol, with the Python screens' states, copy and look: one screen at a time, the
    pulse on the three buttons to hold, the spinner and the thin progress bar, truecolor with 256- and 16-colour
    fallbacks, `NO_COLOR`, ASCII glyphs where Unicode cannot be shown, `UNDERTONE_NO_MOTION`, centred in about 60
    columns.
-4. The release: the programs of the matrix with SHA-256 sums from the release workflow (built by hand or on a branch,
+5. The release: the programs of the matrix with SHA-256 sums from the release workflow (built by hand or on a branch,
    never published by it), the rescue kit and the site offering the program beside the Python launcher (a new kit
    number with its pin refreshed), and `docs/RESCUE.md` and the installer's Rescue card updated. The Python command
    stays the fallback until the owner has proven the program on a real pedal.
