@@ -6,9 +6,9 @@ launchers `undertone` and `undertone.cmd`), and it needs Python 3 and, on a Mac,
 the same command as one Rust program that needs nothing installed. The Python command is the specification and stays
 the fallback until the owner has proven the program on a real pedal.
 
-So far the folder holds the workspace, this design, the CI, the protocol library and the program's commands
-`rescue`, `install` and `check`, each tested against the Python command's own runs on simulated pedals. Nothing in it
-has run on a real pedal yet. The guided screens and the release follow; [Stages](#stages) lists them.
+So far the folder holds the workspace, this design, the CI, the protocol library, the program's commands `rescue`,
+`install` and `check`, and its guided screens, each tested against the Python command's own runs on simulated pedals.
+Nothing in it has run on a real pedal yet. The release follows; [Stages](#stages) lists what is left.
 
 ## Layout
 
@@ -59,9 +59,9 @@ wait on a fake clock as the Python simulators do.
 **The write needs a confirmation.** Every function that can erase or write takes a `Confirmed` value. Its field is
 private and it has one constructor, which takes the report of the read-only run and the person's answer, and returns a
 value only for "yes" (typed on the command line, or the "yes" choice of the guided "replace the software?" screen). It
-carries the SHA-256 of the source that run compared, and the write refuses any other source. A run that writes consumes it, so
-a retry after a failed write needs a new answer: the re-confirmation rule is enforced by the type, not by a check that
-could be forgotten. The protocol crate has `#![forbid(unsafe_code)]`.
+carries the SHA-256 of the source that run compared, and the write refuses any other source. A run that writes consumes
+it, so a retry after a failed write needs a new answer: the re-confirmation rule is enforced by the type, not by a check
+that could be forgotten. The protocol crate has `#![forbid(unsafe_code)]`.
 
 **The screens are a state machine over the protocol.** The guided flow is `undertone_screens.Guide`, state for state:
 each state shows one screen and names the next. The screen is drawn from a plain description (title, lines, choices,
@@ -85,9 +85,9 @@ kept, each with a test:
    "Stopped. Nothing was written." In the guided screens a separate "replace the software?" screen asks, with "no"
    chosen at first.
 4. **No back or quit during a write.** Esc and q stop the wait for the pedal (nothing was sent), but once a write is
-   under way they only show, in amber, "do not unplug: your pedal is being updated". Ctrl-C during a write prints the
-   resume note: the pedal may not start yet, run the same command again and it continues where it stopped, and where
-   the backup is.
+   under way they only show, in amber, "do not unplug: your pedal is being updated". In the screens a first Ctrl-C
+   during a write does the same; a second one ends the program, as Python's Ctrl-C does, with the resume note: the
+   pedal may not start yet, run the same command again and it continues where it stopped, and where the backup is.
 5. **A new answer after a failed write.** "Try again" after a failed write goes back to the confirmation screen, and
    the end screen says the pedal may be partly updated.
 6. **Boot area checks.** A layout is named by the CRC-32 of its boot area: the old head (M-VAVE V16, V17 and V20),
@@ -189,16 +189,16 @@ downloaded with a browser is questioned:
   Signing with a Developer ID and notarizing (Apple Developer Program, a yearly fee) removes the prompt.
 - **Windows.** A downloaded unsigned `.exe` makes SmartScreen show "Windows protected your PC"; the person must click
   More info, then Run anyway. On a Windows 11 PC with Smart App Control turned on, an unsigned program is blocked with
-  no way to run it. Authenticode signing (a code-signing certificate, or Microsoft's Trusted Signing service for a monthly fee) removes Smart App
-  Control's block; SmartScreen still warns until the signed program builds reputation.
+  no way to run it. Authenticode signing (a code-signing certificate, or Microsoft's Trusted Signing service for a
+  monthly fee) removes Smart App Control's block; SmartScreen still warns until the signed program builds reputation.
 
 Signing needs an account and a certificate that only the owner can take out; it is not part of these stages. Until
 then the guide must give the macOS and Windows steps above, and the Python command stays offered beside the program.
 
 ## Size
 
-The budget is 4 MiB for one release program; CI fails above it. This stage measures about 0.7 MiB on macOS
-(Apple silicon) with libusb built in. The release profile optimizes for size, with link-time optimization, one codegen
+The budget is 4 MiB for one release program; CI fails above it. With libusb built in and the screens, it is about 1.1
+MiB on macOS (Apple silicon), stripped. The release profile optimizes for size, with link-time optimization, one codegen
 unit and the symbols stripped.
 
 ## Tests
@@ -234,9 +234,17 @@ unit and the symbols stripped.
   answered no, a refused rescue with its advice, the way back to M-VAVE's firmware through the recovery mode, and a
   check, and must show the same window as `tools/undertone.py` (times and paths aside), end with the same exit code,
   send the same transfers and leave the same flash (`commands.json`, from the same script).
-- **The screens** (stage 4). Each state's screen as plain text compared with the Python screens' text; pictures of the
-  full-screen view at 80 x 24 and 100 x 30, dark and light, rendered through a pseudo-terminal and set beside the
-  Python gallery; the guided rescue and install driven by key presses against the simulated pedal.
+- **The screens.** `undertone/src/tui/tests.rs` composes every screen of the guided flows, and each tool screen with
+  each status, in truecolor, 256 and 16 colours, dark, light and unknown themes, Unicode and ASCII, at 62 x 24, 80 x 24
+  and 100 x 30, and requires the same rows, styles and escape codes as `undertone_screens.compose` (`frames.json`); the
+  terminal view's colours must be those codes. Each guided flow (the rescue, a rescue answered "not now", one that
+  cannot be fixed, a failed write that needs a new yes, the install, the check, the password, back and quit), driven by
+  the same choices against the same simulated pedal, must walk through the same screens, progress and outcomes to the
+  same end (`guided.json`).
+- **The real program in a pseudo-terminal.** Built with the `sim` feature and started with `UNDERTONE_SIM=rescue`,
+  `install` or `check`, the program runs its guided screens against the simulated pedal, slowed a little; a script
+  drives it with keys in a pseudo-terminal, answers its theme question as a dark or light terminal, and keeps each
+  screen as the terminal shows it. The feature is never in a release.
 
 Nothing here runs on a real pedal. Each stage's pull request says what the owner should check on a pedal and on
 Windows.

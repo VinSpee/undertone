@@ -9,7 +9,7 @@ log, and the flash the pedal ends with.
 
   python3 undertone-cli/protocol/tests/fixtures/record.py      rewrites transcripts.json beside this file
 """
-import hashlib, io, json, re, sys, tempfile, zlib
+import dataclasses, hashlib, io, json, re, sys, tempfile, threading, zlib
 from dataclasses import replace
 from pathlib import Path
 from unittest import mock
@@ -25,6 +25,7 @@ import pxpkg
 import uboot_install as ui
 import uboot_rescue as ur
 import undertone as u
+import undertone_screens as screens
 
 M64 = (1 << 64) - 1
 
@@ -80,11 +81,11 @@ class Bench:
     """tests/test_uboot_install.py's Bench, with the recording pedals (protocol/src/sim.rs ports it)."""
     POLL = 0.05
 
-    def __init__(self, flash, starts):
+    def __init__(self, flash, starts, drops=()):
         self.clock = uboot_sim.FakeClock()
         self.uboot = Pedal(flash, LOADER, self.clock)
         self.uboot.present = False
-        self.starts, self.boot_window = list(starts), 3.0
+        self.starts, self.boot_window, self.drops = list(starts), 3.0, list(drops)
         self.end = self.clock.t + 120.0
         self.mode, self.rec, self.recoveries = "off", None, []
         self.empty_since = self.clock.t
@@ -99,6 +100,8 @@ class Bench:
 
     def appear(self, at):
         self.uboot.reenumerate()
+        if self.drops:
+            self.uboot.drop_at = len(self.uboot.seen) + self.drops.pop(0)
         self.mode, self.appeared, self.claimed = "uboot", at, False
 
     def step(self):
@@ -315,6 +318,125 @@ def commands():
     }
 
 
+# ---------------------------------------------------------------- the guided screens
+def screen_dict(screen):
+    d = dataclasses.asdict(screen)
+    d["aside"] = ["BACKUP" if "blackbox-" in line else line for line in d["aside"]]
+    return json.loads(json.dumps(d))
+
+
+class RecordingView:
+    """A view that answers each question with the next scripted choice and runs each tool at once, keeping every screen,
+    the phases the tool's lines walk the progress through, and each outcome."""
+
+    def __init__(self, keys):
+        self.keys, self.seen = list(keys), []
+        self.caps = screens.Caps(unicode=False, motion=False)
+
+    def ask(self, screen):
+        key = self.keys.pop(0)
+        self.seen.append({"ask": screen_dict(screen), "key": key})
+        return key
+
+    def work(self, screen, job_fn, log, write=False, hint=()):
+        progress, phases = screens.Progress(write), []
+
+        def take(line):
+            progress.feed(line)
+            if not phases or phases[-1] != progress.phase:
+                phases.append(progress.phase)
+        o = job_fn(take, take, threading.Event())
+        self.seen.append({"work": screen_dict(screen), "write": write, "hint": list(hint), "phases": phases,
+                          "code": o.code, "text": shown(o.text)})
+        return o
+
+
+class NoLog:
+    path = None
+
+    def write(self, line):
+        pass
+
+
+def guided(name, flash, starts, keys, start="menu", drops=(), attempts=10, permission=None):
+    bench = Bench(flash, starts, drops)
+    view, opened = RecordingView(keys), []
+    gamut = ui.Source("Gamut's app area of the test", IMAGES["new"][0x6000:0x9F000])
+    with mock.patch.object(u, "FIRMWARE", FIRMWARE), mock.patch.object(ur, "get_loader", lambda p=None: LOADER), \
+            mock.patch.object(u, "rescue_transport", lambda: bench), mock.patch.object(u, "install_transport", lambda: bench), \
+            mock.patch.object(ui, "LAYOUTS", LAYOUTS), mock.patch.object(ur.time, "sleep", bench.sleep), \
+            mock.patch.object(u, "permission_problem", lambda: permission), mock.patch.object(ur, "WINDOWS", False), \
+            mock.patch.object(u, "gamut_source", lambda p=None: gamut), mock.patch.object(screens, "Log", lambda f: NoLog()):
+        guide = screens.Guide(view, u.Options(None, str(BACKUPS), attempts), start, open_url=opened.append)
+        result = guide.go()
+    return {"screens": view.seen, "opened": opened, "code": result.code, "restart": result.restart,
+            "lines": [shown(line) for line in result.lines],
+            "backup": result.backup is not None, "flash": hashlib.sha256(bytes(bench.uboot.flash)).hexdigest()}
+
+
+def guided_flows():
+    images = firmware()
+    dark = bytearray(noise(20, ur.FLASH_SIZE))
+    dark[:len(images["023"])] = images["023"]
+    dark[0x4000:0xA3000] = noise(21, 0xA3000 - 0x4000)
+    dark = bytes(dark)
+    on_v23 = SOURCES["new"] + noise(99, ur.FLASH_SIZE - len(SOURCES["new"]))
+    return {
+        "rescue": guided("rescue", dark, ("uboot", "uboot"), ["rescue", "go", "go", "yes", "done"]),
+        "rescue-not-now": guided("rescue-not-now", dark, ("uboot",), ["rescue", "go", "later", "done"]),
+        "rescue-cannot": guided("rescue-cannot", noise(22, ur.FLASH_SIZE), ("uboot",), ["rescue", "go", "guide", "done"]),
+        "rescue-fails-then-no": guided("rescue-fails-then-no", dark, ("uboot", "uboot"),
+                                       ["rescue", "go", "go", "yes", "again", "no", "done"], drops=(100000, 100),
+                                       attempts=1),
+        "install": guided("install", on_v23, ("recovery", "recovery"), ["install", "go", "go", "yes", "done"]),
+        "check": guided("check", on_v23, ("recovery",), ["check", "go", "done"]),
+        "password": guided("password", on_v23, (), ["check", "go", "go"], permission=u.SUDO),
+        "back-and-quit": guided("back-and-quit", on_v23, (), ["install", "back", "check", "back", "quit"]),
+    }
+
+
+CONFIGS = [("truecolor", "dark", True, False, 80, 24, 0.0), ("256", "light", True, False, 100, 30, 0.0),
+           ("16", None, False, False, 62, 24, 0.0), ("truecolor", "light", True, True, 80, 24, 0.7)]
+STATUSES = [(("spin", "looking for your pedal…", 0.0), (), "wait"),
+            (("spin", "looking for your pedal…", 0.0), ("Still looking. Plug straight into this computer, no hub.",
+                                                       "A pedal that will not start shows up between restarts."), "wait"),
+            (("ok", "found it", 0.0), (), "busy"),
+            (("bar", "writing", 0.42), (screens.REFUSED,), "busy")]
+
+
+def frames(flows):
+    """Every screen of the flows, and each tool screen with each status, composed in each configuration: the rows of
+    (text, style) runs and the escape codes the palette gives each row."""
+    seen, out = set(), []
+    for flow in flows.values():
+        for step in flow["screens"]:
+            fields = step.get("ask") or step["work"]
+            variants = [fields] if "ask" in step else [
+                dict(fields, status=list(st), warn=list(warn), choices=[], foot=foot) for st, warn, foot in STATUSES]
+            for v in variants:
+                key = json.dumps(v, sort_keys=True)
+                if key in seen:
+                    continue
+                seen.add(key)
+                screen = screens.Screen(**{k: (tuple(tuple(c) for c in x) if k == "choices" else
+                                              tuple(x) if isinstance(x, list) else x) for k, x in v.items()})
+                for depth, theme, unicode, motion, cols, rows, tick in CONFIGS:
+                    caps = screens.Caps(depth, theme, unicode, motion)
+                    frame = screens.compose(screen, caps, cols, rows, tick)
+                    palette = screens.Palette(depth, theme)
+                    out.append({"screen": v, "caps": [depth, theme, unicode, motion], "size": [cols, rows],
+                                "tick": tick, "plain": screens.plain(frame).split("\n"),
+                                "digest": frame_digest(frame, palette)})
+    return out
+
+
+def frame_digest(frame, palette):
+    """SHA-256 of every run's text and style and every row's escape codes (undertone/src/tui/look.rs's `digest`)."""
+    runs = "\n".join("".join(f"{t}\x1f{','.join(st)}\x1e" for t, st in r) for r in frame)
+    ansi = "\n".join(screens.ansi_row(r, palette) for r in frame)
+    return hashlib.sha256((runs + "\n\n" + ansi).encode()).hexdigest()
+
+
 def main():
     fixtures = {
         "rescue-read-only": rescue(False),
@@ -329,6 +451,9 @@ def main():
     out.write_text(json.dumps(fixtures, indent=1) + "\n")
     Path(__file__).with_name("packages.json").write_text(json.dumps(packages(), indent=1) + "\n")
     Path(__file__).with_name("commands.json").write_text(json.dumps(commands(), indent=1) + "\n")
+    flows = guided_flows()
+    Path(__file__).with_name("guided.json").write_text(json.dumps(flows, indent=1) + "\n")
+    Path(__file__).with_name("frames.json").write_text(json.dumps(frames(flows), indent=0) + "\n")
     print(f"wrote {out}: " + ", ".join(f"{k} {len(v['transcript'])} transfers" for k, v in fixtures.items()))
 
 
