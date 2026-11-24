@@ -738,11 +738,11 @@ const free = (kind, slot) => page.locator(`#${kind}list .free [data-slot="${slot
   ok(/Sends CC 40/.test(await text("#chocsrc-A")) && await val("#chocdo-A") === "tap", "and Undo brings the mapping back");
   await page.selectOption("#chocdo-A", "preset:1");
   await page.selectOption("#chocmodel", "chocolate");
-  await page.click("#chocundo");
-  ok(await val("#chocmodel") === "chocolate" && /Should send CC 20/.test(await text("#chocsrc-A")), "Undo after the model changed: the model on show stays, and its own mapping is restored");
+  ok(await page.isDisabled("#chocundo"), "Undo is off for the model on show when only the other model has changes");
   await page.selectOption("#chocmodel", "plus");
-  ok(await val("#chocdo-A") === "preset:1", "the other model's mapping is not rolled back by it");
-  await page.selectOption("#chocdo-A", "tap");
+  ok(await val("#chocdo-A") === "preset:1" && await page.isEnabled("#chocundo"), "the other model's edit is kept, and can be undone after switching back");
+  await page.click("#chocundo");
+  ok(await val("#chocmodel") === "plus" && await val("#chocdo-A") === "tap", "Undo then brings back that edit");
   // out of reach, and back
   await page.evaluate(() => window.__bleDrop());
   await sleep(150);

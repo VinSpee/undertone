@@ -16,7 +16,7 @@ const KEY = "openpocket-chocolate-v1";
 const RELEASE_MS = 900;               // while a switch is taught: how long its release is waited for after its press
 const RETRY_MS = 2000;                // a Chocolate that went away: how long before the page looks for it again
 let cfg = cleanConfig(null);          // { model, profiles }
-const undo = [];                      // cfg before each change, as JSON, oldest first
+const undo = [];                      // { model, profile } before each change, as JSON, oldest first
 // the Chocolate this page connected to itself. state: off | choosing | connecting | on | waiting (it went away)
 const link = { state: "off", device: null, name: "", why: "" };
 let port = "";                        // a Chocolate the computer paired itself: the name of its MIDI port
@@ -32,16 +32,18 @@ function load() { try { cfg = cleanConfig(JSON.parse(localStorage.getItem(KEY) |
 function save() { try { localStorage.setItem(KEY, JSON.stringify(cfg)); } catch (_) { } }
 // a change of the mapping: kept at once, and Undo brings back what was there
 function change(next, what) {
-  undo.push(JSON.stringify(cfg));
+  undo.push({ model: cfg.model, profile: JSON.stringify(profile()) });
   if (undo.length > 50) undo.shift();
   cfg = { ...cfg, profiles: { ...cfg.profiles, [cfg.model]: next } };
   said = what;
   save(); render();
 }
 function undoLast() {
+  const i = undo.findLastIndex((u) => u.model === cfg.model);
+  if (i < 0) return;
   stopTeach();
-  const prev = cleanConfig(JSON.parse(undo.pop()));
-  cfg = { ...cfg, profiles: { ...cfg.profiles, [cfg.model]: prev.profiles[cfg.model] } };
+  const [u] = undo.splice(i, 1);
+  cfg = cleanConfig({ ...cfg, profiles: { ...cfg.profiles, [u.model]: JSON.parse(u.profile) } });
   said = "Undone.";
   save(); render();
 }
@@ -246,7 +248,7 @@ function render() {
   el.append(
     h("div", { class: "card-head" }, h("h2", { id: "midichoc-h", text: "Chocolate foot controller" }), h("span", { class: "grow" }),
       pickModel,
-      h("button", { type: "button", class: "btn small", id: "chocundo", text: "Undo", disabled: !undo.length, onclick: undoLast }),
+      h("button", { type: "button", class: "btn small", id: "chocundo", text: "Undo", disabled: !undo.some((u) => u.model === cfg.model), onclick: undoLast }),
       h("button", { type: "button", class: "btn small", id: "chocreset", text: "Back to the defaults",
         onclick: () => { stopTeach(); change(defaultProfile(model()), `${model().name}: back to the defaults. Undo brings your mapping back.`); } })),
     h("div", { class: "learnbar", id: "choclink" }, linkRow()),
