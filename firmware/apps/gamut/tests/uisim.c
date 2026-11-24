@@ -59,7 +59,7 @@ static uint32_t fit_box(uint32_t x, uint32_t y, uint32_t w, const char *s, const
 #include "../ui.h"
 #include "../ui_colors.h"               /* (the web editor's block colours: the screen must not show them) */
 
-static int reds;                        /* pages that showed red */
+static int reds, gaps;                  /* pages that showed red, pages with pixels never drawn */
 static void shot(const char *dir, const char *name)
 {
     static int n;
@@ -79,7 +79,7 @@ static void shot(const char *dir, const char *name)
         red += fb[i] != POISON && (fb[i] >> 11) > 16 && ((fb[i] >> 5) & 63) < 24;
     }
     printf("%-28s %6lu px sent%s", name, px_sent, holes || red ? "" : "\n");
-    if (holes) printf("   %d pixels never drawn (magenta)\n", holes);
+    if (holes) { printf("   %d pixels never drawn (magenta)\n", holes); gaps++; }
     else if (red) { printf("   %d red pixels: a fault is drawn in amber, never in red\n", red); reds++; }
     px_sent = 0;
 }
@@ -116,10 +116,11 @@ static int small_letters(const char *d)
     for (int blk = 0; blk < PX_NBLK; blk++) {           /* every label, name, model, setting and value the engine has fits its box */
         strcpy(b, px_block_label(blk)); ui_lower(b);
         if (ft_width(&GF_LB, b) > T_W - 4u) { printf("small: the label \"%s\" does not fit its key\n", b); return 1; }
-        if (ft_width(&GF_LB, b) > 32u) { printf("small: the label \"%s\" does not fit beside its model\n", b); return 1; }
+        for (const char *c = b; *c; c++) if (!strchr(GF_HE.chars, *c)) { printf("small: the label \"%s\" has a letter the 40 px face lacks\n", b); return 1; }
+        if (ft_width(&GF_HE, b) + 10u > P_LBL_W) { printf("small: the label \"%s\" does not fit beside the number, on its chip\n", b); return 1; }
         { char n[20]; strcpy(n, ui_block_name(blk)); ui_lower(n); if (ft_width(&GF_TX, n) > 136u) { printf("small: the name \"%s\" does not fit the band\n", n); return 1; } }
         for (int t = 0; t < px_ntypes(blk); t++) {
-            if (ft_width(&GF_TX, px_type_name(blk, t)) > 160u) { printf("small: the model \"%s\" does not fit\n", px_type_name(blk, t)); return 1; }
+            if (ft_width(&GF_TX, px_type_name(blk, t)) > 184u) { printf("small: the model \"%s\" does not fit\n", px_type_name(blk, t)); return 1; }
             for (int k = 0; k < px_nparams(blk, t); k++) {
                 char n[24]; strcpy(n, px_param_name(blk, t, k)); ui_lower(n);
                 if (ui_list_n(blk, t, k)) { strcat(n, " 16/16"); if (ft_width(&GF_LB, n) > E_LIST_X - BAR_X) { printf("small: \"%s\" does not fit before its name\n", n); return 1; } continue; }
@@ -146,22 +147,41 @@ static int count_col(uint32_t x, uint32_t y, uint32_t w, uint32_t h, uint16_t co
 static void play_again(void) { poison(); uc.screen = -1; ui_invalidate(); ui_render(); }
 static int px_at(uint32_t x, uint32_t y, uint16_t c) { return fb[y * 240u + x] == c; }
 /* ---- the palette's meanings (ui_palette.h): a block is on or off by light, not by a colour of its own; green is the lamp ---- */
+static int ink_rows(uint32_t x, uint32_t y, uint32_t w, uint32_t h, uint16_t col)   /* the rows from the first to the last that show col */
+{
+    int top = -1, bot = -1;
+    for (uint32_t j = 0; j < h; j++) if (count_col(x, y + j, w, 1, col)) { if (top < 0) top = (int)j; bot = (int)j; }
+    return top < 0 ? 0 : bot - top + 1;
+}
 static int lamp_meanings(const char *d)
 {
     load_preset(9); cur_preset = 9; ui_blk = PX_B_AMP; ui_home(); play_again(); ui_status("dsp 42%", UI_ST_NORM);
     for (int i = 0; i < PX_NBLK; i++) {                 /* (2 px into a key from its top, above its label) */
         int b = PRESET.order[i], on = PRESET.on[b] != 0;
-        if (!px_at(tile_x(i) + T_W / 2u, tile_y(i) + 2u, on ? C_HOUSING : C_KEY)) { printf("lamp: block %d's key must be pale when on and dark when off\n", b); return 1; }
-        if (!px_at(tile_x(i) + T_W / 2u, tile_y(i) - 2u, b == (int)ui_blk ? C_HOUSING : C_GROUND) || !px_at(tile_x(i) + T_W / 2u, tile_y(i) - 1u, C_GROUND)) { printf("lamp: the ring is round the selected key only, a pixel of ground away from it\n"); return 1; }
+        uint32_t x = tile_x(i) + T_W / 2u, y = tile_y(i);
+        if (!px_at(tile_x(i) + 1u, y + (on ? T_ON : T_OFF) + 2u, on ? C_HOUSING : C_KEY)) { printf("line: block %d's key must be pale when on and dark when off\n", b); return 1; }
+        if (!px_at(tile_x(i) + 1u, y + T_LINE, on ? C_HOUSING : C_LABEL) || !px_at(tile_x(i) - 2u, y + T_LINE, C_LABEL) || !px_at(tile_x(i) - 2u, y + T_LINE + 1u, C_LABEL))
+            { printf("line: a key that is on sits on the line, one that is off below it, and the line runs on between the keys\n"); return 1; }
+        if (!px_at(x, y + T_LANE + 1u, b == (int)ui_blk ? C_HOUSING : C_GROUND) || !px_at(x, y + T_LANE - 1u, C_GROUND)) { printf("line: the bar in the lane is under the selected block only\n"); return 1; }
     }
+    if (count_col(0, T_Y0 + T_LINE, 240, 1, C_GROUND)) { printf("line: the line runs from edge to edge\n"); return 1; }
     for (int b = 0; b < PX_NBLK; b++)
         if (BLK_COL[b] != C_HOUSING && count_col(0, 0, 240, 240, BLK_COL[b])) { printf("lamp: PLAY shows block %d's colour\n", b); return 1; }
-    int lit = count_col(200, P_INFO_Y, 12, 23, C_LAMP);
-    if (!PRESET.on[PX_B_AMP] || lit < 40 || count_col(0, S_H, 240, P_INFO_Y - S_H, C_LAMP) || count_col(0, 0, 240, 240, GRN)) { printf("lamp: PLAY's only green is the lamp of the selected block, lit while it is on\n"); return 1; }
+    int mark = count_col(0, 0, 25, S_H, C_LAMP);
+    if (mark < 9 || count_col(0, 0, 240, 240, C_LAMP) != mark || count_col(0, 0, 240, 240, GRN)) { printf("lamp: PLAY's only green is the mark's lamp\n"); return 1; }
+    master_vol = 0; ui_render();
+    if (count_col(0, 0, 240, 240, C_LAMP) || count_col(0, 0, 25, S_H, C_LAMP_OFF) != mark) { printf("lamp: no sound passes at volume 0: the mark's lamp is unlit\n"); return 1; }
+    master_vol = 80; ui_render();
+    /* beside the number: the selected block's label, 40 px capitals' height, pale while its block is on, grey while off */
+    if (!PRESET.on[PX_B_AMP] || !count_col(P_LBL_X, P_NUM_Y, P_LBL_W, 57, C_HOUSING)) { printf("label: an on block's label is pale\n"); return 1; }
+    if (ink_rows(P_LBL_X, P_NUM_Y, P_LBL_W, 57, C_HOUSING) < 40 || ink_rows(6, P_NUM_Y, 98, 58, C_HOUSING) < 57) { printf("label: the label is 40 px tall at least and the number 58\n"); return 1; }
     PRESET.on[PX_B_AMP] = 0; ui_render(); shot(d, "play_selected_block_off");
-    if (count_col(0, 0, 240, 240, C_LAMP) || count_col(200, P_INFO_Y, 12, 23, C_LAMP_OFF) != lit) { printf("lamp: an off block's lamp is unlit\n"); return 1; }
+    if (count_col(P_LBL_X, P_NUM_Y, P_LBL_W, 57, C_HOUSING) || !count_col(P_LBL_X, P_NUM_Y, P_LBL_W, 57, C_LABEL)) { printf("label: an off block's label is grey\n"); return 1; }
+    for (uint32_t b = 0; b < PX_NBLK; b++) { ui_blk = b; ui_render(); }   /* (every label is drawn: fit_box counts one that is cut or lacks a glyph) */
+    ui_blk = PX_B_AMP; ui_render();
     ui_push(); poison(); ui_render(); ui_status("dsp 42%", UI_ST_NORM);
-    if (!px_at(180, 15, C_KEY) || count_col(178, 6, 52, 19, C_LAMP_OFF) != lit) { printf("lamp: block page: an off block has a dark key and an unlit lamp\n"); return 1; }
+    int lit = count_col(178, 6, 52, 19, C_LAMP_OFF);
+    if (!px_at(180, 15, C_KEY) || lit < 40) { printf("lamp: block page: an off block has a dark key and an unlit lamp\n"); return 1; }
     for (int b = 0; b < PX_NBLK; b++)
         if (BLK_COL[b] != C_HOUSING && count_col(0, 0, 240, 240, BLK_COL[b])) { printf("lamp: the block page shows block %d's colour\n", b); return 1; }
     ui_knob(-1, 0); ui_push(); ui_render(); shot(d, "edit_on_key_selected");   /* (back from MODEL: ON; PUSH switches it) */
@@ -172,55 +192,70 @@ static int lamp_meanings(const char *d)
     ui_push(); ui_render();
     if (count_col(E_LIST_X, E_P0 + 1u, 230u - E_LIST_X, 22, C_GRAPHITE)) { printf("lamp: the value is as it was once the change is done\n"); return 1; }
     ui_home(); load_preset(9); play_again(); ui_status("dsp 42%", UI_ST_NORM);
+    /* a block picked up: its key above the line and its label's chip, both amber; the bar under it amber too */
+    { int i = ui_pos_of(PX_B_AMP);
+      ui_move_start(); ui_render(); shot(d, "play_block_picked_up");
+      if (!px_at(tile_x(i) + T_W / 2u, tile_y(i) + 2u, C_AMBER) || !px_at(tile_x(i) + T_W / 2u, tile_y(i) + T_LANE + 1u, C_AMBER) || !px_at(P_LBL_X + 8u, P_NUM_Y + 2u, C_AMBER)
+          || !count_col(P_LBL_X, P_NUM_Y, P_LBL_W, 57, C_GRAPHITE)) { printf("line: a block picked up rises above the line in amber, and its label stands on an amber chip\n"); return 1; }
+      ui_move_cancel(); ui_render();
+      if (count_col(0, S_H, 240, F_Y - S_H, C_AMBER)) { printf("line: put back, nothing stays amber\n"); return 1; } }
     /* the battery: the charge turns amber at 30 %, the figure too at 15 %; neither is green or red */
     { int m = bat_mv;
-      bat_pct = 31; ui_render(); if (count_col(84, 0, 74, S_H, C_AMBER)) { printf("lamp: a battery at 31 %% is not amber\n"); return 1; }
-      bat_pct = 30; ui_render(); if (!count_col(86, 6, 18, 8, C_AMBER) || count_col(112, 0, 46, S_H, C_AMBER)) { printf("lamp: at 30 %% the charge is amber, the figure not yet\n"); return 1; }
-      bat_pct = 15; ui_render(); shot(d, "play_battery_low"); if (!count_col(112, 0, 46, S_H, C_AMBER)) { printf("lamp: at 15 %% the figure is amber too\n"); return 1; }
-      bat_pct = -1; bat_mv = m; ui_render(); }
+      bat_pct = 31; ui_render(); if (count_col(BAT_X, 0, 59, S_H, C_AMBER)) { printf("lamp: a battery at 31 %% is not amber\n"); return 1; }
+      bat_pct = 30; ui_render(); if (!count_col(BAT_X + 2u, 8, 16, 6, C_AMBER) || count_col(BAT_X + 25u, 0, 34, S_H, C_AMBER)) { printf("lamp: at 30 %% the charge is amber, the figure not yet\n"); return 1; }
+      bat_pct = 15; ui_render(); shot(d, "play_battery_low"); if (!count_col(BAT_X + 25u, 0, 34, S_H, C_AMBER)) { printf("lamp: at 15 %% the figure is amber too\n"); return 1; }
+      bat_pct = 100; ui_render(); bat_pct = -1; bat_mv = m; ui_render(); }
     return 0;
 }
 static int quick_wins(const char *d)
 {
     char c[16];
-    /* F1: every load text the main loop can build fits the box it is drawn in (it used to cut "BYP 2C 150%" to "BYP 2C 15") */
+    /* F1: every load text the main loop can build fits the box it is drawn in (it used to cut "BYP 2C 150%" to "BYP 2C 15"): its
+     * word in the labels' face, 2 px, its figure in the figures' face. The peak of an overload is in PLAY's footer instead. */
     for (uint32_t l = 0; l <= 999u; l++)
-        for (int m = 0; m < 8; m++) {
-            int safe = m & 1, bypass = (m >> 1) & 1, late = (m >> 2) & 1;
-            ui_load_text(c, l, safe, bypass, late);
-            if (ft_width(&GF_LB, c) > ST_W) { printf("F1: \"%s\" is %u px, the box %u\n", c, ft_width(&GF_LB, c), ST_W); return 1; }
+        for (int m = 0; m < 4; m++) {
+            int safe = m & 1, late = (m >> 1) & 1, sp = 0;
+            ui_load_text(c, l, safe, 0, late);
+            while (c[sp] != ' ') sp++;
+            c[sp] = 0;
+            if (ft_width(&GF_LB, c) + 2u + ft_width(&GF_MS, c + sp + 1) > ST_W) { printf("F1: \"%s %s\" does not fit the box of %u px\n", c, c + sp + 1, ST_W); return 1; }
         }
+    if (ft_width(&GF_LB, "loading") > ST_W) { printf("F1: LOADING does not fit the load figure's box\n"); return 1; }
     ui_load_text(c, 150, 0, 1, 0);
     if (strcmp(c, "peak 150%")) { printf("F1: a peak of 150%% reads \"%s\"\n", c); return 1; }
     ui_load_text(c, 88, 0, 0, 1);
     if (strcmp(c, "dsp 88%!")) { printf("F11: a late block reads \"%s\"\n", c); return 1; }
-    if (ft_width(&GF_LB, "knob: select  push: edit") > ST_X - 2u) { printf("F1: the longest hint no longer fits beside the load figure\n"); return 1; }
-    /* F1: overload is an amber banner with an instruction, on PLAY (top bar) and on a block page (footer) */
+    /* F1: overload is an amber band with its sign and an instruction, on PLAY (in the plate's place, taller) and on a block page (footer) */
     load_preset(9); cur_preset = 9; ui_blk = PX_B_AMP; ui_home(); play_again(); ui_status("dsp 42%", UI_ST_NORM);
-    if (count_col(0, 0, 240, 3, C_AMBER)) { printf("F1: PLAY shows the banner without an overload\n"); return 1; }
-    ui_status("peak 150%", UI_ST_BYPASS); ui_render(); shot(d, "play_overload_banner");
-    if (count_col(0, 0, 240, S_H, C_AMBER) < 240 * 5 || count_col(0, S_TY, 240, 16, C_GRAPHITE) == 0 || count_col(0, F_TY, 240, 16, C_HOUSING) == 0) { printf("F1: PLAY overload: no amber bar with graphite words, or no instruction in the footer\n"); return 1; }
+    if (count_col(0, 0, 240, 3, C_AMBER) || uc.dy) { printf("F1: PLAY shows the band without an overload\n"); return 1; }
+    poison(); ui_status("peak 150%", UI_ST_BYPASS); ui_render(); shot(d, "play_overload_banner");
+    if (count_col(0, 0, 240, S_BAN, C_AMBER) < 240 * 20 || !px_at(14, 9, C_GRAPHITE) || count_col(28, 4, 204, 22, C_GRAPHITE) == 0) { printf("F1: PLAY overload: no amber band of 30 px with the sign and graphite words\n"); return 1; }
+    if (count_col(0, F_TY, 240, 16, C_HOUSING) == 0 || count_col(0, F_TY, 240, 16, C_AMBER) == 0) { printf("F1: PLAY overload: the footer says what to do, and the peak in amber\n"); return 1; }
+    if (count_col(0, S_BAN, 240, 1, C_GROUND) != 240 || count_col(0, F_Y - 1u, 240, 1, C_GROUND) != 240 || tile_y(11) + T_ROW >= F_Y) { printf("F1: PLAY overload: the page stands clear below the band and above the footer\n"); return 1; }
+    ui_status("peak 999%", UI_ST_BYPASS); ui_render();   /* (the widest peak: fit_box counts a footer that is cut) */
     ui_push(); ui_render(); shot(d, "edit_overload_banner");
-    if (count_col(0, F_Y, 240, 18, C_AMBER) < 240 * 3 || count_col(0, F_TY, 240, 16, C_GRAPHITE) == 0) { printf("F1: block page overload: the footer is not amber with graphite words\n"); return 1; }
+    if (count_col(0, F_Y, 240, 18, C_AMBER) < 240 * 3 || count_col(28, F_TY, 212, 16, C_GRAPHITE) == 0 || !px_at(14, F_TY + 3u, C_GRAPHITE)) { printf("F1: block page overload: the footer is not amber with the sign and graphite words\n"); return 1; }
     ui_status("dsp 42%", UI_ST_NORM); ui_render();
     if (count_col(0, F_Y, 240, 18, C_AMBER)) { printf("F1: the footer stays amber after the overload ends\n"); return 1; }
     ui_home(); play_again(); ui_status("dsp 42%", UI_ST_NORM);
-    if (count_col(0, 0, 240, S_H, C_AMBER)) { printf("F1: the top bar stays amber after the overload ends\n"); return 1; }
-    /* F2: LOADING shows amber on the MODEL row being edited (the name greys), and amber in the corner on PLAY (the amp name greys) */
+    if (count_col(0, 0, 240, S_BAN, C_AMBER) || uc.dy) { printf("F1: the band stays after the overload ends\n"); return 1; }
+    /* F2: LOADING shows amber on the MODEL row being edited (the name greys), and amber in the corner on PLAY */
     {
         play_again(); ui_status("dsp 61%", UI_ST_NORM);
-        int amp = count_col(94, P_NUM_Y + 4u, 142, 22, C_HOUSING);
+        if (count_col(ST_X, 0, ST_W, S_H, C_AMBER) || !count_col(ST_X, 0, ST_W, S_H, C_HOUSING) || !count_col(ST_X, 0, ST_W, S_H, C_LABEL)) { printf("F2: PLAY: the load reads its word in grey and its figure in housing\n"); return 1; }
         ui_status("dsp 61%", UI_ST_LOADING); ui_render(); shot(d, "play_loading");
-        if (!amp || count_col(94, P_NUM_Y + 4u, 142, 22, C_HOUSING) || !count_col(ST_X, S_TY, ST_W, 16, C_AMBER)) { printf("F2: PLAY: the amp name must grey and the corner read LOADING in amber\n"); return 1; }
+        if (!count_col(ST_X, S_TY, ST_W, 16, C_AMBER) || count_col(ST_X, 0, ST_W, S_H, C_HOUSING)) { printf("F2: PLAY: the corner must read LOADING in amber\n"); return 1; }
         ui_status("dsp 61%", UI_ST_NORM); ui_render();
-        if (count_col(94, P_NUM_Y + 4u, 142, 22, C_HOUSING) != amp) { printf("F2: PLAY: the amp name must come back when the model plays\n"); return 1; }
+        if (count_col(ST_X, 0, ST_W, S_H, C_AMBER)) { printf("F2: PLAY: the load figure must come back when the model plays\n"); return 1; }
         ui_push(); poison(); ui_render(); ui_status("dsp 61%", UI_ST_NORM);
         int row = count_col(BAR_X, E_P0 + 6u, E_LIST_X - BAR_X, 16, C_AMBER);
         ui_status("dsp 61%", UI_ST_LOADING); ui_render(); shot(d, "edit_model_loading");
         if (count_col(BAR_X, E_P0 + 6u, E_LIST_X - BAR_X, 16, C_AMBER) <= row || count_col(E_LIST_X, E_P0 + 1u, 230u - E_LIST_X, 22, C_HOUSING)) { printf("F2: block page: the MODEL row must read LOADING in amber, the name in grey\n"); return 1; }
-        if (count_col(ST_X, F_TY, ST_W, 16, C_AMBER)) { printf("F2: block page: the corner keeps the load figure\n"); return 1; }
+        if (count_col(ST_X, F_TY, ST_W, 16, C_AMBER) || !count_col(ST_X, F_TY, ST_W, 16, C_HOUSING)) { printf("F2: block page: the corner keeps the load figure\n"); return 1; }
         ui_status("dsp 61%", UI_ST_NORM); ui_render();
         if (count_col(BAR_X, E_P0 + 6u, E_LIST_X - BAR_X, 16, C_AMBER) != row) { printf("F2: block page: the MODEL row must come back\n"); return 1; }
+        /* a footer names each control in housing and what it does in label grey, clear of the load figure */
+        if (!count_col(8, F_TY, ST_X - 10u, 16, C_HOUSING) || !count_col(8, F_TY, ST_X - 10u, 16, C_LABEL) || count_col(ST_X - 12u, F_TY, 12, 16, C_PLATE) != 12 * 16) { printf("footer: a block page's hints are a pale control and a grey action each, and end before the load figure\n"); return 1; }
         ui_home(); play_again(); ui_status("dsp 42%", UI_ST_NORM);
     }
     /* F3: a footswitch on a block page goes back to PLAY (on the block it was on); the band carries the preset number */
@@ -234,13 +269,13 @@ static int quick_wins(const char *d)
     cur_preset = 11; load_preset(11); ui_render(); shot(d, "edit_band_after_midi_change");   /* (a Program Change keeps the page) */
     if (!band || count_col(8, 6, 24, 19, C_KEY) == band) { printf("F3: the band must show the new preset number after a MIDI change\n"); return 1; }
     ui_home(); cur_preset = 9; load_preset(9);
-    /* F4: while EDITED shows, the footer names SAVE */
+    /* F4: while EDITED shows (in amber, in the top plate), the footer names SAVE */
     play_again(); ui_status("dsp 42%", UI_ST_NORM);
-    if (count_col(0, F_TY, 240, 16, C_AMBER)) { printf("F4: SAVE is named without an edit\n"); return 1; }
+    if (count_col(0, F_TY, 240, 16, C_AMBER) || count_col(0, 0, 240, S_H, C_AMBER)) { printf("F4: SAVE is named without an edit\n"); return 1; }
     PRESET.p[PX_B_AMP][1] ^= 7u; ui_render(); shot(d, "play_edited_save_hint");
-    if (!count_col(0, F_TY, 240, 16, C_AMBER)) { printf("F4: EDITED shows, but the footer does not name SAVE\n"); return 1; }
+    if (!count_col(0, F_TY, 240, 16, C_AMBER) || !count_col(BAT_X + 59u, 0, ST_X - BAT_X - 59u, S_H, C_AMBER)) { printf("F4: the plate must say EDITED and the footer name SAVE, both in amber\n"); return 1; }
     load_preset(9); ui_render();
-    if (count_col(0, F_TY, 240, 16, C_AMBER)) { printf("F4: the SAVE hint stays after the edit is gone\n"); return 1; }
+    if (count_col(0, F_TY, 240, 16, C_AMBER) || count_col(0, 0, 240, S_H, C_AMBER)) { printf("F4: EDITED or the SAVE hint stays after the edit is gone\n"); return 1; }
     return lamp_meanings(d) || small_letters(d);
 }
 
@@ -318,12 +353,17 @@ static int overhaul(const char *d)
     hold(1u << UB_FSUP | 1u << UB_FSDN, 60);
     CHECK(ui_mode == M_TUNER && cur_preset == 9 && a_tmute, "F5: both footswitches: the step back, the tuner, muted");
     tuner_draw(108.0f); shot(d, "tuner_flat");
-    CHECK(count_col(10, 76, 46, 23, C_HOUSING) && !count_col(184, 76, 46, 23, C_HOUSING), "F12: flat: an arrow on the left, toward in tune");
-    CHECK(count_col(0, 30, 240, 30, C_GROUND) == 240 * 30 && count_col(0, 206, 240, 16, C_GROUND) == 240 * 16, "F12: no diagnostics on the tuner page");
-    CHECK(count_col(56, 60, 128, 54, C_HOUSING) && !count_col(0, 30, 240, F_Y - 30u, C_LAMP), "tuner: out of tune: the note in housing, nothing lit");
-    tuner_draw(112.5f); CHECK(!count_col(10, 76, 46, 23, C_HOUSING) && count_col(184, 76, 46, 23, C_HOUSING), "F12: sharp: the arrow on the right");
-    tuner_draw(110.0f); CHECK(!count_col(10, 76, 46, 23, C_HOUSING) && !count_col(184, 76, 46, 23, C_HOUSING), "F12: in tune: no arrow");
-    CHECK(count_col(56, 60, 128, 54, C_LAMP) && !count_col(56, 60, 128, 54, C_HOUSING) && count_col(110, TN_BAR_Y - 2u, 20, 14, C_LAMP), "tuner: in tune: the note and the needle are the lamp's green");
+    CHECK(count_col(4, TN_NOTE_Y + 30u, 36, 22, C_HOUSING) && !count_col(200, TN_NOTE_Y + 30u, 36, 22, C_HOUSING), "F12: flat: an arrow on the left, toward in tune");
+    CHECK(count_col(0, 30, 240, 4, C_GROUND) == 240 * 4 && count_col(0, TN_Y + 41u, 240, F_Y - TN_Y - 41u, C_GROUND) == 240 * (int)(F_Y - TN_Y - 41u), "F12: no diagnostics on the tuner page");
+    CHECK(ink_rows(40, TN_NOTE_Y, 160, 83, C_HOUSING) >= 80 && !count_col(0, 30, 240, F_Y - 30u, C_LAMP), "tuner: out of tune: the note in housing, 81 px tall, nothing lit");
+    CHECK(count_col(110, TN_Y + 18u, 20, 6, C_LAMP_OFF) && px_at(120 - 64, TN_Y, C_HOUSING) && px_at(120 - 64, TN_Y + 17u, C_HOUSING), "tuner: 32 cents flat: the needle 64 px left of the middle, the window unlit");
+    tuner_draw(112.5f); CHECK(!count_col(4, TN_NOTE_Y + 30u, 36, 22, C_HOUSING) && count_col(200, TN_NOTE_Y + 30u, 36, 22, C_HOUSING), "F12: sharp: the arrow on the right");
+    tuner_draw(108.7366f);                               /* (20 cents flat: the needle on a tick) */
+    CHECK(px_at(80, TN_Y, C_HOUSING) && !px_at(120 - 64, TN_Y, C_HOUSING), "tuner: the needle follows the note");
+    tuner_draw(110.0f); CHECK(!count_col(4, TN_NOTE_Y + 30u, 36, 22, C_HOUSING) && !count_col(200, TN_NOTE_Y + 30u, 36, 22, C_HOUSING), "F12: in tune: no arrow");
+    CHECK(count_col(40, TN_NOTE_Y, 160, 83, C_LAMP) && !count_col(40, TN_NOTE_Y, 160, 83, C_HOUSING) && count_col(110, TN_Y + 18u, 20, 6, C_LAMP) && px_at(120, TN_Y, C_HOUSING), "tuner: in tune: the note and the window are the lamp's green, the needle in the middle");
+    CHECK(px_at(80, TN_Y, C_GROUND) && px_at(80, TN_Y + 10u, C_RIM) && px_at(79, TN_Y + 10u, C_GROUND) && px_at(80, TN_Y + 14u, C_RIM) && px_at(20, TN_Y + 6u, C_LABEL) && px_at(220, TN_Y + 6u, C_LABEL),
+          "tuner: the scale is whole again where the needle was: a tick every 10 cents, the end ones tall");
     hold(0, 300);
     hold(1u << UB_FSDN, 40); hold(1u << UB_FSDN | 1u << UB_FSUP, 40); hold(0, 300);
     CHECK(ui_mode == M_CHAIN && cur_preset == 9 && !a_tmute, "F5: both footswitches leave the tuner, the preset as it was");
@@ -401,11 +441,17 @@ static int overhaul(const char *d)
                 CHECK(ft_width(&GF_MD, b) + 8u <= 230u - E_VAL_X, "F17: a cut frequency does not fit its box");
             }
     }
-    /* F14: on PLAY, the line under the tiles names a NAM amp's model and a user IR */
+    /* F14: a block's model is on its page, a PUSH away, not on PLAY: PLAY stays as it is when a NAM amp's model changes */
     ui_home(); ui_blk = PX_B_AMP; full();
-    int m0 = count_col(40, P_INFO_Y, 160, 23, C_HOUSING);
-    PRESET.p[PX_B_AMP][0] = (uint8_t)px_nam_knob(5); ui_render(); shot(d, "play_info_nam_model");
-    CHECK(count_col(40, P_INFO_Y, 160, 23, C_HOUSING) != m0, "F14: the line under the tiles follows the NAM model");
+    { static uint16_t was[240 * 240];
+      memcpy(was, fb, sizeof was);
+      PRESET.p[PX_B_AMP][0] = (uint8_t)px_nam_knob(5); ui_render();
+      CHECK(ui_dirty() && !memcmp(was, fb, sizeof was), "F14: PLAY does not name a block's model");
+      ui_push(); full(); shot(d, "edit_model_on_its_page");
+      int m0 = count_col(E_LIST_X, E_P0 + 1u, 230u - E_LIST_X, 22, C_HOUSING);
+      PRESET.p[PX_B_AMP][0] = (uint8_t)px_nam_knob(0); ui_render();
+      CHECK(m0 && count_col(E_LIST_X, E_P0 + 1u, 230u - E_LIST_X, 22, C_HOUSING) != m0, "F14: the block page names the NAM model, and follows it");
+      PRESET.p[PX_B_AMP][0] = (uint8_t)px_nam_knob(5); }
     /* F9: the block page's selection goes in the order drawn: ON at the top, MODEL, the settings */
     ui_blk = PX_B_AMP; ui_mode = M_BLOCK; ui_item = 0;
     ui_turn(-1, 0); CHECK(ui_item == 1u, "F9: back from MODEL: ON");
@@ -429,13 +475,31 @@ static int overhaul(const char *d)
     /* F15, F16: SAVE says a copy keeps its name; RESTORE FACTORY says RESTORE and does nothing on a factory sound */
     ui_home(); load_preset(9); cur_preset = 9; full();
     poison(); save_open(); save_knob(1); save_draw(); shot(d, "save_copy_keeps_name");
-    CHECK(count_col(0, 186, 240, 16, C_LABEL), "F15: SAVE to another slot says the name stays");
+    CHECK(count_col(0, 190, 240, 16, C_LABEL), "F15: SAVE to another slot says the name stays");
+    CHECK(ink_rows(0, 76, 240, 58, C_HOUSING) >= 57, "SAVE: the slot's number is as tall as PLAY's");
     while (sv_dest != SV_FACTORY) save_knob(-1);
     save_draw(); shot(d, "save_restore_nothing");
     CHECK(sv_dest == SV_FACTORY && !st_saved(9), "F16: RESTORE FACTORY");
     tap(UB_PUSH); CHECK(ui_mode == M_SAVE && !st_saved(9), "F16: PUSH does nothing when there is nothing to restore");
     tap(UB_HOME); CHECK(ui_mode == M_CHAIN, "HOME leaves SAVE");
     full();
+    return 0;
+}
+
+/* the update's screen (px_usb.h draws it through OP_OTA_SCREEN): a dot for each step, the running one the lamp; a failure in amber */
+static int update_screen(const char *d)
+{
+    poison(); ui_update_show(2, 0); shot(d, "update_step_2");
+    int dot = count_col(98, 118, 8, 8, C_LAMP);
+    CHECK(!count_col(0, 0, 240, 240, POISON), "update: the whole screen is drawn");
+    CHECK(dot >= 40 && count_col(0, 110, 240, 24, C_LAMP) == dot, "update: the step that runs, and it alone, is the lamp");
+    CHECK(px_at(84, 122, C_HOUSING) && px_at(120, 122, C_RIM) && px_at(138, 122, C_RIM) && px_at(156, 122, C_RIM), "update: a step done is pale, the ones to come dark");
+    CHECK(count_col(104, 30, 40, 50, C_LAMP) && count_col(0, 170, 240, 16, C_AMBER), "update: the mark's lamp is lit, and DO NOT UNPLUG is amber");
+    poison(); ui_update_show(5, 0); shot(d, "update_restart");
+    CHECK(px_at(156, 122, C_LAMP) && px_at(138, 122, C_HOUSING) && px_at(84, 122, C_HOUSING), "update: the last step");
+    poison(); ui_update_show(9, -12); shot(d, "update_failed");
+    CHECK(!count_col(0, 0, 240, 240, POISON) && !count_col(0, 0, 240, 240, C_LAMP), "update: failed: nothing is lit");
+    CHECK(count_col(6, 116, 228, 62, C_AMBER) > 228 * 40 && count_col(32, 124, 198, 16, C_GRAPHITE) && px_at(20, 127, C_GRAPHITE), "update: failed: an amber box, the sign, the code in graphite");
     return 0;
 }
 
@@ -489,8 +553,9 @@ int main(int argc, char **argv)
     mid_cfg.chan = 16; midi_open(); midi_knob(1); midi_draw(); shot(d, "midi_channel_wraps_to_omni");
     if (mid_cfg.chan != 0) { printf("midi: channel 16 + 1 must wrap to omni\n"); return 1; }
     midi_knob(-1); if (mid_cfg.chan != 16) { printf("midi: omni - 1 must wrap to 16\n"); return 1; }
-    if (quick_wins(d) || overhaul(d)) return 1;
+    if (quick_wins(d) || overhaul(d) || update_screen(d)) return 1;
     if (reds) { printf("%d pages show red\n", reds); return 1; }
+    if (gaps) { printf("%d pages have pixels never drawn\n", gaps); return 1; }
     if (cut) { printf("%d texts cut or without a glyph\n", cut); return 1; }
     return 0;
 }

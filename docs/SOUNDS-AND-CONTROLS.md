@@ -150,28 +150,34 @@ balance your sounds. The output ends in a soft limiter (transparent up to -2 dBF
 | Right / left footswitch | next / previous preset (on a block's EDIT page it also goes back to PLAY, where the preset shows). Coming back to a preset you edited without saving gives the edit back (one edit is kept) |
 | **Both footswitches** | **tuner** (the first one changes the preset at once, as always; the second within about 0.15 s changes it back and opens the tuner). Both again leave it |
 | AMP, CAB, DLY, REV, MOD | jump to the block; press again = on/off |
-| FX | the next of DRV, SFX, SYN, PIT, CMP, GT and EQ in the order of the preset's chain, as the tiles read · **long press (0.8 s)** = MIDI page |
+| FX | the next of DRV, SFX, SYN, PIT, CMP, GT and EQ in the order of the preset's chain, as the keys read · **long press (0.8 s)** = MIDI page |
 | MASTER | output volume |
 
-**Screen (v36)**: PLAY shows the preset number and name large, the amp and cab, the chain as keys (a block that is on
-is a pale key, one that is off a dark key; the selected one has a ring) and the selected block; EDIT shows the block's
-name, its ON / OFF key, the model, and up to 5 settings with value and bar; the EDIT band also shows the preset number.
-A value is inverted, dark on a pale chip, while the knob changes it.
-**Text**: words are in B612 and figures in B612 Mono. Labels, hints and settings are in small letters (`gain`, `knob:
-block`, `363 ms`); the name of a preset, a model or an IR is shown as it is stored.
-**Colours**: the screen is dark with pale text. Green is a lamp, and only that: the dot beside `on` while a block is on,
-the playing preset in the list, a computer connected on the MIDI page, `saved`, and the note and the needle when in
-tune. Amber is the only warning colour: something waits on you (`edited`, `hold: save`, `loading`) or went wrong
-(overload, a late block, a low battery, a fault). Nothing is red, and the blocks have no colours of their own on the
-pedal (the web editor keeps them).
+**Screen (v36)**: PLAY shows the preset number in large figures (58 px, to be read from where you stand) and, beside
+it, the label of the selected block in large letters (40 px: pale while the block is on, grey while it is off); the
+preset's name is below them. The chain is two rows of six keys along a line: a block that is on is a pale key on the
+line, a block that is off a dark key below it, so on and off are told by light and by height. A bar under a row marks
+the selected block, and a block picked up to be moved rises above the line in amber. A block's model, a NAM amp's model
+and a user IR's name are on the block's EDIT page, one PUSH away. EDIT shows the block's name, its ON / OFF key, the
+model, and up to 5 settings with value and bar; the EDIT band also shows the preset number. A value is inverted, dark on
+a pale chip, while the knob changes it. The footer of a page names each control in pale and what it does in grey
+(`knob block  push edit  home list`). The **tuner** shows the note 81 px tall over a scale of 50 cents each way, with a
+needle where the note is. The **update** screen shows a dot for each of its five steps.
+**Text**: words are in B612 and figures in B612 Mono. Labels, hints and settings are in small letters (`gain`,
+`knob block`, `363 ms`); the name of a preset, a model or an IR is shown as it is stored.
+**Colours**: the screen is dark with pale text. Green is a lamp, and only that: the lamp of the mark at the top left of
+PLAY (lit while sound passes), the dot beside `on` while a block is on, the playing preset in the list, a computer
+connected on the MIDI page, `saved`, the tuner's note and the window under its scale when in tune, and the step that
+runs during an update. Amber is the only warning colour: something waits on you (`edited`, `hold push save`,
+`loading`, a block picked up) or went wrong (overload, a late block, a low battery, a fault). Nothing is red, and the
+blocks have no colours of their own on the pedal (the web editor keeps them).
 `dsp xx%` (top right on PLAY, bottom right on EDIT) = DSP load (amber above 80 %, and with `!` when a block ran late;
 which cores ran is on the diagnostics page). **Overload guard**: the effects are bypassed until the next change, an
-amber bar says `overload: sound bypassed` (on EDIT the whole footer turns amber) and the footer says `turn a block off`
-(with `peak xxx%` on PLAY). While a NAM model loads, the MODEL row of the EDIT page reads `loading` in amber (on PLAY the
-corner does, and the amp name goes grey). `edited`: the sound differs from its saved slot.
-Top centre of PLAY: the **battery** (v36), from the chip's own VBAT/4 channel (the charge turns amber at 30 %, the
-figure too at 15 %; `usb` when the 5 V supply is there); the diagnostics page shows the same reading in volts. On PLAY,
-the line under the tiles names a NAM amp's model and a user IR's name.
+amber band with a warning sign says `overload` and `sound bypassed` at the top of PLAY (on EDIT the whole footer turns
+amber) and the footer says `turn a block off` (with `peak xxx%` on PLAY). While a NAM model loads, the MODEL row of the
+EDIT page reads `loading` in amber (on PLAY the top right corner does). `edited`: the sound differs from its saved slot.
+In the top plate of PLAY: the **battery** (v36), from the chip's own VBAT/4 channel (the charge turns amber at 30 %, the
+figure too at 15 %; `usb` when the 5 V supply is there); the diagnostics page shows the same reading in volts.
 
 ## MIDI over USB-C (test build v37; [MIDI.md](MIDI.md))
 **Hold FX** for 0.8 s: the MIDI page (CHANNEL OMNI or 1 to 16, SEND, CLOCK > DELAY, USB AUDIO: [USB-AUDIO.md](USB-AUDIO.md)). Program Change 0 to 51 loads slot 1 to 52;
@@ -196,11 +202,11 @@ On / off: 64 and up is on. Settings 0 to 127 are 0 to 100. Model: the whole 0 to
 CC 7 is the MASTER volume. Details, the clock sync and the limits: [MIDI.md](MIDI.md).
 
 ## Saving your sounds (v25)
-- `edited` at the top of the PLAY screen means the sound has been edited since the preset was loaded; the footer then reads `hold: save`.
+- `edited` at the top of the PLAY screen means the sound has been edited since the preset was loaded; the footer then reads `hold push save`.
 - **Long press on PUSH**: SAVE page. The knob picks the slot (1 to 52; the current preset is offered first; the
   screen shows the name of the sound that will be replaced), PUSH saves, HOME cancels.
 - At the very end of the list: **restore factory** puts the current slot back to its factory preset (the footer reads
-  `push: restore`; on a slot that already holds its factory sound, PUSH does nothing).
+  `push restore`; on a slot that already holds its factory sound, PUSH does nothing).
 - A sound saved to another slot keeps its name: rename it in the web editor.
 - The pedal starts on the slot saved last.
 - Sounds are kept in flash (0xF0000–0xF4000, two copies): a power cut during a save leaves the previous version,

@@ -16,7 +16,7 @@ from PIL import Image, ImageDraw, ImageFont
 
 ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..")
 ASCII = "".join(chr(c) for c in range(0x20, 0x7F))
-FIGURES = " 0123456789+-.%/:=#'()" + string.ascii_lowercase + string.ascii_uppercase   # figures, their units, a few words
+FIGURES = " 0123456789+-.%/:=#'()!" + string.ascii_lowercase + string.ascii_uppercase   # figures, their units, a few words
 SETS = {
     "base": {
         "out": "firmware/fonts.h", "src": "/usr/share/fonts/opentype/inter", "face": "Inter",
@@ -47,7 +47,7 @@ SETS = {
             ("GF_LB", "B612-Regular.ttf", 13, ASCII, 0),              # labels, hints, messages: 10
             ("GF_TX", "B612-Regular.ttf", 19, ASCII, 0),              # models, titles, names in a list: 14
             ("GF_NM", "B612-Bold.ttf", 28, ASCII, 0),                 # the preset name: 22, the most 13 characters allow
-            ("GF_HE", "B612-Bold.ttf", 52, " abcdegilmnoprstvxy", 0),  # the selected block's label (the 12 labels' letters): 40
+            ("GF_HE", "B612-Bold.ttf", 52, " abcdefgilmnopqrstvxy", 0),  # the selected block's label (the 12 labels' letters): 40
             ("GF_LG", "B612-Bold.ttf", 106, " #-ABCDEFG", 0),         # the tuner note: 81
             ("GF_MS", "B612Mono-Regular.ttf", 12, FIGURES, 0),        # small figures: 9
             ("GF_MD", "B612Mono-Regular.ttf", 19, FIGURES, 0),        # values: 14
