@@ -122,8 +122,9 @@ of its own, and it changes nothing in the Chocolate.
   preset, a block on or off, or tap tempo (two taps or more set the delay TIME, 200 ms to 2 s, as MIDI clock does). The
   expression pedal takes any setting of any block. The defaults are DRIVE, MOD, DELAY and REVERB under A to D, and the
   previous and the next preset under A + B and C + D.
-- **Undo.** Every change is kept in the browser at once. **Undo** takes back the last change, one after the other, and
-  **Back to the defaults** is itself undone by it.
+- **Undo.** Every change is kept in the browser at once. **Undo** takes back the last change of the model on show, one
+  after the other, and **Back to the defaults** is itself undone by it. A change to the other model stays in the list
+  for when it is shown again; Undo is off while the model on show has none.
 
 A message of the Chocolate that belongs to no control with something to do goes on as any controller's: a learned
 control takes it, and a Program Change loads a preset. The mapping lives in the browser and works while the page is
