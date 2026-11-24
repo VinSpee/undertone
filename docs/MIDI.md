@@ -172,6 +172,7 @@ follow a tempo with another note value, set the delay's own TIME; this is not a 
 | SEND | ON, OFF | ON |
 | CLOCK > DELAY | ON, OFF | OFF |
 | USB AUDIO | ON, OFF | OFF |
+| USB PORT | COMPUTER, FOOTSWITCH | COMPUTER, never saved |
 
 The knob changes the row, PUSH goes to the next one (after the last it leaves), HOME leaves. The page also shows whether a
 host is connected and the last Program or Control Change received ("LAST: CC 25 = 127"), which is what to look at first when
@@ -180,6 +181,22 @@ nothing happens. Leaving saves the settings only if you changed something (one f
 **USB AUDIO** (v42) is not a MIDI setting; it lives on this page because it changes what the pedal is on USB. ON makes
 the pedal a USB sound card as well as a MIDI device: see [USB-AUDIO.md](USB-AUDIO.md). The change is made when you leave
 the page, and the pedal then leaves USB for a second. MIDI works the same with it on or off.
+
+### A footswitch by cable
+
+**USB PORT** makes the pedal's USB-C port the USB MIDI host of a footswitch plugged into it, such as an M-VAVE Chocolate,
+so the footswitch works without Bluetooth. FOOTSWITCH takes effect at once, and the line under the rows says what the pedal
+finds: NO FOOTSWITCH, FOOTSWITCH CONNECTED, NOT A MIDI DEVICE, LOW SPEED DEVICE or FOOTSWITCH LOST. The footswitch's Program
+and Control Changes are read as a computer's: presets, blocks, the footswitch numbers above and the map. SysEx is not
+passed on, and the pedal sends nothing to the footswitch. While the port is a host there is no computer: the installer and
+the editor over USB do not see the pedal. Set the row back to COMPUTER, or turn the pedal off and on: the setting is never
+saved, so every power-on starts as the normal USB device.
+
+The pedal does not power the footswitch. Put a USB-C OTG adapter with a charging input (or a USB-C hub with a power input)
+between them, with a charger or a power bank in it. A footswitch behind a hub works too; a low-speed device does not.
+
+The host is felucca-bsp's `chip/usb_host.c`, after ettorebox (Roberto Antonacci). It has never run on this pedal's
+hardware before this build: see "Not checked" below.
 
 The settings are one byte in the header of the preset store (`firmware/apps/gamut/px_store.h`). Older copies have 0 there, which means the
 defaults. A power cut while saving leaves the old or the new settings, never a broken store (tested).
@@ -245,9 +262,13 @@ Run `node tools/op.mjs test` (see [BUILDING.md](BUILDING.md)):
   Control Change per change, no echo, SEND off), the settings byte, MIDI clock (120 BPM, jitter, gaps, a changing tempo), and
   that a sound sent by one pedal is applied unchanged by another.
 - `firmware/apps/gamut/tests/midiio.c`: the real glue code against the ring: Program Change and Control Change change the sound, are ignored while
-  SAVE, tuner or the MIDI page is open, channel filtering, a flood is drained and recovers, clock sync on and off.
+  SAVE, tuner or the MIDI page is open, channel filtering, a flood is drained and recovers, clock sync on and off, and with USB PORT
+  on FOOTSWITCH a footswitch acts as a computer while nothing is sent to it.
 - `firmware/apps/gamut/tests/test_store.c`: the settings survive a power cycle, a preset save and a power cut at every step.
-- `firmware/apps/gamut/tests/uisim.c`: the MIDI page is drawn completely, the channel wraps, leaving saves only if changed.
+- `firmware/apps/gamut/tests/uisim.c`: the MIDI page is drawn completely, the channel wraps, leaving saves only if changed,
+  USB PORT acts at once and is never saved, and each of its states is drawn.
+- `tests/test_usb_host.c`: the host's descriptor parser on the Chocolate's layout (HID at interface 0, MIDI streaming at
+  2), which packets pass, the states the page shows, and the host's clock across the main clock's wrap at 178.9 s.
 - `tests/test_installer.mjs`: an update still succeeds after a foreign SysEx.
 - `tests/test_op.mjs`, `tests/test_page.mjs`: the test package command and the installer's test channel.
 - `tests/test_editor_logic.mjs`, `tests/test_editor_page.mjs`: the Chocolate card. The Bluetooth MIDI packets are read as
@@ -256,7 +277,9 @@ Run `node tools/op.mjs test` (see [BUILDING.md](BUILDING.md)):
 
 **Not checked, because it needs the pedal:** the USB enumeration and the port name on each OS, a real DAW or app sending, the
 timing of replies, the DSP load and any dropout with MIDI flowing, the real screen, the update path on the new build, power
-cycles. That is what [MIDI-TEST.md](MIDI-TEST.md) is for.
+cycles. That is what [MIDI-TEST.md](MIDI-TEST.md) is for. The same goes for USB PORT: the USB host has never run on this
+hardware, so finding the Chocolate through a powered OTG adapter, its presses, unplugging and plugging it back, and the
+return to COMPUTER (the installer finds the pedal again) are all unchecked.
 
 ## The test package
 

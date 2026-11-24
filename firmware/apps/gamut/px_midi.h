@@ -42,6 +42,16 @@ static void px_midi_cfg_unpack(px_midi_cfg_t *c, uint8_t b)
 #define OP_UAUDIO 1
 #endif
 static uint8_t px_ua_on;
+/* USB PORT: the USB-C port's role, the MIDI page's row after USB AUDIO (ui.h). 0 COMPUTER, the USB device as always (the web
+ * installer, the editor over USB, the rescue); 1 FOOTSWITCH, the USB MIDI host of a footswitch by cable (px_usb.h,
+ * felucca-bsp's chip/usb_host.c). Not saved, on purpose: every power-on is COMPUTER (docs/MIDI.md, "A footswitch by cable").
+ * px_uh: what the host sees (px_usbhost.h), for the screen. Not in the Bluetooth test image, whose RAM is full. */
+#define OP_USB_HOST OP_UAUDIO
+#if OP_USB_HOST
+#include "../../px_usbhost.h"        /* (firmware/: the base firmware's, as px_usb.h) */
+static uint8_t px_usb_foot;
+static pxu_t px_uh;
+#endif
 /* the pedal's MIDI state, shared by the screen (ui.h) and the glue (px_midi_io.h) */
 static px_midi_cfg_t mid_cfg;           /* all-zero until the store is read: omni, send on, clock off */
 static uint8_t mid_usb_up;              /* a USB host is connected */

@@ -249,6 +249,9 @@ static void app_main(void)
 #endif
 #if !AUDIO_PROBE
         px_usb_service(now);             /* web installer: handshake, update, UBOOT soft key */
+#if OP_USB_HOST
+        px_uh_service(px_usb_foot, &px_uh);   /* the MIDI page's USB PORT: a footswitch by cable, the port its host */
+#endif
         px_midi_service();               /* USB-MIDI: Program / Control Change in, the pedal's own changes out */
         lights_update(&PRESET, ui_mode == M_TUNER, now);   /* the button lights follow the blocks */
         if (ui_mode != M_TUNER) {        /* DSP load in the status corner: "DSP 42%", "PEAK 150%" (bypassed), "SAFE 42%" */

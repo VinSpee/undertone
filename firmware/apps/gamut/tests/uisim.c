@@ -614,11 +614,26 @@ int main(int argc, char **argv)
     /* v42: the fourth row, USB AUDIO: the setting follows the row only when the page is left */
     midi_push(); midi_knob(1); midi_draw(); shot(d, "midi_usb_audio_on");
     if (px_ua_on) { printf("midi: USB AUDIO must not change while the page is open\n"); return 1; }
+    /* the fifth row, USB PORT: it acts at once (the usb line says what the host finds) and is never saved */
+    midi_push(); midi_knob(1);
+    if (!px_usb_foot) { printf("midi: USB PORT must act at once\n"); return 1; }
+    {
+        static const char *const ST[] = {"midi_port_starting", "midi_port_waiting", "midi_port_no_midi", "midi_port_low_speed",
+                                         "midi_port_connected", "midi_port_lost"};
+        for (uint8_t st = PXU_OFF; st <= PXU_LOST; st++) { px_uh.st = st; midi_draw(); shot(d, ST[st]); }
+    }
+    midi_knob(1); px_uh.st = PXU_OFF; midi_draw();
+    if (px_usb_foot) { printf("midi: USB PORT back to COMPUTER\n"); return 1; }
+    midi_knob(1);                                  /* leave it on FOOTSWITCH: leaving the page must not save it */
     midi_push(); poison(); uc.screen = -1; ui_invalidate(); ui_render(); status();
+    if (!px_usb_foot) { printf("midi: leaving the page must keep USB PORT as it was set\n"); return 1; }
+    px_usb_foot = 0;
     if (midi_saved != 1 || ui_mode != M_CHAIN) { printf("midi: leaving the page after a change must save once and return to the chain\n"); return 1; }
     if (!px_ua_on) { printf("midi: leaving the page must set USB AUDIO as the row showed\n"); return 1; }
     midi_open(); midi_close();
     if (midi_saved != 1) { printf("midi: leaving without a change must not save\n"); return 1; }
+    midi_open(); midi_push(); midi_push(); midi_push(); midi_push(); midi_knob(1); midi_close(); px_usb_foot = 0;
+    if (midi_saved != 1) { printf("midi: USB PORT alone must not save\n"); return 1; }
     midi_open(); midi_push(); midi_push(); midi_push(); midi_knob(-1); midi_close();
     if (midi_saved != 2 || px_ua_on) { printf("midi: USB AUDIO off again must save once more\n"); return 1; }
     mid_cfg.chan = 16; midi_open(); midi_knob(1); midi_draw(); shot(d, "midi_channel_wraps_to_omni");

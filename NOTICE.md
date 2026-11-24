@@ -4,7 +4,7 @@ Undertone is GPL-3.0-only (`LICENSE`), except the parts below, which keep their 
 
 | Part | Origin | Licence |
 | --- | --- | --- |
-| `firmware/bsp/` (chip support: startup, interrupts, second core, flash, USB-MIDI device, M-UPGRADE update entry `ota.c`) | [felucca-bsp](https://github.com/hugelton/felucca-bsp), Leo Kuroshita / Hügelton Instruments and contributors. `chip/ota.c` changed for Undertone (identity read at run time). `chip/usb.c` changed for the USB audio of Gamut (v42, then called OpenPocket): the audio streams switched at run time (`FELUCCA_UAC_SWITCH`), the record stream's packet pacing of felucca-bsp `e79a1f8`, the playback mix in integers, fewer controller reads a poll. | MPL-2.0 (`LICENSES/MPL-2.0.txt`) |
+| `firmware/bsp/` (chip support: startup, interrupts, second core, flash, USB-MIDI device, M-UPGRADE update entry `ota.c`) | [felucca-bsp](https://github.com/hugelton/felucca-bsp), Leo Kuroshita / Hügelton Instruments and contributors. `chip/ota.c` changed for Undertone (identity read at run time). `chip/usb.c` changed for the USB audio of Gamut (v42, then called OpenPocket): the audio streams switched at run time (`FELUCCA_UAC_SWITCH`), the record stream's packet pacing of felucca-bsp `e79a1f8`, the playback mix in integers, fewer controller reads a poll. `chip/usb_host.c` changed for Gamut's USB footswitch by cable: its clock given by the application (`UH_MS`). | MPL-2.0 (`LICENSES/MPL-2.0.txt`) |
 | `loader/` (update loader) | felucca-bsp `loader/`, changed for the Pocket X flash layout | MPL-2.0 |
 | `docs/pxota.js`, `docs/pxpkg.js`, `tools/pxpkg.py`, `tools/mkloader.py`, `tools/lz4blk.py` | adapted from [Felucca](https://github.com/hugelton/Felucca)'s web installer and build tools (as used by CLIPPER and SLOOP) | GPL-3.0 |
 | `firmware/sdk/` (I2S and DAC drivers as LLVM bitcode, SPL, cfg files) | JieLi AC79 SDK V1.2.0 (fw-AC79_AIoT_SDK) | Apache-2.0 (`LICENSES/Apache-2.0.txt`) |
@@ -39,7 +39,8 @@ sounds (pull request #26).
 **Roberto Antonacci ([steponme82](https://github.com/steponme82))**: the BlackBox button lights (#17), and from his fork
 [ettorebox](https://github.com/steponme82/ettorebox): the build-time fold of the Bluetooth library (`tools/jlfold.py`, commit
 `375a253`), the web editor's NAM import in browsers with no second window or script-opened file picker, such as MIDIWeb on
-an iPhone (commit `f25a720`), the USB MIDI messages' arrival time (commit `10e2c7c`), the footswitch numbers CC 116, 118
+an iPhone (commit `f25a720`), the USB MIDI messages' arrival time and the pedal as the USB MIDI host of a footswitch by cable with its own clock
+(commit `10e2c7c`), the footswitch numbers CC 116, 118
 and 119 (commits `c324798`, `5675bcc`), the second core's fault record with its registers (commit `409771d`), and the
 Bluetooth library's timers made safe in interrupts with its usr timeouts on the 10 kHz tick (commits `7819e5a`, `c09d828`).
 

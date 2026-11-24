@@ -3,7 +3,9 @@
  *
  * usb.c (felucca-bsp, unchanged) puts the channel voice messages and the clock / transport bytes of the host into
  * midi_in_q (4-byte USB-MIDI event packets, with the millisecond they arrived) and sends what is put in midi_out_q.
- * SysEx never takes this road: it goes to the update code (ota.c) and the editor (px_editor.h) only.
+ * SysEx never takes this road: it goes to the update code (ota.c) and the editor (px_editor.h) only. With the MIDI page's
+ * USB PORT on FOOTSWITCH, felucca-bsp's host (chip/usb_host.c) puts a footswitch's channel messages in the same ring, so a
+ * Chocolate by cable is read as a computer is; nothing is sent back to it then.
  * The including file provides px_midi.h, usb.c's rings, PRESET, cur_preset, load_preset, master_vol, ui_mode / ui_item /
  * ui_nitems and ui_preset_step (ui.h), st_midi, st_usb and st_commit (px_store.h), and ms_now.
  *
@@ -84,7 +86,12 @@ static void px_midi_service(void)
     /* the sound may be changed from the host only while the pedal is on a normal page */
     int free_ui = ui_mode != M_SAVE && ui_mode != M_TUNER && ui_mode != M_MOVE && ui_mode != M_MIDI;
     int touched = 0;
-    mid_usb_up = (uint8_t)usb_midi_out_ready();
+#if OP_USB_HOST
+    const int to_host = !px_usb_foot && usb_midi_out_ready();   /* USB PORT on FOOTSWITCH: the footswitch is not a computer */
+#else
+    const int to_host = usb_midi_out_ready();
+#endif
+    mid_usb_up = (uint8_t)to_host;
     while (mi_r != mi_w) {                      /* usb.c's timer interrupt is the only writer */
         uint32_t at = mi_r % MQ, pkt = midi_in_q[at], ms = midi_in_ms[at];
         RING_PUBLISH();
@@ -96,7 +103,8 @@ static void px_midi_service(void)
 #endif
     if (midi_in_overflow && mi_r == mi_w) midi_in_overflow = 0;   /* usb.c stopped queueing on overflow: start over */
     if (touched) px_midi_tx_sync(&mid_tx, &PRESET, cur_preset);   /* what the host sent is not sent back */
-    if (!usb_midi_out_ready()) { px_midi_tx_sync(&mid_tx, &PRESET, cur_preset); return; }
+    if (!to_host) { px_midi_tx_sync(&mid_tx, &PRESET, cur_preset); return; }   /* (nothing is sent to a footswitch: one that
+                                                * never takes its OUT endpoint's packets would be dropped as lost, uh_tx_poll) */
     while (midi_out_room()) {
         uint32_t pkt = px_midi_tx_next(&mid_tx, &mid_cfg, &PRESET, cur_preset);
         if (!pkt) break;
