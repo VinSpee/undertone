@@ -232,6 +232,29 @@ class Commands(Fixture):
         self.assertIn("rescue", out.getvalue())
 
 
+class Launchers(unittest.TestCase):
+    """The two files a person types. The Windows one cannot run here: its lines are checked instead."""
+
+    def test_the_windows_launcher_finds_python_and_passes_everything_on(self):
+        raw = (ROOT / "undertone.cmd").read_bytes()
+        self.assertEqual(raw.count(b"\r\n"), raw.count(b"\n"), "CRLF line endings")
+        lines = [l for l in raw.decode().splitlines() if l and not l.upper().startswith("REM")]
+        order = [i for i, l in enumerate(lines) if "where py " in l or "where python " in l]
+        self.assertEqual(len(order), 2)
+        self.assertIn('set "PY=py -3"', lines[order[0]], "the py launcher first")
+        self.assertIn("if not defined PY", lines[order[1]], "python only when py is missing")
+        self.assertIn('%PY% "%~dp0tools\\undertone.py" %*', lines, "the folder of the launcher, every argument")
+        self.assertEqual(lines[-1], "exit /b %errorlevel%", "undertone's exit code")
+        self.assertIn("python.org", raw.decode())
+
+    def test_the_unix_launcher_runs_undertone(self):
+        import subprocess
+        r = subprocess.run(["sh", str(ROOT / "undertone"), "version"], capture_output=True, text=True)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertRegex(r.stdout, r"^undertone, rescue kit \d+$")
+        self.assertTrue(os.access(ROOT / "undertone", os.X_OK))
+
+
 # ---------------------------------------------------------------- the screens
 class Keys(unittest.TestCase):
     def test_unix_keys(self):
