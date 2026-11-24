@@ -28,6 +28,12 @@ make ble          # firmware/openpocket-ble.bin and build/ble/PocketX_936.fwsc, 
 (`node tools/op.mjs ble` is the same; `OP_BLE=1 sh firmware/build.sh` inside the container.) It prints the SHA-256 of the image and the two packages. Build outputs
 are `firmware/build-ble/` and `build/ble/`; `make clean` removes them.
 
+The controller library is folded at build time (`tools/jlfold.py`, from Roberto Antonacci's ettorebox): the constants
+`ble_cfg.c` and `ble_stubs.c` define and the empty print helpers become each member's own, so the compiler drops the
+code they switch off and the log strings. The vendor's files are not changed. Without the fold the image no longer fits
+its flash window (the link overflows `XIP`). The folded image has not
+yet run on a pedal: flash it once and check the radio, the link and the MIDI path before trusting it.
+
 ## Flash it
 
 This is the pedal's normal update path, with the test packages instead of the release ones. Your pedal must already run

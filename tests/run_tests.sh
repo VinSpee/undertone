@@ -51,6 +51,7 @@
 #  - pedal skin: its input mapping (tools/sim/pedal-input.js)
 #  - sound: the WebAssembly engine on known signals, against the native build; the bundled loops against their manifest
 #  - Chocolate Plus files: tools/chocolate/fcp.py against a made-up export
+#  - Bluetooth library fold: tools/jlfold.py reads ble_cfg.c and ble_stubs.c and folds a sample of the members' IR
 #  - editor: docs/pxedit.js against the simulated pedal (tests/edsim.c), PING's figures, and the editor's own logic
 #    (docs/pxmidi.js: the Control Change map against docs/MIDI.md, learned controls; docs/pxble.js and docs/pxchoc.js:
 #    Bluetooth MIDI packets and a Chocolate's controls; docs/pxlib.js: the model library)
@@ -130,6 +131,8 @@ echo "== hosted simulator (tools/sim.mjs)"
 node tests/test_sim.mjs
 echo "== Chocolate Plus files (tools/chocolate/fcp.py)"
 python3 tests/test_fcp.py
+echo "== Bluetooth library fold (tools/jlfold.py)"
+python3 tests/test_jlfold.py
 echo "== pedal skin input"
 node tests/test_pedal_input.mjs
 echo "== simulated sound"

@@ -79,9 +79,11 @@ BLEOBJ=""; MAPOPT="-Map $O/openpocket.map"   # (the memory report below reads th
 if [ -n "$OP_BLE" ]; then
   # JieLi's LE controller (LLVM bitcode, Apache-2.0, third_party/jieli-ble) -> pi32v2 objects, and our context switch
   mkdir -p "$O/jl"
-  for b in "$HERE"/../third_party/jieli-ble/*/*.bc; do
-    $CC -Os -c -x ir "$b" -o "$O/jl/$(basename "$(dirname "$b")")_$(basename "$b" .bc).o"
-  done
+  # the members folded (tools/jlfold.py, from ettorebox): the constants ble_cfg.c and ble_stubs.c define and the empty
+  # print helpers become the members' own, so -Os drops the code they switch off and the log strings. As published, the
+  # image no longer fits its flash window.
+  cat "$HERE/apps/gamut/ble/ble_cfg.c" "$HERE/apps/gamut/ble/ble_stubs.c" > "$O/jlcfg.c"
+  python3 "$HERE/../tools/jlfold.py" fold "$TC" "$O/jlcfg.c" "$O/jl" "$HERE"/../third_party/jieli-ble/*/*.bc
   # v40 made memcpy and memset RAM code, out of the call range of the library's code at the end of the flash: the
   # library calls flash copies instead (apps/gamut/ble/ble_libc.c)
   for o in "$O"/jl/*.o; do python3 "$HERE/../tools/elfsym.py" "$o" memcpy=ble_memcpy memset=ble_memset; done
