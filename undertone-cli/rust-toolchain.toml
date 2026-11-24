@@ -1,0 +1,5 @@
+# The toolchain every build and CI uses. CI adds each target of the matrix itself (DESIGN.md, "Builds").
+[toolchain]
+channel = "1.99.1"
+components = ["clippy", "rustfmt"]
+profile = "minimal"

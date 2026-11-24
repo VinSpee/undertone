@@ -1,0 +1,2 @@
+# The repository's line length (its Python and JavaScript wrap at 120 columns).
+max_width = 120
