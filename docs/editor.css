@@ -145,8 +145,8 @@ button.chip.link { color: var(--acc); border-color: color-mix(in oklch, var(--ac
   border-block-end: 3px solid var(--site-lime);
   background: var(--site-ink);
 }
-/* the site's mark (site.css): Anybody, printed in black's place in bone over the two riso inks, lime and teal */
-.brand { font: 900 1.25rem/1 "Anybody", "Arial Black", system-ui, sans-serif; font-variation-settings: "wdth" 130; letter-spacing: -0.01em; color: var(--site-bone); text-decoration: none; white-space: nowrap; display: flex; align-items: baseline; padding-block: 12px; text-shadow: -2px 2px 0 var(--site-lime), 2px -2px 0 var(--site-teal); }
+/* the site's mark (site.css): Anybody, flat in bone */
+.brand { font: 900 1.25rem/1 "Anybody", "Arial Black", system-ui, sans-serif; font-variation-settings: "wdth" 130; letter-spacing: -0.01em; color: var(--site-bone); text-decoration: none; white-space: nowrap; display: flex; align-items: baseline; padding-block: 12px; }
 .brand span { margin-inline-start: 10px; font-family: Inter, system-ui, sans-serif; font-weight: 600; font-size: 0.8125rem; font-variation-settings: normal; letter-spacing: 0; color: var(--dim); text-shadow: none; }
 .tabs { display: flex; gap: 4px; }
 .tabs button { display: inline-flex; align-items: center; gap: 7px; min-block-size: 38px; padding-inline: 12px; border: 0; border-radius: var(--r); background: transparent; font-weight: 600; font-size: 0.875rem; color: var(--dim); }
