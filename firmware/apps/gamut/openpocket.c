@@ -48,6 +48,7 @@ static void load_preset(uint32_t i) { st_get(i, &PRESET); preset_new = 1; }
 
 #if !AUDIO_PROBE
 #include "ui.h"
+#define OP_OTA_SCREEN ui_update_show   /* the update's screen is Gamut's own (ui.h), not the base firmware's (px_usb.h) */
 #include "px_lights.h"      /* the button lights follow the blocks (issue #8; px_leds.h drives them) */
 #define PX_LIGHTS_OFF() lights_off()
 /* the flash OpenPocket keeps its own data in: the preset store (px_store.h), the NAM user models (px_models.h) and the

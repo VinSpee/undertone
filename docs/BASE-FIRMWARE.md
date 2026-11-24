@@ -70,6 +70,7 @@ The app's file defines these names before `base/board.h`:
 | `OP_VERSION_NUM`, `OP_VERSION` | `OP_VERSION_NUM` is the package's identity number. `"50"` gives `PocketX_950`. For an app, `OP_VERSION` is `v` and that number (`"01"` gives `v01`). Gamut keeps the two apart: `OP_VERSION_TEXT` (`1.0b1`) is the version text that the boot screen and the INFO reply show, and `OP_VERSION` is that text and the test channel's tag. |
 | `OP_APP_ID` | An app other than Gamut: its folder's name under `firmware/apps`. Gamut defines none. |
 | `A_CH` | `2` when the app's sound has a left and a right side. The default is `1`. |
+| `OP_OTA_SCREEN` | Before `px_usb.h`: a function `(step, code)` that draws the update's steps and its failure, for an app whose screen has its own design. Gamut defines it (`ui.h`'s `ui_update_show`). Without it the base draws its own update screen. |
 
 An app that writes its own start and loop provides these functions and calls the base in this order:
 

@@ -6,15 +6,21 @@
  *
  *  PLAY                                   EDIT (a block)
  *  +------------------------------+       +------------------------------+
- *  | vol 80     edited    dsp 42% |       |#amp ######################on#|  band: the block, its ON / OFF key
- *  | 07   JCM900                  |       | <         JCM900          >  |  model
- *  |      4x12 GREEN              |       | gain                     55  |
- *  |        brit crunch           |       | ==========-----------------  |  up to 5 settings, bar + value
- *  | [gt][cmp][pit][sfx][syn][drv]|       | bass                     50  |
- *  | [amp][cab][eq][mod][dly][rev]|       | ...                          |
- *  | amp   JCM900             on  |       |                              |
- *  | knob: block   push: edit     |       | knob: select  push: edit 42% |
+ *  |::vol 80 [=]78% edited dsp 42%|       |#amp ######################on#|  band: the block, its ON / OFF key
+ *  | 07    amp                    |       | <         JCM900          >  |  model
+ *  |        brit crunch           |       | gain                     55  |
+ *  |[gt][cmp]----------------[drv]|       | ==========-----------------  |  up to 5 settings, bar + value
+ *  |         [pit][sfx][syn]      |       | bass                     50  |
+ *  |[amp][cab]---------------[rev]|       | ...                          |
+ *  | ====     [eq][mod][dly]      |       |                              |
+ *  |knob block push edit home list|       |knob select  push edit dsp 42%|
  *  +------------------------------+       +------------------------------+
+ *
+ * PLAY: the preset number in 58 px figures and, beside it, the selected block's label in 40 px letters: the two texts read
+ * from five feet. The name is below them. The chain is two rows of six slots along a line: a block that is on is a pale
+ * key on the line, a block that is off a dark key below it, so on and off are told by light and by height. A bar in the
+ * lane under a row marks the selected block; a block picked up rises above the line in amber. A block's model is on its
+ * page, a PUSH away. A footer names each control in pale and what it does in grey.
  *
  * Text (v43's screen): B612 for words and B612 Mono for figures (ui_fonts.h, Gamut's own). Labels and hints are in small
  * letters; a preset's, a model's and an IR's name is drawn as it is stored. The engine words its labels in capitals
@@ -43,31 +49,38 @@ static uint32_t ui_mode = M_CHAIN, ui_blk = PX_B_AMP, ui_item = 0;
 #define UI_PAGE (ui_mode == M_BLOCK || ui_mode == M_EDIT)   /* the block page has the focus */
 
 #include "ui_palette.h"                /* the screen's colours and what each means */
-#include "ui_fonts.h"                  /* its fonts: GF_LB labels, GF_TX text, GF_NM the preset name, GF_MS and GF_MD figures */
+#include "ui_fonts.h"                  /* its fonts: GF_LB labels, GF_TX text, GF_NM the preset name, GF_MS and GF_MD figures,
+                                        * GF_XL the preset number, GF_HE the selected block's label, GF_LG the tuner's note */
 
-/* geometry (cell heights: GF_LB 16, GF_TX 22, GF_NM 33, GF_MS 13, GF_MD 21, and the base firmware's FT_XL 45 px; from a
- * cell's top the capitals stand on row 12 of GF_LB, 17 of GF_TX, 10 of GF_MS and 16 of GF_MD) */
-#define S_H      20u                   /* status bar */
-#define P_NUM_Y  26u                   /* PLAY: preset number */
-#define P_NAME_Y 76u                   /* PLAY: preset name */
-#define T_Y0     122u                  /* PLAY: 1st row of tiles */
-#define T_DY     30u
+/* geometry (cell heights: GF_LB 16, GF_TX 22, GF_NM 33, GF_MS 13, GF_MD 21, GF_XL 58, GF_HE 57, GF_LG 83; from a cell's
+ * top the capitals stand on row 12 of GF_LB, 17 of GF_TX, 10 of GF_MS and 16 of GF_MD) */
+#define S_H      22u                   /* PLAY: the top plate */
+#define S_BAN    30u                   /* PLAY: the overload band that takes its place; the page below it moves down by */
+#define P_BAN_DY 7u                    /* this (uc.dy), and still ends above the footer */
+#define P_NUM_Y  24u                   /* PLAY: preset number */
+#define P_LBL_X  114u                  /* PLAY: the selected block's label, beside the number (the widest, "mod" on its chip: 119 px) */
+#define P_LBL_W  120u
+#define P_NAME_Y 85u                   /* PLAY: preset name */
+#define T_Y0     118u                  /* PLAY: the chain's 1st row of slots */
+#define T_ROW    48u                   /* a slot's rows, from its top: a key picked up (22), T_ON a key that is on (22), the */
+#define T_ON     8u                    /* line at T_LINE (2), T_OFF a key that is off (18), T_LANE the cursor's lane (4) */
+#define T_LINE   18u
+#define T_OFF    24u
+#define T_LANE   44u
 #define T_COLS   6
 #define T_PITCH  39u
 #define T_W      35u
-#define T_H      24u
-#define P_INFO_Y 186u                  /* PLAY: the selected block */
 #define F_Y      222u                  /* footer (both screens) */
 #define F_TY     (F_Y + 1u)            /* its text: GF_LB's 16 rows of the footer's 18 */
-#define S_TY     2u                    /* the status bar's text */
+#define S_TY     3u                    /* the top plate's text; its figures stand 2 px lower, on the same line */
 #define E_BAND   30u                   /* EDIT: block band */
 #define E_TYPE_Y 36u                   /* EDIT: model row */
 #define E_P0     70u                   /* EDIT: 1st setting */
 #define E_ROW    30u
 #define BAR_X    10u
 #define BAR_W    220u
-#define ST_X     164u                  /* the load figure's box: top right of PLAY, bottom right of a block page */
-#define ST_W     72u                   /* (wide enough for the widest, "peak 999%!": uisim.c checks every one) */
+#define ST_X     172u                  /* the load figure's box: top right of PLAY, bottom right of a block page */
+#define ST_W     64u                   /* (wide enough for the widest, "dsp 100%!": uisim.c checks every one) */
 
 static void num3(char *b, uint32_t v)  /* number without leading zeros */
 {
@@ -80,6 +93,23 @@ static void num3(char *b, uint32_t v)  /* number without leading zeros */
 static void ui_lamp(uint32_t x, uint32_t y, int on, uint16_t bg)
 {
     ui_rbox(x, y, 8, 8, 4, !on ? C_LAMP_OFF : bg == C_HOUSING ? C_LAMP_KEY : C_LAMP, bg);
+}
+/* the mark: sixteen holes, the top right one the lamp (lit: sound passes) */
+static void ui_grille(uint32_t x, uint32_t y, uint32_t hole, uint32_t pitch, uint32_t lamp, int lit, uint16_t col, uint16_t bg)
+{
+    for (uint32_t r = 0; r < 4u; r++)
+        for (uint32_t c = 0; c < 4u; c++)
+            if (r || c != 3u) ui_rbox(x + c * pitch, y + r * pitch, hole, hole, hole / 2u, col, bg);
+    uint32_t o = (lamp - hole) / 2u;
+    ui_rbox(x + 3u * pitch - o, y - o, lamp, lamp, lamp / 2u, lit ? C_LAMP : C_LAMP_OFF, bg);
+}
+/* the warning sign, 13 x 11: beside a warning's words, so that amber is not its only mark */
+static void ui_warn(uint32_t x, uint32_t y, uint16_t fg, uint16_t bg)
+{
+    static const uint16_t ROW[11] = {0x0040, 0x00E0, 0x00A0, 0x0110, 0x0150, 0x0248, 0x0248, 0x0404, 0x0444, 0x0802, 0x1FFF};
+    lcd_win(x, y, 13, 11);
+    for (int j = 0; j < 11; j++) for (int i = 12; i >= 0; i--) lcd_px((ROW[j] >> i) & 1u ? fg : bg);
+    lcd_end();
 }
 /* the engine's words are capitals: UI_LC with a text box's alignment draws them in small letters, as they are drawn */
 #define UI_LC 4
@@ -125,22 +155,50 @@ static void ui_value(uint32_t x, uint32_t y, uint32_t w, const char *s, const op
     ui_rbox(x + w - tw - 8u, y, tw + 8u, f->h, 4, C_HOUSING, bg);
     ft_box(x + w - tw - 4u, y, tw, s, f, dim ? C_LABEL : C_GRAPHITE, C_HOUSING, 0);
 }
+/* a footer's hints, in its first w px (centred, or from 8 px in): "knob=block|push=edit|home=list" names each control in
+ * housing and what it does in label grey, 4 px apart, the pairs 10 px apart. A part after '!' is amber, after '~' grey. */
+static void ui_footer(const char *s, uint32_t w, int centre)
+{
+    uint32_t x = 8u, tw = 0;
+    for (int pass = 0; pass < 2; pass++) {
+        int act = 0;                                   /* the part follows a '=': what the control does */
+        if (pass) { if (centre) x = tw < w ? (w - tw) / 2u : 0u; lcd_rect(0, F_TY, x, 16, C_PLATE); }
+        for (const char *p = s; *p; ) {
+            char t[28];
+            uint16_t col = act ? C_LABEL : C_HOUSING;
+            uint32_t n = 0;
+            if (*p == '!') { col = C_AMBER; p++; } else if (*p == '~') { col = C_LABEL; p++; }
+            while (*p && *p != '=' && *p != '|') { if (n < 27u) t[n++] = *p; p++; }
+            t[n] = 0;
+            uint32_t gap = *p == '=' ? 4u : *p == '|' ? 10u : 0u, k = ft_width(&GF_LB, t);
+            if (!pass) tw += k + gap;
+            else if (x < w) {                          /* (a part too long for what is left is cut there, as ft_box cuts) */
+                if (x + k > w) { k = w - x; gap = 0; }
+                ft_box(x, F_TY, k, t, &GF_LB, col, C_PLATE, 0); lcd_rect(x + k, F_TY, gap, 16, C_PLATE); x += k + gap;
+            }
+            act = *p == '=';
+            if (*p) p++;
+        }
+    }
+    if (x < w) lcd_rect(x, F_TY, w - x, 16, C_PLATE);
+}
 
-/* what the load figure stands for: the overload banner (BYPASS), LOADING a NAM model (amber on the MODEL row, the amp name
- * greyed on PLAY), a late block or little headroom left (the figure in amber; a late block adds "!") */
+/* what the load figure stands for: the overload banner (BYPASS), LOADING a NAM model (amber on the MODEL row, and in the
+ * corner of PLAY), a late block or little headroom left (the figure in amber; a late block adds "!") */
 enum { UI_ST_NORM, UI_ST_LATE, UI_ST_BYPASS, UI_ST_LOADING, UI_ST_HIGH };
 #define UI_LOAD_HIGH 80u               /* above this load the figure turns amber */
 
 /* ---- cache of what is on screen ---- */
 static struct {
     int full, screen;                  /* screen: 0 PLAY, 1 EDIT, -1 another page was drawn over it */
+    uint32_t dy;                       /* PLAY: how far the page stands below its place (the overload band is taller than the plate) */
     uint32_t preset, vol; char name[14];
-    int dirty, amp_t, cab_t, amp_on, cab_on, amp_m, cab_m;
+    int dirty;
     uint8_t tile_on[PX_NBLK], tile_sel[PX_NBLK], tile_blk[PX_NBLK], tile_mv[PX_NBLK];
-    int info_b, info_t, info_on, info_m;
+    int info_b, info_on, info_mv;
     int blk, type, np, item, mode, on;
     uint8_t val[PX_NPAR];
-    int hint, amp_ld, row_ld; uint32_t bnum;
+    int hint, row_ld; uint32_t bnum;
     char status[12]; int status_kind;
 } uc;
 static void ui_invalidate(void) { uc.full = 1; }
@@ -177,31 +235,35 @@ static int bat_percent(int mv)         /* a Li-ion cell at rest: 4.15 V full, 3.
     for (int i = 1; i < 12; i++) if (mv < V[i]) return P[i - 1] + (P[i] - P[i - 1]) * (mv - V[i - 1]) / (V[i] - V[i - 1]);
     return 100;
 }
-/* battery, top centre of PLAY: a cell icon + "78%" (the charge amber from 30 % down, the figure from 15 %), "usb" when the 5 V supply is there, an empty cell and
+/* battery, in the top plate of PLAY: a cell icon + "78%" (the charge amber from 30 % down, the figure from 15 %), "usb" when the 5 V supply is there, an empty cell and
  * "--" while there is no reading (v37: shown, not hidden: the raw readings are on the tuner page, bat_raw) */
+#define BAT_X 73u                      /* the cell 20 x 10 and its tip, then the figure from BAT_X + 25: 59 px in all */
 static void draw_battery(int force)
 {
     static int last = -100;
     int usb = bat_usb_mv > 4300, pct = bat_pct >= 0 ? bat_pct : bat_mv ? bat_percent(bat_mv) : -1, key = usb ? 1000 + (pct < 0 ? 0 : pct) : pct;
     if (!force && key == last) return;
     last = key;
-    const uint32_t x = 84u, y = 4u;                    /* icon 22 x 12 + tip, then the text */
+    const uint32_t x = BAT_X, y = 6u;
     uint16_t c = !usb && pct <= 30 ? C_AMBER : C_HOUSING;
-    lcd_rect(x, 0, 74, y, C_PLATE); lcd_rect(x, y + 12u, 74, S_H - y - 12u, C_PLATE);
-    lcd_rect(x, y, 22, 1, C_LABEL); lcd_rect(x, y + 11u, 22, 1, C_LABEL);
-    lcd_rect(x, y + 1u, 1, 10, C_LABEL); lcd_rect(x + 21u, y + 1u, 1, 10, C_LABEL);
-    lcd_rect(x + 22u, y + 3u, 2, 6, C_LABEL); lcd_rect(x + 22u, y, 2, 3, C_PLATE); lcd_rect(x + 22u, y + 9u, 2, 3, C_PLATE);
-    uint32_t f = pct < 0 ? (usb ? 18u : 0u) : (uint32_t)pct * 18u / 100u;
-    if (f) lcd_rect(x + 2u, y + 2u, f, 8, c);
-    if (f < 18u) lcd_rect(x + 2u + f, y + 2u, 18u - f, 8, C_PLATE);
-    lcd_rect(x + 1u, y + 1u, 1, 10, C_PLATE); lcd_rect(x + 20u, y + 1u, 1, 10, C_PLATE);
-    lcd_rect(x + 2u, y + 1u, 18, 1, C_PLATE); lcd_rect(x + 2u, y + 10u, 18, 1, C_PLATE);
+    lcd_rect(x, 0, 25, y, C_PLATE); lcd_rect(x, y + 10u, 25, S_H - y - 10u, C_PLATE);
+    lcd_rect(x, y, 20, 1, C_LABEL); lcd_rect(x, y + 9u, 20, 1, C_LABEL);
+    lcd_rect(x, y + 1u, 1, 8, C_LABEL); lcd_rect(x + 19u, y + 1u, 1, 8, C_LABEL);
+    lcd_rect(x + 20u, y + 3u, 2, 4, C_LABEL); lcd_rect(x + 20u, y, 2, 3, C_PLATE); lcd_rect(x + 20u, y + 7u, 2, 3, C_PLATE);
+    lcd_rect(x + 22u, y, 3, 10, C_PLATE);
+    uint32_t f = pct < 0 ? (usb ? 16u : 0u) : (uint32_t)pct * 16u / 100u;
+    if (f) lcd_rect(x + 2u, y + 2u, f, 6, c);
+    if (f < 16u) lcd_rect(x + 2u + f, y + 2u, 16u - f, 6, C_PLATE);
+    lcd_rect(x + 1u, y + 1u, 1, 8, C_PLATE); lcd_rect(x + 18u, y + 1u, 1, 8, C_PLATE);
+    lcd_rect(x + 2u, y + 1u, 16, 1, C_PLATE); lcd_rect(x + 2u, y + 8u, 16, 1, C_PLATE);
     char b[8] = "usb";
     if (!usb && pct < 0) { b[0] = '-'; b[1] = '-'; b[2] = 0; }
     else if (!usb) { num3(b, (uint32_t)pct); int i = 0; while (b[i]) i++; b[i] = '%'; b[i + 1] = 0; }
-    lcd_rect(x + 24u, y, 4, 12, C_PLATE);
-    ft_box(x + 28u, usb ? S_TY : S_TY + 2u,     /* (the figures' cell is the shorter one: both stand on one line) */
-           46, b, usb ? &GF_LB : &GF_MS, usb ? C_HOUSING : pct < 0 ? C_LABEL : pct <= 15 ? C_AMBER : C_HOUSING, C_PLATE, 0);
+    const op_font *ft = usb ? &GF_LB : &GF_MS;
+    uint32_t ty = usb ? S_TY : S_TY + 2u;              /* (the figures' cell is the shorter one: both stand on one line) */
+    lcd_rect(x + 25u, 0, 34, ty, C_PLATE);
+    ft_box(x + 25u, ty, 34, b, ft, usb ? C_HOUSING : pct < 0 ? C_LABEL : pct <= 15 ? C_AMBER : C_HOUSING, C_PLATE, 0);
+    lcd_rect(x + 25u, ty + ft->h, 34, S_H - ty - ft->h, C_PLATE);
 }
 
 /* ---- status bar / footer, shared ---- */
@@ -212,23 +274,31 @@ static int ui_dirty(void)              /* the preset differs from what its slot 
     if (ref_slot != cur_preset || ref_gen != st_gen) { st_get(cur_preset, &ui_ref); ref_slot = cur_preset; ref_gen = st_gen; }
     return memcmp(&ui_ref, &PRESET, sizeof ui_ref) != 0;
 }
-static void draw_status(int force)
+static void draw_status(int force)    /* PLAY's top plate: the mark, the volume, the battery, "edited"; the load figure is ui_status's */
 {
     if (uc.screen != 0) return;        /* (EDIT: its band takes the top) */
-    if (uc.status_kind == UI_ST_BYPASS) {                /* overload: the whole bar is the banner */
-        if (force) { lcd_rect(0, 0, 240, S_TY, C_AMBER); ft_box(0, S_TY, 240, "overload: sound bypassed", &GF_LB, C_GRAPHITE, C_AMBER, 1); lcd_rect(0, S_TY + 16u, 240, S_H - S_TY - 16u, C_AMBER); }
+    if (uc.status_kind == UI_ST_BYPASS) {                /* overload: an amber band in the plate's place, the sign and the word */
+        if (force) {
+            ui_warn(8, 9, C_GRAPHITE, C_AMBER);
+            ft_box(28, 4, 96, "overload", &GF_TX, C_GRAPHITE, C_AMBER, 0);
+            ft_box(124, 8, 108, "sound bypassed", &GF_LB, C_GRAPHITE, C_AMBER, 2);
+        }
         return;
     }
     if (force || uc.vol != master_vol) {
-        char b[10] = "vol "; num3(b + 4, master_vol);
-        ft_box(0, S_TY, 66, b, &GF_LB, C_LABEL, C_PLATE, 1);  /* (v36: 66 px; v35's 48 px cut "VOL 100" to "VOL 10") */
+        char b[4]; num3(b, master_vol);
+        if (force) ft_box(24, S_TY, 20, "vol", &GF_LB, C_LABEL, C_PLATE, 0);
+        ft_box(48, S_TY + 2u, 24, b, &GF_MS, C_HOUSING, C_PLATE, 0);
+        ui_grille(6, 4, 3, 4, 5, master_vol != 0u, C_RIM, C_PLATE);   /* (its lamp: sound passes) */
         uc.vol = master_vol;
     }
-    lcd_rect(66, 0, 18, S_H, C_PLATE); lcd_rect(158, 0, ST_X - 158u, S_H, C_PLATE);
     draw_battery(force);
+    int d = ui_dirty();                                /* EDITED: the sound differs from its saved slot */
+    if (force || d != uc.dirty) { ft_box(BAT_X + 59u, S_TY, ST_X - BAT_X - 59u, d ? "edited" : "", &GF_LB, C_AMBER, C_PLATE, 0); uc.dirty = d; }
 }
 /* the DSP load, from the main loop: "dsp 42%", "dsp 88%!" (a block ran late), "safe 42%", "peak 150%" (bypassed). v42: which
- * cores ran is on the diagnostics page (ui_dg). Every text fits ST_W (firmware/apps/gamut/tests/uisim.c checks the worst ones). */
+ * cores ran is on the diagnostics page (ui_dg). Every text fits ST_W (firmware/apps/gamut/tests/uisim.c checks them all; the
+ * peak is shown in PLAY's footer, with what to do). */
 static struct {                        /* the main loop's last DSP figures, for the diagnostics page */
     uint32_t load, peak, cl[2];        /* the load (the peak while bypassed), the peak since the preset, each core's (layer split) */
     uint8_t cores, split, guard, late, bypass;   /* cores: 0 C0, 1 C1, 2 both ("2C"); guard: the safety bypass's limit, % */
@@ -245,6 +315,30 @@ static int ui_load_kind(uint32_t l, int safe, int bypass, int late, int loading)
 {
     return loading ? UI_ST_LOADING : bypass ? UI_ST_BYPASS : late ? UI_ST_LATE : !safe && l > UI_LOAD_HIGH ? UI_ST_HIGH : UI_ST_NORM;
 }
+/* the load figure in its box: its word in label grey, its figure in the figures' face, amber when it warns ("dsp" "88%!");
+ * a text that is not a word and a figure is drawn as it is (LOADING; the Bluetooth test image scrolls its states here) */
+static void ui_load_box(uint32_t y, const char *s, int kind)
+{
+    int n = 0, sp = -1;
+    int warn = kind == UI_ST_LATE || kind == UI_ST_HIGH || kind == UI_ST_LOADING;
+    while (s[n]) { if (s[n] == ' ') sp = n; n++; }
+#if OP_BLE_TEST
+    int fig = 0;
+#else
+    int fig = sp > 0 && sp < 11 && s[sp + 1];
+#endif
+    for (int i = sp + 1; fig && s[i]; i++) if (!((s[i] >= '0' && s[i] <= '9') || s[i] == '%' || s[i] == '!')) fig = 0;
+    if (!fig) { ft_box(ST_X, y, ST_W, s, &GF_LB, warn ? C_AMBER : C_LABEL, C_PLATE, 2); return; }
+    char w[12];
+    for (n = 0; n < sp; n++) w[n] = s[n];
+    w[n] = 0;
+    uint32_t fw = ft_width(&GF_MS, s + sp + 1), fx = ST_X + ST_W - fw;
+    if (fw + 2u > ST_W) { fw = ST_W - 2u; fx = ST_X + 2u; }
+    ft_box(ST_X, y, fx - 2u - ST_X, w, &GF_LB, C_LABEL, C_PLATE, 2);
+    lcd_rect(fx - 2u, y, fw + 2u, 2, C_PLATE); lcd_rect(fx - 2u, y + 2u, 2, 13, C_PLATE);
+    ft_box(fx, y + 2u, fw, s + sp + 1, &GF_MS, warn ? C_AMBER : C_HOUSING, C_PLATE, 0);
+    lcd_rect(fx - 2u, y + 15u, fw + 2u, 1, C_PLATE);
+}
 static void ui_status(const char *s, int kind)
 {
     if (ui_mode == M_TUNER || ui_mode == M_SAVE || ui_mode == M_MIDI || ui_mode == M_LIST || ui_mode == M_DIAG) return;
@@ -255,10 +349,10 @@ static void ui_status(const char *s, int kind)
     for (int i = 0; i < 12; i++) { uc.status[i] = s[i]; if (!s[i]) break; }
     uc.status[11] = 0;
     uc.status_kind = kind;
-    if ((was == UI_ST_BYPASS) != (kind == UI_ST_BYPASS)) { uc.full = 1; return; }   /* the banner comes or goes: redraw the page */
+    if ((was == UI_ST_BYPASS) != (kind == UI_ST_BYPASS)) { uc.full = 1; return; }   /* the band comes or goes: redraw the page */
     if (kind == UI_ST_BYPASS) { uc.hint = -1; return; }                              /* (on PLAY the footer shows the peak; a block page's amber footer has the instruction alone) */
     int ld = kind == UI_ST_LOADING && uc.screen == 0;     /* on a block page the MODEL row says it instead */
-    ft_box(ST_X, uc.screen ? F_TY : S_TY, ST_W, ld ? "loading" : s, &GF_LB, ld || kind == UI_ST_LATE || kind == UI_ST_HIGH ? C_AMBER : C_LABEL, C_PLATE, 2);
+    ui_load_box(uc.screen ? F_TY : S_TY, ld ? "loading" : uc.status, !ld && kind == UI_ST_LOADING ? UI_ST_NORM : kind);
 }
 static void draw_hint(int force)
 {
@@ -267,104 +361,105 @@ static void draw_hint(int force)
     int key = h | alert << 4 | save << 5;
     if (!force && uc.hint == key) return;
     uc.hint = key;
-    if (alert) {                                         /* overload: what to do (a block page's whole footer turns amber) */
-        char t[40]; t[0] = 0;
-        b_str(t, uc.screen ? "overload: turn a block off" : "turn a block off  ");
-        if (!uc.screen) b_str(t, uc.status);
-        if (uc.screen) { lcd_rect(0, F_Y, 240, 1, C_AMBER); lcd_rect(0, F_TY + 16u, 240, 1, C_AMBER); }
-        ft_box(0, F_TY, 240, t, &GF_LB, uc.screen ? C_GRAPHITE : C_HOUSING, uc.screen ? C_AMBER : C_PLATE, 1);
+    if (alert && uc.screen) {                            /* overload on a block page: its whole footer turns amber, the sign and what to do */
+        lcd_rect(0, F_Y, 240, 1, C_AMBER); lcd_rect(0, F_TY + 16u, 240, 1, C_AMBER);
+        lcd_rect(0, F_TY, 8, 16, C_AMBER); lcd_rect(8, F_TY, 13, 3, C_AMBER);
+        ui_warn(8, F_TY + 3u, C_GRAPHITE, C_AMBER);
+        lcd_rect(8, F_TY + 14u, 13, 2, C_AMBER); lcd_rect(21, F_TY, 7, 16, C_AMBER);
+        ft_box(28, F_TY, 212, "overload: turn a block off", &GF_LB, C_GRAPHITE, C_AMBER, 0);
         return;
     }
-    if (save) {
-        ft_box(0, F_TY, 116, "push: edit", &GF_LB, C_LABEL, C_PLATE, 2);
-        ft_box(116, F_TY, 124, "  hold: save", &GF_LB, C_AMBER, C_PLATE, 0);
+    if (alert) {                                         /* on PLAY: what to do, and the peak ("peak 142%") with its figure in amber */
+        char t[40]; int sp = 0;
+        t[0] = 0; b_str(t, "turn a block off");
+        while (uc.status[sp] && uc.status[sp] != ' ') sp++;
+        if (uc.status[sp]) { char w[12]; for (int i = 0; i < sp; i++) w[i] = uc.status[i]; w[sp] = 0; b_str(t, "="); b_str(t, w); b_str(t, "|!"); b_str(t, uc.status + sp + 1); }
+        ui_footer(t, 240, 1);
         return;
     }
-    const char *t = h == M_MOVE ? "knob: move    push: drop"
-                  : h == M_EDIT ? "knob: value   push: ok"
-                  : h == M_BLOCK ? "knob: select  push: edit"
-                  : "knob: block  push: edit  home: list";
-    ft_box(0, F_TY, uc.screen ? ST_X - 2u : 240u, t, &GF_LB, C_LABEL, C_PLATE, uc.screen ? 0 : 1);
+    ui_footer(save ? "push=edit|hold push=!save"
+              : h == M_MOVE ? "knob=move|push=drop|home=undo"
+              : h == M_EDIT ? "knob=value|push=done"
+              : h == M_BLOCK ? "knob=select|push=edit"
+              : "knob=block|push=edit|home=list", uc.screen ? ST_X - 2u : 240u, !uc.screen);
 }
 
 /* ===================================================== PLAY ======== */
+/* beside the number, the selected block's label, 40 px tall: pale while the block is on, grey while it is off, graphite
+ * on an amber chip while it is moved */
+static void draw_label(int force)
+{
+    int b = (int)ui_blk, on = PRESET.on[b] != 0, mv = ui_mode == M_MOVE;
+    if (!force && uc.info_b == b && uc.info_on == on && uc.info_mv == mv) return;
+    char t[8];
+    uint32_t n = 0, y = P_NUM_Y + uc.dy;
+    for (const char *s = px_block_label(b); *s && n < 7u; s++) t[n++] = *s;
+    t[n] = 0; ui_lower(t);
+    uint32_t tw = ft_width(&GF_HE, t);
+    if (mv && tw + 10u <= P_LBL_W) {
+        ui_rbox(P_LBL_X, y, tw + 10u, 57, 6, C_AMBER, C_GROUND);
+        ft_box(P_LBL_X + 5u, y, tw, t, &GF_HE, C_GRAPHITE, C_AMBER, 0);
+        lcd_rect(P_LBL_X + tw + 10u, y, P_LBL_W - tw - 10u, 57, C_GROUND);
+    } else ft_box(P_LBL_X, y, P_LBL_W, t, &GF_HE, on ? C_HOUSING : C_LABEL, C_GROUND, 0);
+    uc.info_b = b; uc.info_on = on; uc.info_mv = mv;
+}
 static void draw_play_top(int force)
 {
     if (force || uc.preset != cur_preset) {
         char b[4]; uint32_t n = cur_preset + 1u;
         b[0] = (char)('0' + n / 10u); b[1] = (char)('0' + n % 10u); b[2] = 0;
-        ft_box(6, P_NUM_Y, 84, b, &FT_XL, C_HOUSING, C_GROUND, 0);
+        ft_box(6, P_NUM_Y + uc.dy, 98, b, &GF_XL, C_HOUSING, C_GROUND, 0);
         uc.preset = cur_preset;
     }
-    int at = PRESET.type[PX_B_AMP], ct = PRESET.type[PX_B_CAB], ao = PRESET.on[PX_B_AMP], co = PRESET.on[PX_B_CAB];
-    int am = at == PX_AMP_NAM ? px_nam_model(PRESET.p[PX_B_AMP][0]) : -1;   /* v37: a NAM amp shows its model */
-    int ald = uc.status_kind == UI_ST_LOADING && at == PX_AMP_NAM;   /* a NAM model loads: the name greys until it plays */
-    if (force || at != uc.amp_t || ao != uc.amp_on || am != uc.amp_m || ald != uc.amp_ld) {
-        char nm[12];
-        const char *an = px_type_name(PX_B_AMP, at);
-        if (am >= 0) { px_nam_name(am, nm); an = nm; }
-        ft_box(94, P_NUM_Y + 4u, 142, ao ? an : "no amp", &GF_TX, ao && !ald ? C_HOUSING : C_LABEL, C_GROUND, 0);
-        uc.amp_t = at; uc.amp_on = ao; uc.amp_m = am; uc.amp_ld = ald;
-    }
-    int cm = ct == PX_CAB_IR ? px_ir_slot(PRESET.p[PX_B_CAB][0]) : -1;   /* v38: a user IR shows its name */
-    if (force || ct != uc.cab_t || co != uc.cab_on || cm != uc.cab_m) {
-        char nm[12];
-        const char *cn = px_type_name(PX_B_CAB, ct);
-        if (cm >= 0) { px_ir_name(cm, nm); cn = nm; }
-        ft_box(94, P_NUM_Y + 29u, 88, co ? cn : "no cab", &GF_LB, C_LABEL, C_GROUND, 0);
-        uc.cab_t = ct; uc.cab_on = co; uc.cab_m = cm;
-    }
-    int d = ui_dirty();                                /* EDITED: the sound differs from its saved slot */
-    if (force || d != uc.dirty) { ft_box(182, P_NUM_Y + 29u, 54, d ? "edited" : "", &GF_LB, C_AMBER, C_GROUND, 2); uc.dirty = d; }
+    draw_label(force);
     int nchg = force;
     for (int i = 0; i < 14; i++) if (uc.name[i] != PRESET.name[i]) nchg = 1;
     if (nchg) {
-        ft_box(0, P_NAME_Y, 240, PRESET.name, &GF_NM, C_HOUSING, C_GROUND, 1);
+        ft_box(0, P_NAME_Y + uc.dy, 240, PRESET.name, &GF_NM, C_HOUSING, C_GROUND, 1);
         for (int i = 0; i < 14; i++) uc.name[i] = PRESET.name[i];
     }
 }
-/* ---- chain tiles: position i shows block PRESET.order[i] ---- */
-static uint32_t tile_x(int i) { return 4u + (uint32_t)(i % T_COLS) * T_PITCH; }
-static uint32_t tile_y(int i) { return T_Y0 + (uint32_t)(i / T_COLS) * T_DY; }
-static void draw_tile(int i)           /* a key: pale while its block is on, dark while off, amber while it is moved */
+/* ---- the chain: slot i shows block PRESET.order[i], two rows of six along a line ---- */
+static uint32_t tile_x(int i) { return 4u + (uint32_t)(i % T_COLS) * T_PITCH; }                 /* its key's left */
+static uint32_t tile_y(int i) { return T_Y0 + uc.dy + (uint32_t)(i / T_COLS) * T_ROW; }         /* its slot's top */
+static void tile_line(uint32_t x, uint32_t y, uint32_t w, uint32_t h)   /* a slot's first h rows, w px of them: ground, and the line where it runs */
+{
+    if (h <= T_LINE) { lcd_rect(x, y, w, h, C_GROUND); return; }
+    lcd_rect(x, y, w, T_LINE, C_GROUND); lcd_rect(x, y + T_LINE, w, 2, C_LABEL);
+    lcd_rect(x, y + T_LINE + 2u, w, h - T_LINE - 2u, C_GROUND);
+}
+static void draw_lane(int i)           /* the lane under a slot: the bar under the selected block (the knob's turn redraws no more) */
+{
+    int sel = PRESET.order[i] == ui_blk;
+    lcd_rect(tile_x(i), tile_y(i) + T_LANE, T_W, T_ROW - T_LANE, !sel ? C_GROUND : ui_mode == M_MOVE ? C_AMBER : C_HOUSING);
+    uc.tile_sel[i] = (uint8_t)sel;
+}
+/* a slot: its key on the line and pale while its block is on, below the line and dark while off, above it and amber while
+ * it is moved; the line where the key does not hide it; the bar in the lane under the selected block */
+static void draw_tile(int i)
 {
     int b = PRESET.order[i];
     uint32_t x = tile_x(i), y = tile_y(i);
     int on = PRESET.on[b] != 0, sel = (b == (int)ui_blk), mv = sel && ui_mode == M_MOVE;
-    uint16_t bg = mv ? C_AMBER : on ? C_HOUSING : C_KEY, fg = on || mv ? C_GRAPHITE : C_LABEL, ring = sel ? C_HOUSING : C_GROUND;
-    ui_rbox(x - 2u, y - 2u, T_W + 4u, T_H + 4u, 4, ring, C_GROUND);   /* selection ring (or nothing), then 1 px of ground: */
-    ui_rbox(x - 1u, y - 1u, T_W + 2u, T_H + 2u, 3, C_GROUND, ring);   /* a ring that touched a pale key would not show */
-    ui_rbox(x, y, T_W, T_H, 4, bg, C_GROUND);
-    ui_box(x + 2u, y + 4u, T_W - 4u, px_block_label(b), &GF_LB, fg, bg, 1 | UI_LC);
-    uc.tile_on[i] = (uint8_t)on; uc.tile_sel[i] = (uint8_t)sel; uc.tile_blk[i] = (uint8_t)b; uc.tile_mv[i] = (uint8_t)mv;
+    uint32_t ky = mv ? 0u : on ? T_ON : T_OFF, kh = on || mv ? 22u : 18u;
+    uint16_t bg = mv ? C_AMBER : on ? C_HOUSING : C_KEY, fg = on || mv ? C_GRAPHITE : C_LABEL;
+    tile_line(x - 4u, y, 4, T_ROW);                    /* beside the key the line runs on, to the screen's edge after the last */
+    if (i % T_COLS == T_COLS - 1) tile_line(x + T_W, y, 240u - x - T_W, T_ROW);
+    tile_line(x, y, T_W, ky);                          /* (above a key that is off, the line runs past) */
+    ui_rbox(x, y + ky, T_W, kh, 4, bg, C_GROUND);
+    ui_box(x + 2u, y + ky + (kh - 16u) / 2u, T_W - 4u, px_block_label(b), &GF_LB, fg, bg, 1 | UI_LC);
+    lcd_rect(x, y + ky + kh, T_W, T_LANE - ky - kh, C_GROUND);
+    uc.tile_on[i] = (uint8_t)on; uc.tile_blk[i] = (uint8_t)b; uc.tile_mv[i] = (uint8_t)mv;
+    draw_lane(i);
 }
 static void draw_tiles(int force)
 {
     ui_order_fix();
     for (int i = 0; i < PX_NBLK; i++) {
         int b = PRESET.order[i], on = PRESET.on[b] != 0, sel = (b == (int)ui_blk), mv = sel && ui_mode == M_MOVE;
-        if (force || uc.tile_blk[i] != b || uc.tile_on[i] != on || uc.tile_sel[i] != sel || uc.tile_mv[i] != mv) draw_tile(i);
+        if (force || uc.tile_blk[i] != b || uc.tile_on[i] != on || uc.tile_mv[i] != mv) draw_tile(i);
+        else if (uc.tile_sel[i] != sel) draw_lane(i);
     }
-}
-static void draw_info(int force)       /* the selected block: label, model (v42: a NAM amp's model, a user IR's name), its lamp and on/off */
-{
-    int b = (int)ui_blk, t = PRESET.type[b], on = PRESET.on[b] != 0;
-    int m = ui_list_n(b, t, 0) ? ui_list_of(b, PRESET.p[b][0]) : -1;
-    if (!force && uc.info_b == b && uc.info_t == t && uc.info_on == on && uc.info_m == m) return;
-    char nm[12];
-    const char *tn = px_type_name(b, t);
-    if (m >= 0) { ui_list_name(b, m, nm); tn = nm; }
-    const uint32_t y = P_INFO_Y;                       /* (23 rows: the label and on / off stand on the model's line) */
-    lcd_rect(0, y, 8, 23, C_GROUND);
-    lcd_rect(8, y, 32, 5, C_GROUND); lcd_rect(8, y + 21u, 32, 2, C_GROUND);
-    ui_box(8, y + 5u, 32, px_block_label(b), &GF_LB, C_LABEL, C_GROUND, UI_LC);
-    ft_box(40, y, 160, tn, &GF_TX, on ? C_HOUSING : C_LABEL, C_GROUND, 0);   /* (the widest model, HARMONIC TREM: 158 px) */
-    lcd_rect(40, y + 22u, 160, 1, C_GROUND);
-    lcd_rect(200, y, 34, 5, C_GROUND); lcd_rect(200, y + 21u, 34, 2, C_GROUND);
-    lcd_rect(200, y + 5u, 12, 16, C_GROUND); ui_lamp(202, y + 8u, on, C_GROUND);
-    ft_box(212, y + 5u, 22, on ? "on" : "off", &GF_LB, on ? C_HOUSING : C_LABEL, C_GROUND, 2);
-    lcd_rect(234, y, 6, 23, C_GROUND);
-    uc.info_b = b; uc.info_t = t; uc.info_on = on; uc.info_m = m;
 }
 
 /* ===================================================== EDIT ======== */
@@ -504,18 +599,16 @@ static void ui_render(void)
     int f = uc.full;
     if (f) {                                                     /* page change: background drawn once */
         if (scr == 0) {
-            lcd_rect(0, 0, 240, S_H, C_PLATE);
-            lcd_rect(0, S_H, 240, P_NUM_Y - S_H, C_GROUND);
-            lcd_rect(0, P_NUM_Y, 6, 45, C_GROUND); lcd_rect(90, P_NUM_Y, 4, 45, C_GROUND);
-            lcd_rect(94, P_NUM_Y, 142, 4, C_GROUND); lcd_rect(94, P_NUM_Y + 26u, 142, 3, C_GROUND);
-            lcd_rect(236, P_NUM_Y, 4, 45, C_GROUND);
-            lcd_rect(0, P_NUM_Y + 45u, 240, P_NAME_Y - P_NUM_Y - 45u, C_GROUND);
-            lcd_rect(0, P_NAME_Y + 33u, 240, T_Y0 - 2u - P_NAME_Y - 33u, C_GROUND);
-            lcd_rect(16, P_NAME_Y + 36u, 208, 1, C_RIM);
-            lcd_rect(0, T_Y0 - 2u, 2, 2u * T_DY + 2u, C_GROUND); lcd_rect(236, T_Y0 - 2u, 4, 2u * T_DY + 2u, C_GROUND);
-            lcd_rect(0, T_Y0 + T_H + 2u, 240, T_DY - T_H - 4u, C_GROUND);     /* between the two rows of tiles */
-            lcd_rect(0, T_Y0 + T_DY + T_H + 2u, 240, P_INFO_Y - (T_Y0 + T_DY + T_H + 2u), C_GROUND);
-            lcd_rect(0, P_INFO_Y + 23u, 240, F_Y - P_INFO_Y - 23u, C_GROUND);
+            int ban = uc.status_kind == UI_ST_BYPASS;
+            uint32_t top = ban ? S_BAN : S_H, y;
+            uc.dy = ban ? P_BAN_DY : 0u;
+            y = P_NUM_Y + uc.dy;
+            lcd_rect(0, 0, 240, top, ban ? C_AMBER : C_PLATE);
+            lcd_rect(0, top, 240, y - top, C_GROUND);
+            lcd_rect(0, y, 6, 58, C_GROUND); lcd_rect(104, y, P_LBL_X - 104u, 58, C_GROUND);
+            lcd_rect(P_LBL_X, y + 57u, P_LBL_W, 1, C_GROUND); lcd_rect(P_LBL_X + P_LBL_W, y, 240u - P_LBL_X - P_LBL_W, 58, C_GROUND);
+            lcd_rect(0, y + 58u, 240, P_NAME_Y - P_NUM_Y - 58u, C_GROUND);
+            lcd_rect(0, T_Y0 + uc.dy + 2u * T_ROW, 240, F_Y - (T_Y0 + uc.dy + 2u * T_ROW), C_GROUND);
         } else {
             lcd_rect(0, E_BAND, 240, 4, C_GROUND);
             lcd_rect(0, E_BAND + 4u, 4, F_Y - E_BAND - 4u, C_GROUND); lcd_rect(236, E_BAND + 4u, 4, F_Y - E_BAND - 4u, C_GROUND);
@@ -528,7 +621,6 @@ static void ui_render(void)
         draw_status(f);
         draw_play_top(f);
         draw_tiles(f);
-        draw_info(f);
     } else draw_edit(f);
     draw_hint(f);
     if (f) { char s[12]; for (int i = 0; i < 12; i++) s[i] = uc.status[i]; uc.full = 1; ui_status(s, uc.status_kind); uc.full = 0; }
@@ -611,23 +703,23 @@ static void save_draw(void)
     sv_shown = sv_dest;
     char b[20];
     int restore = sv_dest == SV_FACTORY, can = !restore || st_saved(cur_preset);   /* (v42: nothing to restore: PUSH does nothing) */
-    ft_box(0, F_TY, 240, !can ? "knob: slot   home: no" : restore ? "push: restore   home: no" : "knob: slot  push: save  home: no", &GF_LB, C_LABEL, C_PLATE, 1);
+    ui_footer(!can ? "knob=slot|home=back" : restore ? "push=restore|home=back" : "knob=slot|push=save|home=back", 240, 1);
     /* v42: the pedal cannot rename: a copy keeps the name (the web editor renames) */
-    ft_box(0, 186, 240, restore || sv_dest == cur_preset ? "" : "name stays: rename in the editor", &GF_LB, C_LABEL, C_GROUND, 1);
+    ft_box(0, 190, 240, restore || sv_dest == cur_preset ? "" : "name stays: rename in the editor", &GF_LB, C_LABEL, C_GROUND, 1);
     if (restore) {
-        ft_box(0, 82, 240, "", &FT_XL, C_HOUSING, C_GROUND, 1);
-        ft_box(0, 132, 240, "restore factory", &GF_TX, C_HOUSING, C_GROUND, 1);
+        ft_box(0, 76, 240, "", &GF_XL, C_HOUSING, C_GROUND, 1);
+        ft_box(0, 138, 240, "restore factory", &GF_TX, C_HOUSING, C_GROUND, 1);
         b[0] = 's'; b[1] = 'l'; b[2] = 'o'; b[3] = 't'; b[4] = ' ';
         b[5] = (char)('0' + (cur_preset + 1u) / 10u); b[6] = (char)('0' + (cur_preset + 1u) % 10u); b[7] = 0;
-        ft_box(0, 160, 240, can ? b : "already the factory sound", &GF_LB, C_LABEL, C_GROUND, 1);
+        ft_box(0, 164, 240, can ? b : "already the factory sound", &GF_LB, C_LABEL, C_GROUND, 1);
         return;
     }
     px_preset_t d;
     st_get(sv_dest, &d);
     b[0] = (char)('0' + (sv_dest + 1u) / 10u); b[1] = (char)('0' + (sv_dest + 1u) % 10u); b[2] = 0;
-    ft_box(0, 82, 240, b, &FT_XL, C_HOUSING, C_GROUND, 1);
-    ft_box(0, 132, 240, sv_dest == cur_preset ? "this slot" : "replaces", &GF_TX, sv_dest == cur_preset ? C_HOUSING : C_LABEL, C_GROUND, 1);
-    ft_box(0, 160, 240, sv_dest == cur_preset ? "" : d.name, &GF_LB, C_HOUSING, C_GROUND, 1);
+    ft_box(0, 76, 240, b, &GF_XL, C_HOUSING, C_GROUND, 1);
+    ft_box(0, 138, 240, sv_dest == cur_preset ? "this slot" : "replaces", &GF_TX, sv_dest == cur_preset ? C_HOUSING : C_LABEL, C_GROUND, 1);
+    ft_box(0, 164, 240, sv_dest == cur_preset ? "" : d.name, &GF_LB, C_HOUSING, C_GROUND, 1);
 }
 static void save_close(void)
 {
@@ -644,7 +736,7 @@ static void save_confirm(void)
 {
     int rc;
     if (sv_dest == SV_FACTORY && !st_saved(cur_preset)) return;
-    ft_box(0, 186, 240, "saving...", &GF_TX, C_AMBER, C_GROUND, 1);
+    ft_box(0, 190, 240, "saving...", &GF_TX, C_AMBER, C_GROUND, 1);
     if (sv_dest == SV_FACTORY) { rc = st_reset(cur_preset); }
     else { rc = st_save(sv_dest, &PRESET); if (!rc) cur_preset = sv_dest; }
     st_gen++;
@@ -652,8 +744,8 @@ static void save_confirm(void)
     {
         char b[16] = "error -";
         if (rc) { b[7] = (char)('0' + (uint32_t)(-rc) % 10u); b[8] = 0; }
-        if (rc) ft_box(0, 186, 240, b, &GF_TX, C_AMBER, C_GROUND, 1);
-        else ui_lamp_line(186, "saved", &GF_TX, 1, C_HOUSING);
+        if (rc) ft_box(0, 190, 240, b, &GF_TX, C_AMBER, C_GROUND, 1);
+        else ui_lamp_line(190, "saved", &GF_TX, 1, C_HOUSING);
     }
     for (int i = 0; i < 7; i++) { fm1_wdt_feed(); fm1_delay_ms(100); }
     save_close();
@@ -677,7 +769,7 @@ static void midi_open(void)
     lcd_rect(0, 0, 240, 240, C_GROUND);
     ui_band("midi");
     lcd_rect(0, F_Y, 240, 240u - F_Y, C_PLATE);
-    ft_box(0, F_TY, 240, "knob: set   push: next   home: ok", &GF_LB, C_LABEL, C_PLATE, 1);
+    ui_footer("knob=set|push=next|home=done", 240, 1);
 }
 static void midi_draw(void)
 {
@@ -795,7 +887,7 @@ static void list_open(void)
     lcd_rect(0, 0, 240, 240, C_GROUND);
     ui_band("presets");
     lcd_rect(0, F_Y, 240, 240u - F_Y, C_PLATE);
-    ft_box(0, F_TY, 240, "knob: preset   push: load", &GF_LB, C_LABEL, C_PLATE, 1);
+    ui_footer("knob=preset|push=load|home=back", 240, 1);
     uc.screen = -1;
 }
 static void list_draw(void)
@@ -824,10 +916,23 @@ static void list_close(void) { ui_mode = M_CHAIN; ui_item = 0; uc.screen = -1; u
 static void list_load(void) { if (ls_at != cur_preset) ui_goto(ls_at); list_close(); }
 
 /* ===================================================== tuner ======== */
-/* v42: the tuner only; the readings for a photo are on the diagnostics page, HOME held on past the tuner */
+/* v42: the tuner only; the readings for a photo are on the diagnostics page, HOME held on past the tuner. The note is 81 px
+ * tall, read from five feet. Under it a scale of 50 cents each way, a tick every 10: the needle shows where the note is,
+ * and the window under the middle is the lamp, lit while the note is within 5 cents (the note turns the lamp's green too). */
 static const char *NOTE_N[12] = {"C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"};
-static int tn_last_note = -2, tn_last_x = -1, tn_last_c = 1000, tn_last_dir = 2;
-#define TN_BAR_Y 172u
+static int tn_last_note = -2, tn_last_x = -1, tn_last_c = 1000, tn_last_dir = 2, tn_last_ok = -1;
+#define TN_NOTE_Y 34u
+#define TN_Y 158u                      /* the scale: its ticks stand on the line at TN_Y + 14, the needle is 20 px from TN_Y - 2 */
+static void tn_scale(uint32_t x0, uint32_t x1)   /* the scale's columns x0 to x1 - 1, without the needle */
+{
+    lcd_rect(x0, TN_Y - 2u, x1 - x0, 16, C_GROUND);
+    lcd_rect(x0, TN_Y + 14u, x1 - x0, 1, C_RIM);
+    lcd_rect(x0, TN_Y + 15u, x1 - x0, 3, C_GROUND);
+    for (uint32_t x = 20u; x <= 220u; x += 20u) {
+        int tall = x == 20u || x == 120u || x == 220u;
+        if (x >= x0 && x < x1) lcd_rect(x, TN_Y + (tall ? 4u : 8u), 1, tall ? 10u : 6u, tall ? C_LABEL : C_RIM);
+    }
+}
 static void tuner_open(void)
 {
     ui_mode = M_TUNER;
@@ -836,15 +941,13 @@ static void tuner_open(void)
     lcd_rect(0, 0, 240, 30, C_PLATE);
     ft_box(8, 4, 120, "tuner", &GF_TX, C_HOUSING, C_PLATE, 0);
     ft_box(128, 9, 108, "A4 = 440 Hz", &GF_LB, C_LABEL, C_PLATE, 2);
-    ui_rbox(18, TN_BAR_Y - 2u, 204, 14, 5, C_RIM, C_GROUND);
-    lcd_rect(110, TN_BAR_Y - 2u, 20, 14, C_LAMP_OFF);
-    lcd_rect(119, TN_BAR_Y - 10u, 2, 30, C_HOUSING);
-    ft_box(10, TN_BAR_Y + 20u, 40, "-50", &GF_MS, C_LABEL, C_GROUND, 1);
-    ft_box(100, TN_BAR_Y + 20u, 40, "0", &GF_MS, C_LABEL, C_GROUND, 1);
-    ft_box(190, TN_BAR_Y + 20u, 40, "+50", &GF_MS, C_LABEL, C_GROUND, 1);
+    tn_scale(20, 221);
+    ft_box(0, TN_Y + 28u, 40, "-50", &GF_MS, C_LABEL, C_GROUND, 1);
+    ft_box(100, TN_Y + 28u, 40, "0", &GF_MS, C_LABEL, C_GROUND, 1);
+    ft_box(200, TN_Y + 28u, 40, "+50", &GF_MS, C_LABEL, C_GROUND, 1);
     lcd_rect(0, F_Y, 240, 240u - F_Y, C_PLATE);
-    ft_box(0, F_TY, 240, "any switch: exit  hold home: diag", &GF_LB, C_LABEL, C_PLATE, 1);
-    tn_last_note = -2; tn_last_x = -1; tn_last_c = 1000; tn_last_dir = 2;
+    ui_footer("any switch=exit|hold home=diag", 240, 1);
+    tn_last_note = -2; tn_last_x = -1; tn_last_c = 1000; tn_last_dir = 2; tn_last_ok = -1;
 }
 static void tuner_close(void) { a_tmute = 0; ui_mode = M_CHAIN; lcd_rect(0, 0, 240, 240, C_GROUND); uc.screen = -1; ui_invalidate(); }
 static void tuner_draw(float hz)       /* hz <= 0: no note */
@@ -858,34 +961,30 @@ static void tuner_draw(float hz)       /* hz <= 0: no note */
         c = (int)(cents + (cents >= 0 ? 0.5f : -0.5f));
     }
     int ok = (note >= 0 && c > -5 && c < 5);
-    if (note != tn_last_note || (note >= 0 && (ok != (tn_last_c > -5 && tn_last_c < 5)))) {
-        ft_box(56, 60, 128, note < 0 ? "-" : NOTE_N[note], &FT_LG, note < 0 ? C_LABEL : (ok ? C_LAMP : C_HOUSING), C_GROUND, 1);
+    if (note != tn_last_note || ok != tn_last_ok) {
+        ft_box(40, TN_NOTE_Y, 160, note < 0 ? "-" : NOTE_N[note], &GF_LG, note < 0 ? C_LABEL : (ok ? C_LAMP : C_HOUSING), C_GROUND, 1);
         tn_last_note = note;
     }
     int dir = note < 0 || ok ? 0 : c < 0 ? -1 : 1;           /* which way to turn: an arrow toward in tune, on the side the note is */
     if (dir != tn_last_dir) {
-        ft_box(10, 76, 46, dir < 0 ? ">>" : "", &GF_TX, C_HOUSING, C_GROUND, 1);
-        ft_box(184, 76, 46, dir > 0 ? "<<" : "", &GF_TX, C_HOUSING, C_GROUND, 1);
+        ft_box(4, TN_NOTE_Y + 30u, 36, dir < 0 ? ">>" : "", &GF_TX, C_HOUSING, C_GROUND, 1);
+        ft_box(200, TN_NOTE_Y + 30u, 36, dir > 0 ? "<<" : "", &GF_TX, C_HOUSING, C_GROUND, 1);
         tn_last_dir = dir;
     }
-    if (c != tn_last_c || note < 0) {
+    if (c != tn_last_c || note < 0 || ok != tn_last_ok) {
         char b[8] = "";
         if (note >= 0) { int a = c < 0 ? -c : c; b[0] = (char)(c < 0 ? '-' : '+'); num3(b + 1, (uint32_t)a); }
         int i = 0; while (b[i]) i++;
         if (note >= 0) { b[i++] = ' '; b[i++] = 'c'; b[i++] = 't'; b[i] = 0; }
-        ft_box(60, 128, 120, b, &GF_MD, ok ? C_LAMP : C_HOUSING, C_GROUND, 1);
+        ft_box(60, TN_NOTE_Y + 88u, 120, b, &GF_MD, ok ? C_LAMP : C_HOUSING, C_GROUND, 1);
         tn_last_c = note < 0 ? 1000 : c;
     }
+    if (ok != tn_last_ok) { ui_rbox(110, TN_Y + 18u, 20, 6, 3, ok ? C_LAMP : C_LAMP_OFF, C_GROUND); tn_last_ok = ok; }
     int x = -1;
-    if (note >= 0) { x = 120 + c * 2; if (x < 22) x = 22; if (x > 216) x = 216; }
-    if (x != tn_last_x) {                                     /* needle: erase the old one, draw the new one */
-        if (tn_last_x >= 0) {
-            uint16_t under = (tn_last_x >= 108 && tn_last_x <= 132) ? C_LAMP_OFF : C_RIM;
-            lcd_rect((uint32_t)tn_last_x - 3u, TN_BAR_Y - 2u, 7, 14, under);
-            if (tn_last_x >= 107 && tn_last_x <= 133) { lcd_rect(110, TN_BAR_Y - 2u, 20, 14, C_LAMP_OFF); }
-            lcd_rect(119, TN_BAR_Y - 10u, 2, 30, C_HOUSING);
-        }
-        if (x >= 0) lcd_rect((uint32_t)x - 3u, TN_BAR_Y - 2u, 7, 14, (x >= 110 && x <= 130) ? C_LAMP : C_HOUSING);
+    if (note >= 0) x = 120 + (c < -48 ? -48 : c > 48 ? 48 : c) * 2;
+    if (x != tn_last_x) {                                     /* the needle: the scale again where it was, then the needle where it is */
+        if (tn_last_x >= 0) tn_scale((uint32_t)tn_last_x - 1u, (uint32_t)tn_last_x + 2u);
+        if (x >= 0) lcd_rect((uint32_t)x - 1u, TN_Y - 2u, 3, 20, C_HOUSING);
         tn_last_x = x;
     }
 }
@@ -1063,7 +1162,7 @@ static void diag_frame(void)           /* the page's fixed parts */
         ft_box(DG_X, 138, DG_W, "battery", &GF_LB, C_LABEL, C_GROUND, 0);
     }
     lcd_rect(0, F_Y, 240, 240u - F_Y, C_PLATE);
-    ft_box(0, F_TY, 240, dg_page ? "knob: page 1   photo both pages" : "knob: page 2   photo both pages", &GF_LB, C_LABEL, C_PLATE, 1);
+    ui_footer(dg_page ? "knob=page 1|~photograph both" : "knob=page 2|~photograph both", 240, 1);
     for (int k = 0; k < 4; k++) dg_hash[k] = ~0u;
 }
 static void diag_open(void)
@@ -1077,6 +1176,30 @@ static void diag_open(void)
 static void diag_turn(void) { dg_page ^= 1u; diag_frame(); }
 static void diag_close(void) { ui_mode = M_CHAIN; ui_item = 0; lcd_rect(0, 0, 240, 240, C_GROUND); uc.screen = -1; ui_invalidate(); }
 static void diag_draw(void) { if (dg_page) diag_power(); else diag_dsp(); }
+
+/* ===================================================== update ======== */
+/* the update over USB (px_usb.h's ota_show draws it through OP_OTA_SCREEN): the mark, a dot for each of the five steps
+ * (those done pale, the one running the lamp), the step's name; a failure in amber, with its sign, its code and what to do */
+static void ui_update_show(uint32_t step, int32_t code)
+{
+    static const char *const STEP[] = {"", "package", "check", "loader", "confirm", "restart"};
+    int fail = step >= 9u;
+    lcd_rect(0, 0, 240, 240, C_GROUND);
+    ui_grille(104, 40, 4, 9, 7, !fail, C_GRILLE, C_GROUND);
+    ft_box(0, 84, 240, "update", &GF_TX, C_HOUSING, C_GROUND, 1);
+    if (!fail) {
+        for (uint32_t i = 1; i <= 5u; i++) ui_rbox(62u + i * 18u, 118, 8, 8, 4, i < step ? C_HOUSING : i == step ? C_LAMP : C_RIM, C_GROUND);
+        ft_box(0, 134, 240, STEP[step < 6u ? step : 0], &GF_LB, C_HOUSING, C_GROUND, 1);
+        ft_box(0, 170, 240, "do not unplug", &GF_LB, C_AMBER, C_GROUND, 1);
+        return;
+    }
+    char b[28]; uint32_t v = (uint32_t)(code < 0 ? -code : code);
+    b[0] = 0; b_str(b, "update failed (code "); b_num(b, v % 100u); b_str(b, ")");
+    ui_rbox(6, 116, 228, 62, 6, C_AMBER, C_GROUND);
+    ui_warn(14, 127, C_GRAPHITE, C_AMBER);
+    ft_box(32, 124, 198, b, &GF_LB, C_GRAPHITE, C_AMBER, 0);
+    ft_box(32, 146, 198, "try again from the installer", &GF_LB, C_GRAPHITE, C_AMBER, 0);
+}
 
 /* ===================================================== controls ======== */
 /* What each control does on each page, in one place: the main loop (openpocket.c) and the simulator (tests/edsim.c) give
