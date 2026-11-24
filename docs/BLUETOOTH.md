@@ -216,7 +216,7 @@ cache used as RAM is all the NAM vector unit's again, as before v37. The build p
 ### Building
 
 - The log channel (`node tools/op.mjs log`, editor command 23 `DIAG`) answers in every firmware with Bluetooth built in: the
-  boot, the last boot, the radio's state, the link and the last events, as described in [BLE-TEST.md](BLE-TEST.md).
+  boot, the last boot, the radio's state, the link, the last events and the second core's last fault, as described in [BLE-TEST.md](BLE-TEST.md).
 - `OP_NOBLE=1 sh firmware/build.sh` builds the firmware without Bluetooth. `make ble` builds the test image: the same
   firmware with the radio always on and its state scrolling in the status area.
 - **Flash is nearly full:** with Bluetooth, the image uses about 577 of the 581 KB the application area allows.
