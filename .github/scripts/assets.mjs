@@ -3,11 +3,16 @@
 // and `node tools/op.mjs kit` built:
 //   - the firmware catalog release.json and every firmware it names: each one's manifest.json and its packages;
 //   - the rescue kit zip of this repository, without M-VAVE's files (rescue/README.md);
+//   - with --program DIR, undertone as one program for each system that the release workflow's `program` job built
+//     (undertone-macos, undertone-linux-x86_64, undertone-linux-arm64, undertone-windows-x86_64.exe), each on the site
+//     at undertone/<asset>, and undertone-SHA256SUMS, their checksums, on the site at undertone/SHA256SUMS, which the
+//     installer's Rescue card reads to offer them;
 //   - site.sha256, the checksum list the site serves the release from (site/README.md, site/latest.py, site/release.sh):
 //     one line per file of the catalog, its SHA-256, its path on the site and its asset name. The kit is not on it,
 //     because the site builds its own kit from the same sources;
 //   - SHA256SUMS, the SHA-256 of every other file, for `sha256sum -c`.
 //   node .github/scripts/assets.mjs OUT_DIR [--site build/apps/gamut] [--apps build/apps] [--kit docs/rescue]
+//                                   [--program DIR]
 // (--site: the files the site serves at the top of its firmware/ folder, OpenPocket's and the catalog)
 // OUT_DIR must be empty or missing. A release's assets have no folders, so an app's files are named after the app:
 // apps/palette/manifest.json is the asset palette-manifest.json. It fails when a file is not the bytes the catalog or the
@@ -27,7 +32,8 @@ const option = (name, fallback) => {
   return resolve(root, i < 0 ? fallback : args.splice(i, 2)[1] ?? fail(`${name} needs a folder`));
 };
 const site = option("--site", "build/apps/gamut"), apps = option("--apps", "build/apps"), kit = option("--kit", "docs/rescue");
-if (args.length !== 1) fail("usage: node .github/scripts/assets.mjs OUT_DIR [--site DIR] [--apps DIR] [--kit DIR]");
+const program = args.includes("--program") ? option("--program", "") : null;
+if (args.length !== 1) fail("usage: node .github/scripts/assets.mjs OUT_DIR [--site DIR] [--apps DIR] [--kit DIR] [--program DIR]");
 const out = resolve(args[0]);
 if (existsSync(out) && readdirSync(out).length) fail(`${out} is not empty`);
 
@@ -67,8 +73,20 @@ const kitManifest = JSON.parse(readFileSync(kitFile, "utf8"));
 if (kitManifest.firmware) fail(`${kitFile} is the full kit with M-VAVE's files, which no release of this repository carries`);
 add(null, kitManifest.file, join(kit, kitManifest.file), kitManifest.sha256);
 
+// undertone as one program, for each system the program job built; the site serves them and their checksums
+const PROGRAMS = ["undertone-macos", "undertone-linux-x86_64", "undertone-linux-arm64", "undertone-windows-x86_64.exe"];
+const programs = program ? readdirSync(program).sort() : [];
+for (const name of programs) {
+  if (!PROGRAMS.includes(name)) fail(`${join(program, name)} is not one of undertone's programs (${PROGRAMS.join(", ")})`);
+  add(`undertone/${name}`, name, join(program, name));
+}
+
 mkdirSync(out, { recursive: true });
 for (const f of files) copyFileSync(f.source, join(out, f.asset));
+if (programs.length) {
+  writeFileSync(join(out, "undertone-SHA256SUMS"), programs.map((p) => `${sha256(join(out, p))}  ${p}\n`).join(""));
+  files.push({ path: "undertone/SHA256SUMS", asset: "undertone-SHA256SUMS", source: join(out, "undertone-SHA256SUMS") });
+}
 const served = files.filter((f) => f.path);
 writeFileSync(join(out, "site.sha256"), "# The files the site serves from this release (site/README.md): SHA-256, path on the site, release asset\n" +
   served.map((f) => `${sha256(join(out, f.asset))}  ${f.path}  ${f.asset}\n`).join(""));

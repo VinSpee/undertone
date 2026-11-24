@@ -182,13 +182,60 @@ The fingerprint is the SHA-256 of the first `0x4000` bytes of the flash. `d540d2
 `ERROR` about the file: run `undertone rescue --image BlackBox_023-flash.bin` in place of the file in the `firmware` folder.
 
 **Checking the download.** The installer page shows the kit's SHA-256 beside its download button. Compare it with
-`certutil -hashfile OpenPocket-rescue-kit-7.zip SHA256` on Windows or `shasum -a 256 OpenPocket-rescue-kit-7.zip` on a
+`certutil -hashfile OpenPocket-rescue-kit-8.zip SHA256` on Windows or `shasum -a 256 OpenPocket-rescue-kit-8.zip` on a
 Mac, with your kit's number in the name.
 
 **Building it.** `node tools/op.mjs kit` (or `make kit`) writes the zip and `manifest.json` into `docs/rescue/`, where
 the installer page looks for them. It needs only Python 3. The same sources give the same bytes on every computer, and
 `rescue/kit.sha256` pins them. [`rescue/README.md`](../rescue/README.md) has the rules for changing the kit and for
 building the full kit.
+
+## undertone as one program
+
+> **Status.** New, and run against simulated pedals only: not yet on a real pedal, and not on Windows at all. The
+> kit's own `undertone`, with Python, is the tested way and stays in the kit. Please report on GitHub how the program
+> does on your pedal.
+
+`undertone` also comes as one program that needs nothing installed: no Python, no Homebrew, no libusb, no driver. It
+shows the same screens, asks the same questions and runs the same checks as the kit's `undertone`, and keeps its
+backups in the same `OpenPocket-rescue` folder. It is a file of each release and is on the Rescue card of the
+installer page:
+
+| Your computer | The file |
+| --- | --- |
+| Any Mac | `undertone-macos` |
+| Windows | `undertone-windows-x86_64.exe` |
+| Linux on a PC | `undertone-linux-x86_64` |
+| Linux on ARM | `undertone-linux-arm64` |
+
+`undertone-SHA256SUMS` holds the SHA-256 of each file. Put the file in the `OpenPocket-rescue-kit` folder, beside its
+`firmware` folder: it looks for M-VAVE's files there. Then start it in that folder in place of `undertone`.
+
+**Mac.** In Terminal, go to the kit folder as in step 3, then type these two lines once:
+
+```
+chmod +x undertone-macos
+xattr -d com.apple.quarantine undertone-macos
+```
+
+The program is not signed with an Apple developer certificate, so macOS refuses to open a downloaded copy until it
+is told to. The second line tells it. Instead of that line, you can try to start it once, then open System Settings,
+Privacy & Security, and click Open Anyway. Then start it with `./undertone-macos`. It asks for your password, as the
+kit's `undertone` does.
+
+**Windows.** Open a Command Prompt as administrator and go to the kit folder, as in step 3. Start it with
+`undertone-windows-x86_64.exe`. The program is not signed, so Windows may show "Windows protected your PC": click
+More info, then Run anyway. On a PC with Smart App Control turned on, Windows blocks it with no way to run it; use
+the kit's `undertone` there. If Windows offers to format a drive, click Cancel. As with the kit's `undertone`,
+`install` does not run on Windows.
+
+**Linux.** `chmod +x undertone-linux-x86_64` (or `-arm64`) once, then `./undertone-linux-x86_64`. It asks for your
+password through `sudo`.
+
+`rescue`, `install` and `check` work as above, for example `./undertone-macos rescue`. Like the kit's `undertone`, it
+installs Gamut only from the Undertone repository: put it in the repository's top folder after `node tools/op.mjs
+package`, or pass `--gamut FILE`. During a write, Esc, q and a first Ctrl-C only remind you not to unplug the pedal; a
+second Ctrl-C leaves the program, and the next run continues where it stopped.
 
 ## How it works
 

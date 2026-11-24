@@ -6,6 +6,8 @@
 //      as a release, into the pages and the kit the site has already: every file of the catalog arrives at its path, the
 //      bytes its list names, and none is a page or the kit;
 //   3. what the assembler refuses: a folder that is not empty, a package that is not its manifest's, the full kit;
+//      and with --program, undertone's programs as assets and on the site at undertone/, with their checksums, and
+//      nothing else from that folder;
 //   4. the draft, with a stand-in gh: a tag that is not the changelogs' version, a tag with a release already, and the
 //      draft itself, pre-release for a beta, with every file and the changelog entries as its notes.
 // It needs Node, Python 3, curl or wget, and sha256sum. tests/run_tests.sh runs it.
@@ -28,7 +30,8 @@ const run = (cmd, args, env = {}) => new Promise((done) => {
   execFile(cmd, args, { cwd: ROOT, env: { ...process.env, ...env } }, (error, stdout, stderr) => done({ code: error ? error.code || 1 : 0, out: stdout + stderr }));
 });
 const assemble = (out, dirs = {}) => run(process.execPath, [join(ROOT, ".github/scripts/assets.mjs"), out,
-  "--site", dirs.site || SITE, "--apps", dirs.apps || APPS, "--kit", dirs.kit || KIT]);
+  "--site", dirs.site || SITE, "--apps", dirs.apps || APPS, "--kit", dirs.kit || KIT,
+  ...(dirs.program ? ["--program", dirs.program] : [])]);
 
 // a build's outputs: the fixture packages as OpenPocket's (build/apps/gamut) and as the app starter's (build/apps/starter),
 // the catalog of the two, and the rescue kit
@@ -105,6 +108,33 @@ try {
   const refused = changed.code === 0 && await run("sh", [join(ROOT, "site/release.sh"), PIN, WWW, base], env);
   ok(refused && refused.code !== 0 && /is not the pinned file/.test(refused.out), "a release whose site.sha256 does not match a file stops the site's build");
 
+  // the programs the release workflow's program job built: two systems here, as when the other two could not be built
+  const PROG = join(TMP, "program"), OUTP = join(TMP, "release-program");
+  mkdirSync(PROG);
+  writeFileSync(join(PROG, "undertone-macos"), "a Mac program");
+  writeFileSync(join(PROG, "undertone-windows-x86_64.exe"), "a Windows program");
+  const withProgram = await assemble(OUTP, { program: PROG });
+  ok(withProgram.code === 0, `assets.mjs --program assembles the programs too${withProgram.code ? ":\n" + withProgram.out : ""}`);
+  const programAssets = readdirSync(OUTP).filter((a) => a.startsWith("undertone-")).sort();
+  ok(JSON.stringify(programAssets) === JSON.stringify(["undertone-SHA256SUMS", "undertone-macos", "undertone-windows-x86_64.exe"]),
+    `the programs are assets, with their checksums: ${programAssets.join(" ")}`);
+  ok(readFileSync(join(OUTP, "undertone-SHA256SUMS"), "utf8") === `${sha256(join(PROG, "undertone-macos"))}  undertone-macos\n${sha256(join(PROG, "undertone-windows-x86_64.exe"))}  undertone-windows-x86_64.exe\n`,
+    "undertone-SHA256SUMS holds each program's SHA-256 under its asset name");
+  const programLines = readFileSync(join(OUTP, "site.sha256"), "utf8").split("\n").filter((l) => l.includes("undertone")).map((l) => l.split(/\s+/));
+  ok(JSON.stringify(programLines.map(([, p, a]) => `${p} ${a}`).sort()) === JSON.stringify(["undertone/SHA256SUMS undertone-SHA256SUMS",
+    "undertone/undertone-macos undertone-macos", "undertone/undertone-windows-x86_64.exe undertone-windows-x86_64.exe"]),
+  "site.sha256 puts the programs and their checksums at undertone/ on the site, where the Rescue card reads them");
+  ok(execFileSync("sha256sum", ["-c", "SHA256SUMS"], { cwd: OUTP, encoding: "utf8" }).includes("undertone-macos: OK"), "SHA256SUMS covers the programs");
+  const PTAG = "v0.0.2-test", PWWW = join(TMP, "www-program"), PPIN = join(TMP, "pin-program");
+  mkdirSync(PPIN);
+  for (const a of readdirSync(OUTP)) github[`/${PTAG}/${a}`] = readFileSync(join(OUTP, a));
+  writeFileSync(join(PPIN, "RELEASE"), `${PTAG}\n`);
+  writeFileSync(join(PPIN, "release.sha256"), readFileSync(join(OUTP, "site.sha256")));
+  cpSync(join(ROOT, "docs"), PWWW, { recursive: true, filter: (src) => !["firmware", "rescue"].some((d) => src === join(ROOT, "docs", d)) });
+  const delivered = await run("sh", [join(ROOT, "site/release.sh"), PPIN, PWWW, base], env);
+  ok(delivered.code === 0 && readFileSync(join(PWWW, "undertone/undertone-macos"), "utf8") === "a Mac program" && existsSync(join(PWWW, "undertone/SHA256SUMS")),
+    `site/release.sh puts the programs and their checksums at undertone/${delivered.code ? ":\n" + delivered.out : ""}`);
+
   // 3. what the assembler refuses
   const no = async (what, out, dirs, says) => {
     const r = await assemble(out, dirs);
@@ -120,6 +150,10 @@ try {
   writeFileSync(join(FULL, "manifest.json"), JSON.stringify({ ...JSON.parse(readFileSync(join(KIT, "manifest.json"), "utf8")), firmware: true }));
   await no("the full kit with M-VAVE's files", join(TMP, "out-full"), { kit: FULL }, /full kit with M-VAVE's files/);
   await no("a build without the kit", join(TMP, "out-nokit"), { kit: join(TMP, "nokit") }, /build the kit first/);
+  const ODD = join(TMP, "odd-program");
+  cpSync(PROG, ODD, { recursive: true });
+  writeFileSync(join(ODD, "undertone-amiga"), "not a program of this repository");
+  await no("a file of the program folder that is not one of undertone's programs", join(TMP, "out-odd"), { program: ODD }, /is not one of undertone's programs/);
 
   // 4. the draft, from a copy of the release step and the changelogs at version 1.0.0-beta.1, with a stand-in gh that
   // records its calls and answers for the releases it was asked to create

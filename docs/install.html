@@ -94,6 +94,7 @@ pre#log{margin:12px 0 0;background:var(--ink);color:var(--bone);padding:14px;fon
 code{font:500 14px var(--mono);background:var(--ink);color:var(--lime);padding:1px 6px}
 #rescueCard{background:var(--lime)}
 #rescueCard a.go{background:var(--ink);color:var(--bone)}
+#rescueCard a.go.alt{background:transparent;color:var(--ink)}
 #rescueCard .warnbox{background:var(--bone)}
 [hidden]{display:none!important}   /* here as well as in site.css: the script's hidden states must hold without it */
 .page-foot span{max-width:62ch}
@@ -216,6 +217,11 @@ code{font:500 14px var(--mono);background:var(--ink);color:var(--lime);padding:1
     <div class="row"><a class="go" id="kit" hidden></a></div>
     <p class="note" id="kitinfo" hidden><span id="kitfw"></span> SHA-256: <code id="kitsha"></code></p>
     <p class="note" id="kitnone" hidden><span data-t="kitnone">The rescue kit is not on this copy of the page. How to get or build it:</span> <a href="https://github.com/VinSpee/undertone/blob/main/docs/RESCUE.md#the-rescue-kit">the rescue guide</a></p>
+    <div id="program" hidden>
+      <p class="note" data-t="prognote">New: undertone as one program, with nothing else to install, not even Python. Put it in the kit's folder, beside its firmware folder, and start it there. It has not been run on a real pedal yet: the kit's own undertone is the tested way.</p>
+      <div class="row" id="programs"></div>
+      <p class="note"><a href="https://github.com/VinSpee/undertone/blob/main/docs/RESCUE.md#undertone-as-one-program" data-t="proghow">How to start it on each system</a></p>
+    </div>
     <p class="note warnbox" data-t="rescuev22">After the rescue of a pedal that ran M-VAVE V22 or V23, do not install Gamut or PALETTE on it. Installing writes over the end of the V22/V23 boot loader, and the pedal goes dark again. This installer refuses such a pedal and writes nothing, but older installers do not. Gamut is installed on such a pedal from a computer's Terminal instead, with <code>undertone install</code> from the Undertone repository (see "Gamut on a BlackBox with V22 or V23" in the rescue guide).</p>
     <details class="guide" id="rescueguide">
       <summary>How to run the rescue on your computer</summary>
@@ -298,6 +304,7 @@ const T = {
     backoff: "Return to the official firmware", offknown: "Official file verified: ", offunknown: "Well-formed official file, unknown to this page: ",
     kitget: "Download the rescue kit", kitwith: "The kit holds the rescue tool and M-VAVE's official V20, V22 and V23 firmware.",
     kitwithout: "The kit holds the rescue tool. It does not hold M-VAVE's firmware: its firmware folder says where to get the official file.",
+    progget: "undertone for ",
     e_notfound: "Pedal not found. Check the cable (data), close other MIDI apps (on Windows only one program at a time can use the pedal: M-EFCS, M-UPGRADE, a DAW, another tab with this page), then try again.",
     e_model: "This package is not for this pedal: ", e_lost: "The pedal was disconnected. Do not switch it off: plug the cable back in, then press Resume if the page shows update mode, else Install again.",
     e_stopped: "The pedal stopped answering before the update was finished. Do not switch it off: unplug the cable, plug it back in, then press Resume if the page shows update mode, else Install again.", e_noloader: "The update loader did not appear. Do not switch the pedal off: replug the cable, then press Resume.",
@@ -410,6 +417,28 @@ async function loadKit() {
     $("kitsha").textContent = k.sha256;
     a.hidden = false; $("kitinfo").hidden = false;
   } catch (e) { $("kitnone").hidden = false; log("rescue kit: " + e.message); }
+}
+
+// undertone as one program, when the release this site serves carries it (undertone/SHA256SUMS, written by
+// .github/scripts/assets.mjs): one download per system, this computer's first
+const PROGRAMS = { "undertone-macos": "Mac", "undertone-windows-x86_64.exe": "Windows", "undertone-linux-x86_64": "Linux (x86-64)", "undertone-linux-arm64": "Linux (ARM)" };
+async function loadProgram() {
+  try {
+    const r = await fetch("undertone/SHA256SUMS", { cache: "no-store" });
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    const lines = (await r.text()).split("\n").map((l) => l.trim().split(/\s+/)).filter(([sum, name]) => /^[0-9a-f]{64}$/.test(sum) && name in PROGRAMS);
+    if (!lines.length) throw new Error("no program listed");
+    const ua = (navigator.userAgentData?.platform || navigator.platform || "").toLowerCase();
+    const mine = ua.includes("mac") ? "undertone-macos" : ua.includes("win") ? "undertone-windows-x86_64.exe" : ua.includes("arm") || ua.includes("aarch64") ? "undertone-linux-arm64" : "undertone-linux-x86_64";
+    lines.sort(([, a], [, b]) => (b === mine) - (a === mine));
+    for (const [sum, name] of lines) {
+      const a = document.createElement("a");
+      a.className = name === mine ? "go" : "go alt"; a.href = "undertone/" + name; a.download = name;
+      a.textContent = t("progget") + PROGRAMS[name]; a.title = "SHA-256 " + sum;
+      $("programs").append(a);
+    }
+    $("program").hidden = false;
+  } catch (e) { log("undertone as one program: " + e.message); }
 }
 
 function showDev(d) {
@@ -637,6 +666,7 @@ setInterval(() => { if (lastDev && MODELS.includes(lastDev.id.model)) try { loca
 
 applyLang();
 loadKit();
+loadProgram();
 loadOffers().then(() => showDev(lastDev));
 </script>
 <script>

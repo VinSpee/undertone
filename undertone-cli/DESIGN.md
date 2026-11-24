@@ -8,7 +8,8 @@ the fallback until the owner has proven the program on a real pedal.
 
 So far the folder holds the workspace, this design, the CI, the protocol library, the program's commands `rescue`,
 `install` and `check`, and its guided screens, each tested against the Python command's own runs on simulated pedals.
-Nothing in it has run on a real pedal yet. The release follows; [Stages](#stages) lists what is left.
+Each release carries the programs, and the installer's Rescue card offers them beside the kit
+([Release](#release)). Nothing in it has run on a real pedal yet.
 
 ## Layout
 
@@ -248,6 +249,17 @@ unit and the symbols stripped.
 
 Nothing here runs on a real pedal. Each stage's pull request says what the owner should check on a pedal and on
 Windows.
+
+## Release
+
+The `program` job of `.github/workflows/release.yml` builds the release programs, one Mac program for both kinds of
+Mac (`lipo`), and `.github/scripts/assets.mjs` adds them to the release's files with their checksums,
+`undertone-SHA256SUMS`, and to the site at `undertone/`. A system whose build does not finish is left out and the
+release goes on. The installer's Rescue card reads `undertone/SHA256SUMS` and offers the programs it lists, the
+visitor's system first, beside the kit and below it, as untried on a pedal. `docs/RESCUE.md` ("undertone as one
+program") says how to start each one, with the Gatekeeper and SmartScreen steps. The kit stays the Python command's,
+with one more page in its `README.txt` about the program; the kit's number went up for that. Run by hand, the release
+workflow builds the programs and keeps them as workflow artifacts, and publishes nothing.
 
 ## Stages
 

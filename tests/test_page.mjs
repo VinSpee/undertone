@@ -8,7 +8,7 @@
 // tests/test_site.mjs), and SITE_FIRMWARE is the folder that server serves as firmware/: the fixture packages go there.
 import { spawn, execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { mkdtempSync, cpSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, cpSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { createServer } from "node:http";
 import { tmpdir } from "node:os";
 import { join, extname } from "node:path";
@@ -268,6 +268,25 @@ sim.stdin.end(); sim = null; simLog.length = 0; buf = "";
     await no.waitForSelector("#kitnone:not([hidden])", { timeout: 5000 });
     ok(!(await no.isVisible("#kit")) && (await no.getAttribute("#kitnone a", "href")) === "https://github.com/VinSpee/undertone/blob/main/docs/RESCUE.md#the-rescue-kit", "a copy of the page without the kit: says so and links how to get it");
     writeFileSync(join(SITE, "rescue", "manifest.json"), JSON.stringify(kit));
+    // undertone as one program: offered only when the release on the site carries it (undertone/SHA256SUMS), each
+    // listed program once, this computer's first, nothing the list names that is not one of undertone's programs
+    ok(!(await no.isVisible("#program")), "Rescue card: no program offered while the release carries none");
+    mkdirSync(join(SITE, "undertone"), { recursive: true });
+    const sum = (c) => createHash("sha256").update(c).digest("hex");
+    writeFileSync(join(SITE, "undertone", "undertone-windows-x86_64.exe"), "w");
+    writeFileSync(join(SITE, "undertone", "undertone-linux-x86_64"), "l");
+    writeFileSync(join(SITE, "undertone", "SHA256SUMS"), `${sum("w")}  undertone-windows-x86_64.exe\n${sum("l")}  undertone-linux-x86_64\n` +
+      `${sum("x")}  ../firmware/release.json\n`);
+    await no.reload();
+    await no.waitForSelector("#program:not([hidden])", { timeout: 5000 });
+    const offered = await no.$$eval("#programs a", (a) => a.map((e) => [e.getAttribute("href"), e.getAttribute("download"), e.textContent]));
+    ok(offered.length === 2 && offered.every(([href, file]) => href === "undertone/" + file) && offered.some(([, , text]) => /Windows/.test(text)) &&
+       offered.some(([, , text]) => /Linux/.test(text)), `Rescue card: the release's programs, one download each: ${offered.map((o) => o[0]).join(" ")}`);
+    ok(/not been run on a real pedal/.test(await no.textContent("[data-t=prognote]")) &&
+       (await no.getAttribute("[data-t=proghow]", "href")) === "https://github.com/VinSpee/undertone/blob/main/docs/RESCUE.md#undertone-as-one-program",
+    "Rescue card: the program is said to be untried on a pedal, the kit the tested way, and links how to start it");
+    await no.screenshot({ path: join(OUT, "page_4d_rescue_program.png"), fullPage: true });
+    rmSync(join(SITE, "undertone"), { recursive: true });
     await no.close();
   }
 }
