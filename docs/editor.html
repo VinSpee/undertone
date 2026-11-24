@@ -3,7 +3,7 @@
      Gamut web editor: the pedal's presets, its current sound, its NAM models and cabinet IRs, and MIDI control,
      live over USB-MIDI (Chrome / Edge). Protocol: EDITOR-PROTOCOL.md; transport: pxedit.js. No library, no build step:
      editor.css, editor.js (start, connection, sections) and one module per section (edsound.js, edpresets.js,
-     edmodels.js, edmidi.js) on edcore.js. -->
+     edmodels.js, edmidi.js with edchoc.js for a Chocolate foot controller) on edcore.js. -->
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -134,6 +134,7 @@
       <div class="midigrid">
         <section class="card" id="midiconn" aria-labelledby="midiconn-h"></section>
         <section class="card" id="midimon" aria-labelledby="midimon-h"></section>
+        <section class="card wide" id="midichoc" aria-labelledby="midichoc-h"></section>
         <section class="card wide" id="midimap" aria-labelledby="midimap-h"></section>
       </div>
     </section>

@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // OpenPocket — the web editor page (docs/editor.html) in a real browser (Playwright / Chromium) against the simulated
 // pedal (tests/edsim.c: the pedal's real editor code and preset store), through a fake Web MIDI access with the pedal
-// and a second device (a foot controller). TONE3000 is simulated (its pop-up, its sign-in, its lists and files).
+// and a second device (a foot controller), and a fake Web Bluetooth with a Chocolate Plus. TONE3000 is simulated (its
+// pop-up, its sign-in, its lists and files).
 //   node tests/test_editor_page.mjs [OUT_DIR]     (screenshots in OUT_DIR, default build/editor)
 // With SITE_URL set, the page is the one a server already serves there (the site container, tests/test_site.mjs).
 import { spawn } from "node:child_process";
@@ -64,7 +65,26 @@ await page.addInitScript(() => {
     if (port && port.input.onmidimessage) port.input.onmidimessage({ data: Uint8Array.from(d) });
   };
   window.__ctl = (bytes) => { if (ctl.onmidimessage) ctl.onmidimessage({ data: Uint8Array.from(bytes) }); };
+  // a controller the computer paired itself comes as one more MIDI port: window.__paired(name) -> send(bytes)
+  window.__paired = (name) => { const i = mkIn(name); access.inputs.set(i.id, i); fire(i); window.__pairedSend = (bytes) => { if (i.onmidimessage) i.onmidimessage({ data: Uint8Array.from(bytes) }); }; };
   navigator.requestMIDIAccess = async () => access;
+  // Web Bluetooth with one device in reach, a Chocolate Plus: __bleSend(packet) is a notification of its MIDI
+  // characteristic, __bleDrop() takes it out of reach (a connection fails until __bleBack())
+  const chr = new EventTarget();
+  chr.addEventListener("characteristicvaluechanged", (e) => chr.oncharacteristicvaluechanged && chr.oncharacteristicvaluechanged(e));
+  chr.startNotifications = async () => chr;
+  const dev = new EventTarget();
+  dev.name = "FootCtrlPlus";
+  let away = false;
+  dev.gatt = { connected: false,
+    connect: async () => { window.__bleTries = (window.__bleTries || 0) + 1; if (away) throw new Error("Bluetooth Device is no longer in range."); dev.gatt.connected = true; return { getPrimaryService: async () => ({ getCharacteristic: async () => chr }) }; },
+    disconnect: () => { dev.gatt.connected = false; dev.dispatchEvent(new Event("gattserverdisconnected")); } };
+  const bluetooth = { requestDevice: async (opt) => { window.__bleAsked = opt; return dev; } };
+  window.__bleSend = (bytes) => { chr.value = new DataView(Uint8Array.from(bytes).buffer); chr.dispatchEvent(new Event("characteristicvaluechanged")); };
+  window.__bleDrop = () => { away = true; dev.gatt.disconnect(); };
+  window.__bleBack = () => { away = false; };
+  window.__bleHave = (yes) => Object.defineProperty(navigator, "bluetooth", { value: yes ? bluetooth : undefined, configurable: true });
+  window.__bleHave(true);
 });
 function startSim(program = join(ROOT, "build", "edsim"), args = ["--persist", FLASH]) {
   buf = "";
@@ -636,6 +656,119 @@ const free = (kind, slot) => page.locator(`#${kind}list .free [data-slot="${slot
   await sleep(200);
   ok(/Pedal/.test(await page.locator("#monlist li").first().textContent()) && /AMP on \/ off/.test(await page.locator("#monlist li").first().textContent()), "a Control Change the pedal sends is named in the monitor");
   await shot("editor_8_midi_learned.png");
+}
+
+// ---- MIDI: a Chocolate foot controller over Bluetooth, its controls taught and given something to do ----
+{
+  const ble = (...msg) => page.evaluate((b) => window.__bleSend(b), [0x80, 0x8E, ...msg]);
+  const tap = async (cc, ms = 250) => { await ble(0xB1, cc, 127); await ble(0xB1, cc, 0); await sleep(ms); };
+  const val = (sel) => page.locator(sel).evaluate((e) => e.value);
+  await go("midi");
+  ok(await page.isVisible("#chocconnect") && /press Connect/.test(await text("#chochelp")) && await page.locator("#choc .choc-ctl").count() === 7, "Chocolate: its controls, and one button to connect it over Bluetooth");
+  await page.evaluate(() => window.__bleHave(false));
+  await go("sound"); await go("midi");
+  ok(await page.isHidden("#chocconnect") && /cannot connect to Bluetooth devices itself/.test(await text("#chochelp")) && /Audio MIDI Setup/.test(await text("#chochelp")), "a browser without Web Bluetooth: said, with the other way to connect it");
+  await page.evaluate(() => window.__bleHave(true));
+  await go("sound"); await go("midi");
+  await page.selectOption("#chocmodel", "chocolate");
+  ok(/Should send CC 20/.test(await text("#chocsrc-A")) && /Not taught yet/.test(await text("#chocsrc-EXP")), "the Chocolate: the messages its write-up gives, and what is not known");
+  await page.click("#chocconnect");
+  await page.waitForSelector("#chocdisc", { timeout: 4000 });
+  const asked = await page.evaluate(() => window.__bleAsked);
+  ok(asked.filters[0].services[0] === "03b80e5a-ede8-4b33-a751-6ce34ec4c700" && asked.filters.some((f) => f.namePrefix === "FootCtrl") && asked.optionalServices.length === 1, "the browser's chooser is asked for Bluetooth MIDI devices and for the Chocolate's names");
+  ok(/Connected over Bluetooth: FootCtrlPlus/.test(await text("#choclink")) && /FootCtrlPlus/.test(await text("#midictl")), "connected: said in the card and among the controllers");
+  ok(await val("#chocmodel") === "plus" && /This is a Chocolate Plus/.test(await text("#chocstate")) && /Should send CC 0/.test(await text("#chocsrc-A")), "the model is known by its name: the Chocolate Plus and its controls are shown");
+  await shot("editor_8_midi_chocolate.png");
+  // footswitch A as one real Chocolate Plus sent it: the default is DRIVE
+  const drv = (await pedalState()).on[4];
+  await ble(0xB1, 0, 127); await sleep(300);
+  ok((await pedalState()).on[4] === (drv ? 0 : 1) && await page.locator('.choc-ctl[data-c="A"].hit').count() === 1, "footswitch A, as captured from a Chocolate Plus: DRIVE flips, and A lights");
+  await ble(0xB1, 0, 0); await sleep(300);
+  ok((await pedalState()).on[4] === (drv ? 0 : 1) && /A: the switch released/.test(await page.locator("#monlist li").first().textContent()), "its release does nothing, and the monitor says so");
+  // B is taught: a press and its release
+  await page.click("#chocteach-B");
+  ok(/Press B on the Chocolate/.test(await text("#chocstate")), "Teach: the page waits for the control");
+  await ble(0xB1, 21, 127); await sleep(100);
+  ok(/Let go of the switch/.test(await text("#chocstate")), "the press is seen: its release is waited for");
+  await ble(0xB1, 21, 0); await sleep(150);
+  ok(/Sends CC 21 · ch 2/.test(await text("#chocsrc-B")) && /B sends CC 21/.test(await text("#chocstate")), "B is taught");
+  const mod = (await pedalState()).on[8];
+  await tap(21);
+  ok((await pedalState()).on[8] === (mod ? 0 : 1), "B, pressed and released: MOD flips once");
+  // C sends one message per press, a 0: each one is a press
+  await page.click("#chocteach-C");
+  await ble(0xB1, 30, 0); await sleep(150);
+  const dly = (await pedalState()).on[9];
+  await ble(0xB1, 30, 0); await sleep(300);
+  const once = (await pedalState()).on[9];
+  await ble(0xB1, 30, 0); await sleep(300);
+  ok(/Sends CC 30/.test(await text("#chocsrc-C")) && once === (dly ? 0 : 1) && (await pedalState()).on[9] === dly, "C taught with a single 0: every message flips DELAY");
+  // what a control does is chosen, and undone
+  await page.selectOption("#chocdo-A", "preset:1");
+  const slot = (await pedalState()).slot;
+  await ble(0xB1, 0, 127); await ble(0xB1, 0, 0); await sleep(500);
+  ok((await pedalState()).slot === slot + 1, "A given Next preset: a press goes one preset on");
+  await page.click("#chocundo");
+  ok(await val("#chocdo-A") === "on:4" && /Undone/.test(await text("#chocstate")), "Undo: A switches DRIVE again");
+  await page.selectOption("#chocdo-A", "tap");
+  await ble(0xB1, 0, 127); await sleep(500); await ble(0xB1, 0, 127); await sleep(400);
+  const tapped = /A → delay time (\d+) MS \((\d+) BPM\)/.exec(await page.locator("#monlist li").first().textContent());
+  ok(tapped && +tapped[1] > 400 && +tapped[1] < 700, "A given Tap tempo: two taps set the delay time between them");
+  // the expression pedal: taught, then it sets a setting
+  await page.click("#chocteach-EXP");
+  ok(/Move the pedal/.test(await text("#chocstate")), "the pedal is taught by moving it");
+  await ble(0xB1, 4, 10); await sleep(150);
+  await page.selectOption("#chocdo-EXP", "param:5:1");
+  await ble(0xB1, 4, 127); await sleep(400);
+  ok((await pedalState()).amp[1] === 100 && /Pedal → AMP · GAIN 100/.test(await text("#monlist")), "the pedal given AMP GAIN: at its end the pedal's AMP GAIN is 100");
+  // every control in a row
+  await page.click("#chocteach");
+  ok(/Press A on the Chocolate, then let go\. Then 6 more/.test(await text("#chocstate")) && await page.isVisible("#chocskip"), "Teach every control: one after the other");
+  await ble(0xB1, 40, 127); await ble(0xB1, 40, 0); await sleep(120);
+  await ble(0xB1, 40, 0); await sleep(120);                                                // (a bounce of A is not B)
+  await page.click("#chocskip");
+  ok(/Sends CC 40/.test(await text("#chocsrc-A")) && /Press C on the Chocolate/.test(await text("#chocstate")) && /Sends CC 21/.test(await text("#chocsrc-B")), "A is taught, B is skipped and keeps its message, C is next");
+  await page.keyboard.press("Escape");
+  ok(!/Press C/.test(await text("#chocstate")), "Esc stops the teaching");
+  ok(await page.evaluate(() => { const j = JSON.parse(localStorage.getItem("openpocket-chocolate-v1")); return j.model === "plus" && j.profiles.plus.A.src.n === 40 && j.profiles.plus.EXP.tgt.kind === "param" && !j.profiles.chocolate.A.src; }), "the mapping is kept in the browser, one for each model");
+  await shot("editor_8_midi_chocolate_taught.png");
+  await page.click("#chocreset");
+  ok(/Should send CC 0/.test(await text("#chocsrc-A")) && await val("#chocdo-A") === "on:4" && await val("#chocdo-EXP") === "", "Back to the defaults: nothing taught, the first choices again");
+  await page.click("#chocundo");
+  ok(/Sends CC 40/.test(await text("#chocsrc-A")) && await val("#chocdo-A") === "tap", "and Undo brings the mapping back");
+  await page.selectOption("#chocdo-A", "preset:1");
+  await page.selectOption("#chocmodel", "chocolate");
+  ok(await page.isDisabled("#chocundo"), "Undo is off for the model on show when only the other model has changes");
+  await page.selectOption("#chocmodel", "plus");
+  ok(await val("#chocdo-A") === "preset:1" && await page.isEnabled("#chocundo"), "the other model's edit is kept, and can be undone after switching back");
+  await page.click("#chocundo");
+  ok(await val("#chocmodel") === "plus" && await val("#chocdo-A") === "tap", "Undo then brings back that edit");
+  // out of reach, and back
+  await page.evaluate(() => window.__bleDrop());
+  await sleep(150);
+  ok(/went away/.test(await text("#choclink")) && !/FootCtrlPlus/.test(await text("#midictl")), "the Chocolate out of reach: said, and waited for");
+  await page.waitForFunction(() => window.__bleTries >= 3, null, { timeout: 8000 }).catch(() => {});
+  ok(/went away/.test(await text("#choclink")), "a try that fails while it is away is not the end: the page looks again");
+  await page.evaluate(() => window.__bleBack());
+  await page.waitForFunction(() => /Connected over Bluetooth/.test(document.getElementById("choclink").textContent), null, { timeout: 6000 }).catch(() => {});
+  const mod2 = (await pedalState()).on[8];
+  await page.click("#midimon .btn");
+  await tap(21);
+  ok(/Connected over Bluetooth/.test(await text("#choclink")) && (await pedalState()).on[8] === (mod2 ? 0 : 1) && await page.locator("#monlist li").count() === 2,
+    "back in reach: connected again by itself, and B works, each message once");
+  await page.click("#chocdisc");
+  ok(await page.isVisible("#chocconnect"), "Disconnect: the Connect button is back");
+  // a first Chocolate the computer paired itself: a MIDI port, known by its name, with the messages of its write-up
+  await page.evaluate(() => window.__paired("FootCtrl Bluetooth"));
+  await sleep(200);
+  ok(/Connected through this computer: FootCtrl Bluetooth/.test(await text("#choclink")) && await val("#chocmodel") === "chocolate" && await page.isHidden("#chocconnect"), "a Chocolate paired with the computer: taken as a MIDI port, its model known");
+  const drv2 = (await pedalState()).on[4];
+  await page.evaluate(() => { window.__pairedSend([0xB0, 20, 127]); window.__pairedSend([0xB0, 20, 0]); });
+  await sleep(300);
+  ok((await pedalState()).on[4] === (drv2 ? 0 : 1), "its footswitch A (CC 20) flips DRIVE with nothing taught");
+  await page.evaluate(() => window.__pairedSend([0xC0, 2]));
+  await page.waitForFunction(() => document.getElementById("num").textContent === "03", null, { timeout: 3000 }).catch(() => {});
+  ok((await pedalState()).slot === 2, "a message that is no control of it goes on as any controller's: Program Change 2 loads preset 03");
 }
 
 // ---- the pedal unplugged, and back ----

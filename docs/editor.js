@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // Gamut web editor: the start. Finding the pedal and every way that can fail, the sections and the way between
-// them, the DSP load, the keyboard. The sections themselves: edsound.js, edpresets.js, edmodels.js, edmidi.js.
+// them, the DSP load, the keyboard. The sections themselves: edsound.js, edpresets.js, edmodels.js, edmidi.js
+// (and edchoc.js in it).
 
 import { app, $, h, icon, on, emit, say, busy } from "./edcore.js";
 import { Editor } from "./pxedit.js";
@@ -8,6 +9,7 @@ import { initPresets, loadBank, refreshSlots, refreshBank, stepPreset, save, com
 import { initSound } from "./edsound.js";
 import { initModels, loadAssets } from "./edmodels.js";
 import { initMidi } from "./edmidi.js";
+import { initChoc } from "./edchoc.js";
 
 let pingTimer = null, connecting = false, progress = 0;
 
@@ -115,7 +117,7 @@ const GATE = {
       h("li", {}, h("b", { text: "Presets" }), "Browse, rename, reorder, copy and back up the 52 presets."),
       h("li", {}, h("b", { text: "Sound" }), "The signal chain and every block's settings, live."),
       h("li", {}, h("b", { text: "Models" }), "Amp captures from TONE3000 or your files, and cabinet IRs."),
-      h("li", {}, h("b", { text: "MIDI" }), "The pedal's control numbers, and your own controller.")),
+      h("li", {}, h("b", { text: "MIDI" }), "The pedal's control numbers, your own controller, and a Chocolate over Bluetooth.")),
   ],
   unsupported: () => [
     h("h1", { text: "This browser cannot reach the pedal" }),
@@ -228,7 +230,7 @@ function renderConnPop() {
 }
 
 // ---- start ----
-initPresets(); initSound(); initMidi();
+initPresets(); initSound(); initMidi(); initChoc();
 await initModels();
 on("view-go", (v) => setView(v));
 $("reconnect").onclick = connect;
