@@ -14,6 +14,7 @@ on:
       - tools/pd40_install.py
       - tools/pocketx_fw.py
       - tools/pxpkg.py
+      - tools/undertone.py
       - tests/uboot_sim.py
       - tests/recovery_sim.py
       - tests/fw_layouts.py
