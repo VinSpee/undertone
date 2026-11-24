@@ -182,7 +182,7 @@ before it is answered, so a state read right after a press shows the press.
  "preset": {"name": "twin clean", "on": [..12], "type": [..12], "order": [..12], "p": [[..5] x 12]}}
 ```
 
-`slot` is 0..51 (the pedal shows 1..52); `dirty`: the sound differs from its slot (the pedal's "EDITED"); `saved`: the
+`slot` is 0..51 (the pedal shows 1..52); `dirty`: the sound differs from its slot (the pedal's "edited"); `saved`: the
 slot holds a saved preset (0: factory); `mode`: the page, one of `chain` `block` `edit` `tuner` `save` `move` `midi` `list` (the preset list) `diag` (diagnostics); `block`:
 the focused block (0 GATE, 1 COMP, 2 PITCH, 3 SFX, 4 DRIVE, 5 AMP, 6 CAB, 7 EQ, 8 MOD, 9 DELAY, 10 REVERB, 11 SYN);
 `writes_ok` is 0 once the firmware tried to write outside the preset area of the flash; `frame` counts the drawing

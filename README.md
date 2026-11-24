@@ -169,7 +169,7 @@ proposed upstream.
 
 ## Licence
 
-GPL-3.0-only. Board support and loader: MPL-2.0 (felucca-bsp). JieLi SDK files: Apache-2.0. Inter: OFL 1.1.
+GPL-3.0-only. Board support and loader: MPL-2.0 (felucca-bsp). JieLi SDK files: Apache-2.0. Inter and B612: OFL 1.1.
 The factory NAM models were trained, and the drives' settings matched, on the NAM captures of
 [pelennor2170/NAM_models](https://github.com/pelennor2170/NAM_models) (GPL-3.0, thanks to their authors) and the DI recordings of
 [Alec-Wright/Automated-GuitarAmpModelling](https://github.com/Alec-Wright/Automated-GuitarAmpModelling) (GPL-3.0); neither is shipped.
