@@ -24,7 +24,7 @@ tested (issue #1: a restart loop after power cycles in some versions, rescue mod
 
 - [ ] Open the installer with `?channel=midi-test`. A warning banner says "TEST CHANNEL" and the package line says `v37 (midi-test)`.
 - [ ] Connect the pedal, check that it is found, press Install, wait for "Done". Do not unplug while it works.
-- [ ] The pedal restarts. The boot screen shows **v37 MIDI TEST**.
+- [ ] The pedal restarts. The boot screen shows **v37 midi test**.
 - [ ] The sound is normal: play a few presets, each block of one preset, the tuner (hold HOME). Note the number at the bottom
       right ("dsp 42%"): baseline DSP load with the same preset: ______ %.
 - [ ] Open the web editor (`editor.html`): it connects, shows the presets, and a knob turned on the pedal moves on the page.
@@ -99,7 +99,7 @@ Please send, even if everything works:
 
 ```
 Pedal: Pocket X / BlackBox            Computer + OS:
-Installed v37 MIDI TEST: yes/no       Boot screen showed v37 MIDI TEST: yes/no
+Installed v37 MIDI TEST: yes/no       Boot screen showed v37 midi test: yes/no
 USB port name seen:                   Apps tried (DAW, monitor):
 Section 2 (page):  ok / what failed
 Section 3 (receive): ok / what failed   (which CC or PC numbers)

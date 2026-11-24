@@ -17,7 +17,9 @@
 #define POISON 0xF81F
 
 static void fm1_wdt_feed(void) { }
-static void fm1_delay_ms(int ms) { (void)ms; }
+static int waits, wait_shot;            /* the screen as it is at the wait_shot'th wait: what a page shows while the pedal waits */
+static uint16_t wait_fb[240 * 240];
+static void fm1_delay_ms(int ms) { (void)ms; if (++waits == wait_shot) memcpy(wait_fb, fb, sizeof wait_fb); }
 
 static px_preset_t PRESET;
 static uint32_t cur_preset = 0;
@@ -56,7 +58,28 @@ static uint32_t fit_box(uint32_t x, uint32_t y, uint32_t w, const char *s, const
     return ft_box(x, y, w, s, f, fg, bg, align);
 }
 #define ft_box fit_box
+/* the base firmware's screens of a start and of a crash (base/diag.h, base/boot_screens.h), drawn through Gamut's names
+ * for them (ui_hooks.h) as openpocket.c includes them; the chip's crash record and the 8 x 8 text are the PC's here */
+#define OP_NAME "Gamut"
+#define OP_VERSION "1.0b1"
+#define OP_RAM_CODE px_block_label
+#define OP_NOINIT
+#define FM1_CRASH_MAGIC 0x43525348u
+typedef struct { uint32_t magic, count, vec, pc, rets, emu, dbg, sp, psr, icfg, uptime_ms; } fm1_crash_t;
+static fm1_crash_t fm1_crash;
+#include "font8x8.h"
+static void lcd_text(uint32_t x, uint32_t y, const char *s, uint16_t fg, uint16_t bg, uint32_t k)
+{
+    for (; *s; s++, x += 8u * k)
+        for (uint32_t r = 0; r < 8u; r++) for (uint32_t c = 0; c < 8u; c++)
+            lcd_rect(x + c * k, y + r * k, k, k, (FONT8X8[(*s < 0x20 || *s > 0x7E ? ' ' : *s) - 0x20][r] & (0x80u >> c)) ? fg : bg);
+}
+static int reboots;
+static void fm1_reboot(void) { reboots++; }
+#include "../ui_hooks.h"
+#include "base/diag.h"
 #include "../ui.h"
+#include "../ui_boot.h"
 #include "../ui_colors.h"               /* (the web editor's block colours: the screen must not show them) */
 
 static int reds, gaps;                  /* pages that showed red, pages with pixels never drawn */
@@ -503,6 +526,54 @@ static int update_screen(const char *d)
     return 0;
 }
 
+/* the screens of a start, of a crash and of the rescue mode: the base firmware's own statements and fault handler run
+ * here, and draw Gamut's screens through its names (ui_hooks.h) */
+static int start_run(void)
+{
+#include "base/boot_screens.h"
+    return safe;
+}
+static void show_wait(void) { memcpy(fb, wait_fb, sizeof wait_fb); }
+static int start_screens(const char *d)
+{
+    op_diag.magic = OPD_MAGIC; op_diag.stage = ST_OK; op_diag.crash_seen = 0; op_diag.safe = 0;
+    op_pwr.vdc0 = 49; op_pwr.sys0 = 33; op_pwr.rst = 1; op_pwr.pinr = 0;
+    poison(); CHECK(start_run() == 0, "start: a start after a good one is not in safe mode"); shot(d, "boot");
+    CHECK(!count_col(0, 0, 240, 240, POISON) && !count_col(0, 0, 240, 240, C_AMBER), "start: the whole screen is drawn, and nothing warns");
+    CHECK(count_col(100, 40, 60, 60, C_LAMP) && count_col(100, 52, 42, 42, C_GRILLE), "start: the mark, its lamp lit");
+    CHECK(count_col(0, 166, 240, 16, C_HOUSING) && count_col(0, 200, 240, 13, C_LABEL) && count_col(0, 216, 240, 13, C_LABEL), "start: STARTING, then the supplies and the reset's cause, small");
+    ft_box(0, 0, 240, "gamut", &GF_NM, C_HOUSING, C_GROUND, 1);
+    CHECK(same_px(0, 110, 0, 0, 240, 33), "start: the name is the word gamut, in small letters");
+    op_pwr.rst = 3; poison(); start_run();              /* (two causes at once: the line still fits, in the narrower face) */
+    /* a start that did not finish: the report for 12 s (the 7th wait is its first), then safe mode */
+    op_diag.stage = ST_RUN; op_diag.blocks = 4294967295u; op_diag.load = 999; op_diag.peak = 999; op_diag.nans = 99999; op_diag.c1 = 99999; op_diag.loops = 4294967295u;
+    op_pwr.rst = 4; waits = 0; wait_shot = 7;
+    poison(); CHECK(start_run() == 1 && op_diag.safe == 1, "start: after a start that did not finish: safe mode"); shot(d, "boot_safe_mode");
+    CHECK(!count_col(0, 0, 240, 240, POISON) && count_col(0, 146, 240, 13, C_AMBER) && !count_col(0, 160, 240, 80, C_LABEL), "start: safe mode is said in amber, without the start's figures");
+    show_wait(); shot(d, "boot_start_failed");
+    CHECK(!count_col(0, 0, 240, 240, POISON) && count_col(0, 0, 240, 30, C_AMBER) > 240 * 20 && px_at(16, 9, C_GRAPHITE) && count_col(30, 4, 204, 22, C_GRAPHITE),
+          "start: the report: an amber band, the sign, LAST START FAILED in graphite");
+    CHECK(count_col(10, BF_Y0, 94, 2 * BF_DY, C_LABEL) && count_col(104, BF_Y0, 132, 2 * BF_DY, C_HOUSING) && !count_col(0, BF_Y0 + 6 * BF_DY, 240, F_Y - BF_Y0 - 6 * BF_DY, C_HOUSING), "start: not a crash: where it stopped, the reset's cause and four lines of figures");
+    CHECK(count_col(0, F_TY, 240, 16, C_AMBER) && !count_col(0, 30, 240, F_Y - 30u, C_AMBER), "start: the footer asks for a photo, in amber");
+    CHECK(start_run() == 0 && op_diag.safe == 0, "start: the start after safe mode tries again");
+    /* a crash: the handler's screen, then at the next start the report with the crash's figures */
+    fm1_crash.magic = FM1_CRASH_MAGIC; fm1_crash.count = 1; fm1_crash.vec = 259; fm1_crash.pc = 0x0200A3F4u; fm1_crash.rets = 0x02008C10u;
+    fm1_crash.dbg = 0xDEADBEEFu; fm1_crash.emu = 0x12345678u; fm1_crash.uptime_ms = 4294967295u;
+    poison(); fm1_fault(&fm1_crash); shot(d, "crash");
+    CHECK(reboots == 1 && !count_col(0, 0, 240, 240, POISON), "crash: the screen, then the restart");
+    CHECK(count_col(0, 0, 240, 240, C_AMBER) > 240 * 200 && count_col(0, 0, 240, 240, C_AMBER) + count_col(0, 0, 240, 240, C_GRAPHITE) == 240 * 240 && px_at(14, 11, C_GRAPHITE),
+          "crash: graphite on amber and nothing else, with the sign");
+    CHECK(count_col(64, 40, 64, 8, C_GRAPHITE) && count_col(8, 136, 176, 8, C_GRAPHITE) && count_col(8, 152, 144, 8, C_GRAPHITE), "crash: the figures, and what to do");
+    op_diag.stage = ST_OK; op_diag.blocks = 2210; op_diag.load = 71; op_diag.peak = 96; op_diag.nans = 0; op_diag.c1 = 1; op_diag.loops = 18842;
+    waits = 0; wait_shot = 7;
+    poison(); CHECK(start_run() == 1, "start: after a crash: safe mode"); show_wait(); shot(d, "boot_start_failed_crash");
+    CHECK(!count_col(0, 0, 240, 240, POISON) && count_col(104, BF_Y0 + 9 * BF_DY, 132, 13, C_HOUSING) && BF_Y0 + 9 * BF_DY + 13 <= F_Y, "start: a crash: ten lines, its pc, return address, uptime and DBG among them");
+    wait_shot = 0;
+    poison(); ui_uboot_show(); shot(d, "uboot");
+    CHECK(!count_col(0, 0, 240, 240, POISON) && !count_col(0, 0, 240, 240, C_LAMP) && count_col(104, 50, 40, 50, C_LAMP_OFF), "rescue mode: the whole screen, the mark's lamp unlit");
+    return 0;
+}
+
 int main(int argc, char **argv)
 {
     const char *d = argc > 1 ? argv[1] : ".";
@@ -553,7 +624,7 @@ int main(int argc, char **argv)
     mid_cfg.chan = 16; midi_open(); midi_knob(1); midi_draw(); shot(d, "midi_channel_wraps_to_omni");
     if (mid_cfg.chan != 0) { printf("midi: channel 16 + 1 must wrap to omni\n"); return 1; }
     midi_knob(-1); if (mid_cfg.chan != 16) { printf("midi: omni - 1 must wrap to 16\n"); return 1; }
-    if (quick_wins(d) || overhaul(d) || update_screen(d)) return 1;
+    if (quick_wins(d) || overhaul(d) || update_screen(d) || start_screens(d)) return 1;
     if (reds) { printf("%d pages show red\n", reds); return 1; }
     if (gaps) { printf("%d pages have pixels never drawn\n", gaps); return 1; }
     if (cut) { printf("%d texts cut or without a glyph\n", cut); return 1; }

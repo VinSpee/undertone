@@ -9,7 +9,7 @@
 #define C_PLATE    0x2966              /* the bands at the top and the foot of a page, which carry the controls */
 #define C_KEY      0x2125              /* a key that is off, a selected row */
 #define C_RIM      0x4208              /* rules, the empty part of a bar, the mark's holes in the plate */
-#define C_GRILLE   0x5B0B              /* the mark's holes on the ground (the update screen) */
+#define C_GRILLE   0x5B0B              /* the mark's holes on the ground (a start, an update, the rescue mode) */
 #define C_HOUSING  0xF7BD              /* text, a key that is on, the needle */
 #define C_LABEL    0xAD54              /* labels and hints */
 #define C_LAMP     0x5DEA              /* the lamp, lit */

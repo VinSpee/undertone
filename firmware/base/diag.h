@@ -5,11 +5,15 @@
  */
 #pragma once
 
-/* readable crash screen: vector, PC, return address, bus error register — then reboot */
+/* readable crash screen: vector, PC, return address, bus error register — then reboot (an app whose screen has its own
+ * design draws it through OP_FAULT_SCREEN(c), defined before this file: Gamut's ui_hooks.h) */
 static void hex8(char *b, uint32_t v){ static const char H[]="0123456789ABCDEF";
     for (int i=0;i<8;i++) b[i]=H[(v>>(28-4*i))&15u]; b[8]=0; }
 static void fm1_fault(const fm1_crash_t *c)
 {
+#ifdef OP_FAULT_SCREEN                 /* an app whose screen has its own design draws the crash itself */
+    OP_FAULT_SCREEN(c);
+#else
     char h[9];
     lcd_rect(0,0,240,240,RED);
     lcd_text(8,8,"CRASH",WHT,RED,2);
@@ -19,6 +23,7 @@ static void fm1_fault(const fm1_crash_t *c)
     lcd_text(8,88,"DBG",WHT,RED,1); hex8(h,c->dbg);  lcd_text(64,88,h,WHT,RED,1);
     lcd_text(8,104,"EMU",WHT,RED,1);hex8(h,c->emu);  lcd_text(64,104,h,WHT,RED,1);
     lcd_text(8,136,"Take a photo :)",WHT,RED,1);
+#endif
     for (int i=0;i<6;i++){ fm1_wdt_feed(); fm1_delay_ms(1000); }
     fm1_reboot();
 }
