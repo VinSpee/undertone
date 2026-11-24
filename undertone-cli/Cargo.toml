@@ -1,0 +1,21 @@
+# SPDX-License-Identifier: GPL-3.0-only
+# undertone as one program, with no Python: DESIGN.md says what it is, how it is built and what it must keep.
+[workspace]
+members = ["protocol", "undertone"]
+resolver = "3"
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.99"
+license = "GPL-3.0-only"
+publish = false
+
+[workspace.lints.rust]
+unsafe_code = "deny"           # protocol forbids it; the one place that may allow it is the Windows transport
+
+[profile.release]
+opt-level = "s"
+lto = true
+codegen-units = 1
+strip = true

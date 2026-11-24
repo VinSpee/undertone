@@ -1,0 +1,12 @@
+# SPDX-License-Identifier: GPL-3.0-only
+[package]
+name = "undertone-protocol"
+description = "The pedal's USB protocols as tools/uboot_rescue.py, tools/uboot_install.py and tools/pd40_recovery.py speak them, without USB code"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true

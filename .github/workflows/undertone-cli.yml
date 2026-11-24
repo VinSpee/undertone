@@ -1,0 +1,81 @@
+name: undertone-cli
+# The Rust undertone (undertone-cli/DESIGN.md): the format and lint checks, then on each target of the matrix the tests
+# where the runner can run them, a release build and its size against the budget. It never publishes anything.
+on:
+  pull_request:
+    paths: ["undertone-cli/**", ".github/workflows/undertone-cli.yml", "rescue/VERSION"]
+  push:
+    branches: [main]
+    paths: ["undertone-cli/**", ".github/workflows/undertone-cli.yml", "rescue/VERSION"]
+  workflow_dispatch:
+permissions:
+  contents: read
+# a newer push to a pull request stops the run of the older one; every push to main runs to its end
+concurrency:
+  group: undertone-cli-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+defaults:
+  run:
+    shell: bash
+    working-directory: undertone-cli
+env:
+  CARGO_TERM_COLOR: always
+  SIZE_BUDGET: 4194304   # bytes: 4 MiB for one release binary (DESIGN.md, "Size")
+jobs:
+  lint:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262   # v4.4.0
+        with:
+          persist-credentials: false
+      - name: The toolchain of rust-toolchain.toml
+        run: rustup toolchain install
+      - run: cargo fmt --check
+      - run: cargo clippy --locked --all-targets -- -D warnings
+
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { target: aarch64-apple-darwin, os: macos-15, test: true }
+          - { target: x86_64-apple-darwin, os: macos-15, test: false }       # built on Apple silicon, not run there
+          - { target: x86_64-unknown-linux-musl, os: ubuntu-24.04, test: true }
+          - { target: aarch64-unknown-linux-musl, os: ubuntu-24.04-arm, test: true }
+          - { target: x86_64-pc-windows-msvc, os: windows-2025, test: true }
+    name: build (${{ matrix.target }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262   # v4.4.0
+        with:
+          persist-credentials: false
+      - name: The toolchain of rust-toolchain.toml and this target
+        run: rustup toolchain install && rustup target add ${{ matrix.target }}
+      - name: Linux, a static program with musl; its C compiler for libusb, which also needs the kernel's USB headers
+        if: contains(matrix.target, 'linux-musl')
+        run: |
+          sudo apt-get update -q && sudo apt-get install -y -q musl-tools
+          kh="$RUNNER_TEMP/kernel-headers" && mkdir -p "$kh"
+          ln -s /usr/include/linux /usr/include/asm-generic "/usr/include/$(uname -m)-linux-gnu/asm" "$kh/"
+          t=$(echo '${{ matrix.target }}' | tr - _)
+          {
+            echo "CC_$t=musl-gcc"
+            echo "CFLAGS_$t=-idirafter $kh"
+            echo "LIBUDEV_NO_PKG_CONFIG=1"   # libusb finds devices through netlink, not libudev: nothing to load at run time
+          } >> "$GITHUB_ENV"
+      - name: Tests
+        if: matrix.test
+        run: cargo test --locked --target ${{ matrix.target }}
+      - name: Release build
+        run: cargo build --locked --release --target ${{ matrix.target }}
+      - name: Size against the budget, and the program runs
+        run: |
+          bin="target/${{ matrix.target }}/release/undertone"
+          [ -f "$bin.exe" ] && bin="$bin.exe"
+          size=$(wc -c < "$bin" | tr -d ' ')
+          echo "${{ matrix.target }}: $size bytes (budget $SIZE_BUDGET)" | tee -a "$GITHUB_STEP_SUMMARY"
+          [ "$size" -le "$SIZE_BUDGET" ] || { echo "::error::$bin is $size bytes, over the budget of $SIZE_BUDGET"; exit 1; }
+          case "${{ matrix.target }}" in *linux*) file "$bin" | grep -q 'static' || { file "$bin"; echo "::error::not static"; exit 1; };; esac
+          if ${{ matrix.test }}; then "$bin" version; fi
