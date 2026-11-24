@@ -17,7 +17,8 @@
 #  - flash hold (firmware/apps/gamut/px_store.h, px_models.h, px_irs.h): every erase, program and SPI read of a save or an erase
 #    of a preset, a NAM model or an IR falls inside the audio hold (formal/FINDINGS.md, F1)
 #  - button lights (px_lights.h): each block lights its button, FX for its group, HOME blinks in the tuner
-#  - the Bluetooth test image: its sources (third_party/jieli-ble), its status codes and the VM item log reader
+#  - the Bluetooth test image: its sources (third_party/jieli-ble), its status codes, the VM item log reader, and its
+#    timers (ble/ble_os.c: across TIMER4's wrap, the interrupts as found, the usr timeouts on the 10 kHz tick)
 set -e
 cd "$(dirname "$0")/../../../.."
 mkdir -p build
@@ -68,3 +69,5 @@ node firmware/apps/gamut/tests/test_ble_sources.mjs
 echo "== Bluetooth test image status codes"
 $CC -O1 -Wall -Wno-unused-function -o build/ble_status firmware/apps/gamut/tests/test_ble_status.c && build/ble_status
 $CC -O1 -Wall -Wno-unused-function -o build/ble_vm firmware/apps/gamut/tests/test_ble_vm.c && build/ble_vm
+echo "== Bluetooth test image timers (ble/ble_os.c)"
+$CC -O1 -Wall -Wno-unused-function -Ifirmware/apps/gamut/tests/ble_shim -Ifirmware/apps/gamut/ble -o build/ble_timers firmware/apps/gamut/tests/test_ble_timers.c && build/ble_timers

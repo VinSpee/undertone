@@ -6,7 +6,7 @@
  *
  * Tasks never run by themselves: ble_poll() (called from the main loop) resumes every task that is ready and returns
  * when all of them are waiting again. A task gives up the processor only inside os_taskq_pend, os_sem_pend,
- * os_mutex_pend or os_time_dly; interrupts only post messages and semaphores. */
+ * os_mutex_pend or os_time_dly; interrupts only post messages and semaphores, and add and delete timers. */
 #include <stdint.h>
 #include <stddef.h>
 #include "fm1_irq.h"
@@ -30,6 +30,26 @@ void sys_local_irq_disable(void) { local_irq_disable(); }
 void sys_local_irq_enable(void) { local_irq_enable(); }
 int cpu_irq_disabled(void) { return !(fm1_icfg() & 0x200u); }   /* icfg bit 9: the global enable that cli and sti clear and set */
 int cpu_in_irq(void) { return 0; }
+
+/* ---- the scheduler's clock: milliseconds since boot from TIMER4, counted on so that it does not wrap with TIMER4 every
+ * 178.957 s (fm1_uptime_ms does: a timer or a wait that straddled the wrap fired one wrap late). It must be read at least
+ * once in every wrap, which ble_poll does while Bluetooth runs; it is read with the interrupts off, so a task, the main
+ * loop and an interrupt may all read it */
+static uint32_t tm_irq_save(void) { const uint32_t off = (uint32_t)cpu_irq_disabled(); fm1_irq_off(); return off; }
+static void tm_irq_restore(uint32_t off) { if (!off) fm1_irq_on(); }   /* (as they were: never a bare enable) */
+static uint32_t ble_ms_t4, ble_ms_n, ble_ms_rem;
+static uint32_t ble_ms(void)
+{
+    const uint32_t s = tm_irq_save(), t = FM1_T4_CNT, d = t - ble_ms_t4;
+    uint32_t n;
+    ble_ms_t4 = t;
+    ble_ms_rem += d % 24000u;
+    ble_ms_n += d / 24000u + (ble_ms_rem >= 24000u);
+    if (ble_ms_rem >= 24000u) ble_ms_rem -= 24000u;
+    n = ble_ms_n;
+    tm_irq_restore(s);
+    return n;
+}
 
 /* ---- heap: first fit with coalescing on free, 8-byte aligned, one static pool */
 #define HEAP_BYTES (24u * 1024u)
@@ -253,7 +273,7 @@ void os_time_dly(int ticks)
         return;
     if (ticks < 1)
         ticks = 1;
-    cur->wake_ms = fm1_uptime_ms() + (uint32_t)ticks * OS_TICK_MS;
+    cur->wake_ms = ble_ms() + (uint32_t)ticks * OS_TICK_MS;
     cur->state = T_SLEEP;
     task_yield();
 }
@@ -279,7 +299,7 @@ int os_sem_post(void *s)
 int os_sem_pend(void *s, int timeout)
 {
     sem_t *sm = s;
-    uint32_t until = timeout ? fm1_uptime_ms() + (uint32_t)timeout * OS_TICK_MS : 0;
+    uint32_t until = timeout ? ble_ms() + (uint32_t)timeout * OS_TICK_MS : 0;
     for (;;) {
         local_irq_disable();
         if (sm->count > 0) {
@@ -287,7 +307,7 @@ int os_sem_pend(void *s, int timeout)
             local_irq_enable();
             return 0;
         }
-        if (!cur || (until && (int32_t)(fm1_uptime_ms() - until) >= 0)) {
+        if (!cur || (until && (int32_t)(ble_ms() - until) >= 0)) {
             local_irq_enable();
             return OS_TIMEOUT;
         }
@@ -304,7 +324,9 @@ int os_mutex_del(void *m, int force) { (void)m; (void)force; return 0; }
 int os_mutex_pend(void *m, int timeout) { return os_sem_pend(m, timeout); }
 int os_mutex_post(void *m) { return os_sem_post(m); }
 
-/* ---- software timers (sys_timer_add: periodic, sys_timeout_add: once), run from ble_poll */
+/* ---- software timers (sys_timer_add: periodic, sys_timeout_add: once), run from ble_poll. The library adds and deletes
+ * them from its interrupts too (the LE event interrupt's multi-link scheduler, multilink_schedule.c), so a slot is claimed
+ * with the interrupts off and the interrupts are then put back as they were */
 #define MAXTIMER 16
 typedef struct {
     void (*fn)(void *);
@@ -316,35 +338,111 @@ static timer_t_ timers[MAXTIMER];
 
 static uint16_t timer_add(void *priv, void (*fn)(void *), uint32_t ms, int once)
 {
+    const uint32_t s = tm_irq_save();
     int i;
     for (i = 0; i < MAXTIMER; i++)
         if (!timers[i].used) {
             timers[i].fn = fn; timers[i].priv = priv; timers[i].period = ms ? ms : 1u;
-            timers[i].due = fm1_uptime_ms() + timers[i].period; timers[i].once = (uint8_t)once; timers[i].used = 1;
+            timers[i].due = ble_ms() + timers[i].period; timers[i].once = (uint8_t)once; timers[i].used = 1;
+            tm_irq_restore(s);
             return (uint16_t)(i + 1);
         }
+    tm_irq_restore(s);
     return 0;
 }
-static void timer_del(uint16_t id) { if (id && id <= MAXTIMER) timers[id - 1].used = 0; }
+#define USR_ID0 0x100u                              /* (the usr timeouts' ids: 0x101..; the timers' are 1..MAXTIMER) */
+static void usr_del(uint16_t id);
+static void timer_del(uint16_t id)
+{
+    uint32_t s;
+    if (id > USR_ID0) { usr_del(id); return; }      /* (an id of the other table: deleted there) */
+    s = tm_irq_save();
+    if (id && id <= MAXTIMER) timers[id - 1].used = 0;
+    tm_irq_restore(s);
+}
+static int timer_restart(uint16_t id, uint32_t ms)  /* its period (ms, or 0: as it was) again from now */
+{
+    const uint32_t s = tm_irq_save();
+    int r = -1;
+    if (id && id <= MAXTIMER && timers[id - 1].used) {
+        if (ms) timers[id - 1].period = ms;
+        timers[id - 1].due = ble_ms() + timers[id - 1].period;
+        r = 0;
+    }
+    tm_irq_restore(s);
+    return r;
+}
+
+/* the usr timeouts: one-shot, run from the 10 kHz tick's interrupt (px_usb.h) every millisecond, as the SDK's usr timer
+ * runs them in an interrupt. The multi-link scheduler arms them for its advertising and connection-update windows, a few
+ * ms each; run from ble_poll they came a main-loop pass late, tens of ms. A callback runs with the interrupts as the tick
+ * found them. Some take the baseband's lock (ble_hw_disable), which every holder takes with the interrupts off, so the tick
+ * should never find it taken; if it does, the due callbacks wait for the next millisecond instead of spinning on the lock
+ * above its holder. From ettorebox (Roberto Antonacci, commits 7819e5a and c09d828) */
+#define MAXUSR 16u                                  /* (the SDK allocates them: the library never expects a refusal) */
+#define BB_LOCK_AT 33u                              /* (RF_ble.c struct ble_baseband_layer_handle: struct ble_hw_base, 8 ids
+                                                     * and 4 pointers, 32 bytes; an i8; then its struct __spinlock, one byte) */
+extern uint8_t *bb_hdl;
+typedef struct { void (*fn)(void *); void *priv; uint32_t due; uint8_t used; } usr_t_;
+static usr_t_ usrs[MAXUSR];
+static volatile uint32_t usr_used;
+static uint32_t usr_sub;
+uint16_t usr_timeout_add(void *p, void (*f)(void *), uint32_t ms, uint8_t prio)
+{
+    const uint32_t s = tm_irq_save();
+    uint32_t i;
+    (void)prio;
+    for (i = 0; i < MAXUSR; i++)
+        if (!usrs[i].used) {
+            usrs[i].fn = f; usrs[i].priv = p; usrs[i].due = ble_ms() + (ms ? ms : 1u) + 1u;   /* (+1: never before ms) */
+            usrs[i].used = 1;
+            usr_used++;
+            tm_irq_restore(s);
+            return (uint16_t)(USR_ID0 + i + 1u);
+        }
+    tm_irq_restore(s);
+    return 0;
+}
+static void usr_del(uint16_t id)
+{
+    const uint32_t s = tm_irq_save();
+    if (id > USR_ID0 && id <= USR_ID0 + MAXUSR && usrs[id - USR_ID0 - 1u].used) { usrs[id - USR_ID0 - 1u].used = 0; usr_used--; }
+    tm_irq_restore(s);
+}
+static int bb_locked(void) { const volatile uint8_t *const h = bb_hdl; return h != 0 && h[BB_LOCK_AT] != 0u; }
+static void ble_usr_tick(void)                      /* (the 10 kHz tick: every 10th, the due usr timeouts) */
+{
+    uint32_t i, now;
+    if (++usr_sub < 10u) return;
+    usr_sub = 0;
+    if (!usr_used) return;
+    now = ble_ms();
+    for (i = 0; i < MAXUSR; i++) {
+        void (*fn)(void *) = 0;
+        void *priv = 0;
+        const uint32_t s = tm_irq_save();
+        if (usrs[i].used && (int32_t)(now - usrs[i].due) >= 0) {
+            if (bb_locked()) { tm_irq_restore(s); return; }   /* (it and the rest: the next millisecond) */
+            fn = usrs[i].fn; priv = usrs[i].priv; usrs[i].used = 0; usr_used--;
+        }
+        tm_irq_restore(s);
+        if (fn) {
+            fn(priv);
+            if (s) fm1_irq_off();                   /* (its own counted pair ends in an enable: put them back) */
+        }
+    }
+}
 
 uint16_t sys_timer_add(void *p, void (*f)(void *), uint32_t ms) { return timer_add(p, f, ms, 0); }
 uint16_t sys_timeout_add(void *p, void (*f)(void *), uint32_t ms) { return timer_add(p, f, ms, 1); }
-uint16_t usr_timeout_add(void *p, void (*f)(void *), uint32_t ms, uint8_t prio) { (void)prio; return timer_add(p, f, ms, 1); }
 void sys_timer_del(uint16_t id) { timer_del(id); }
 void sys_timeout_del(uint16_t id) { timer_del(id); }
 void usr_timeout_del(uint16_t id) { timer_del(id); }
-void sys_timer_re_run(uint16_t id) { if (id && id <= MAXTIMER && timers[id - 1].used) timers[id - 1].due = fm1_uptime_ms() + timers[id - 1].period; }
-int sys_timer_modify(uint16_t id, uint32_t ms)
-{
-    if (!id || id > MAXTIMER || !timers[id - 1].used)
-        return -1;
-    timers[id - 1].period = ms ? ms : 1u;
-    timers[id - 1].due = fm1_uptime_ms() + timers[id - 1].period;
-    return 0;
-}
+void sys_timer_re_run(uint16_t id) { (void)timer_restart(id, 0u); }
+int sys_timer_modify(uint16_t id, uint32_t ms) { return timer_restart(id, ms ? ms : 1u); }
 void sys_timer_set_user_data(uint16_t id, void *p) { if (id && id <= MAXTIMER) timers[id - 1].priv = p; }
 void *sys_timer_get_user_data(uint16_t id) { return id && id <= MAXTIMER ? timers[id - 1].priv : 0; }
-uint32_t sys_timer_get_ms(void) { return fm1_uptime_ms(); }
+uint32_t sys_timer_get_ms(void) { return ble_ms(); }
 
 /* ble_isr.S: counts the baseband interrupts, then continues in the library's own interrupt function (saved here) */
 void (*ble_irq_target_ev)(void), (*ble_irq_target_rx)(void);
@@ -369,21 +467,28 @@ void ble_poll(void)
 {
     int i, ran;
     fm1_wdt_feed();
-    uint32_t now = fm1_uptime_ms();
+    uint32_t now = ble_ms();
     for (i = 0; i < MAXTIMER; i++) {
         timer_t_ *t = &timers[i];
+        void (*fn)(void *) = 0;
+        void *priv = 0;
+        const uint32_t s = tm_irq_save();           /* (claimed whole: an interrupt may add or delete one meanwhile) */
         if (t->used && (int32_t)(now - t->due) >= 0) {
+            fn = t->fn; priv = t->priv;
             if (t->once)
                 t->used = 0;
             else
                 t->due = now + t->period;
+        }
+        tm_irq_restore(s);
+        if (fn) {
             ble_cnt_timer++;
-            t->fn(t->priv);
+            fn(priv);
         }
     }
     do {
         ran = 0;
-        now = fm1_uptime_ms();
+        now = ble_ms();
         for (i = 0; i < MAXTASK; i++) {
             task_t *t = &tasks[i];
             if ((t->state == T_SLEEP || t->state == T_WAIT_SEM) && t->wake_ms && (int32_t)(now - t->wake_ms) >= 0)

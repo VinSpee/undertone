@@ -54,6 +54,7 @@ static const volatile char OP_PRODUCT[32] __attribute__((used, aligned(4))) = "O
 #include "fm1_timer.h"
 #if OP_BLE_TEST
 static int ble_stall_tick(void);                /* ble/ble_status.h, included after this file */
+static void ble_usr_tick(void);                 /* ble/ble_os.c: the controller library's usr timeouts, every millisecond */
 #endif
 #include "fm1_flash.h"
 #include "fm1_cpu1_stop.h"
@@ -72,6 +73,7 @@ void fm1_timer5_irq(void)                       /* 10 kHz; USB at 2 kHz */
 #if OP_BLE_TEST                                 /* a ble_poll that does not return: the crash screen says where (ble_status.h) */
     if (ble_stall_tick())
         FM1_VEC[FM1_IRQ_TIMER5] = (uint32_t)(uintptr_t)(fm1_fatal_stubs + 6u * FM1_IRQ_TIMER5);
+    ble_usr_tick();
 #endif
     if (++px_t5_sub >= 5u) {
         px_t5_sub = 0;

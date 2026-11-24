@@ -182,7 +182,12 @@ third_party/jieli-ble/      JieLi's controller, as published (Apache-2.0): see i
 * **No RTOS.** The library expects tasks, queues, semaphores and timers. `ble_os.c` provides a cooperative scheduler:
   the controller's one task runs from `ble_poll()` in the main loop, switches only where it waits (queue, semaphore,
   delay), and is woken by the two BLE interrupts (IRQ 45 and 29, priority 2: the numbers and priority the stock firmware
-  uses). The heap is a 24 KB static pool; each task has a 4 KB stack. Against the normal image it needs about 50 KB more RAM (of which the heap
+  uses). Its timers count on a millisecond clock that does not wrap with TIMER4 every 179 s (before, a timer or a wait
+  that straddled the wrap fired a whole wrap late), and the library may add and delete them from its interrupts: a slot is
+  claimed with the interrupts off and they are put back as they were. The library's usr timeouts, which the multi-link
+  scheduler arms for its advertising and connection-update windows, run from the 10 kHz tick every millisecond instead of a
+  main-loop pass late (from Roberto Antonacci's ettorebox, where the same change kept an M-VAVE Chocolate's link from
+  dropping about every 90 s; not yet checked on this image). The heap is a 24 KB static pool; each task has a 4 KB stack. Against the normal image it needs about 50 KB more RAM (of which the heap
   and stacks are 39 KB) and about 230 KB more flash. Since v40.1 the task stacks are in NOINIT (cleared at boot by `ble_os_init`), the
   tuner's buffers in the cache RAM, and the NAM / IR upload staging below the RAM (0x01C00000, `app.ld` `.bss_lo`); the link fits with
   about 7.7 KB of the 96 KB RAM region free. The library's code lies past the call range of v40's RAM code, so its `memcpy` and `memset`
