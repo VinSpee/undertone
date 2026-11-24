@@ -397,9 +397,12 @@ class StateMachine(Fixture):
         failed = u.Outcome(1, "ERROR: gave up after 10 tries; rerun the command, it resumes where it stopped")
         g, view, jobs, _ = self.guide([("what would", "rescue"), ("fix a pedal", "go"), ("can be fixed", "go"),
                                        ("replace", "yes"), ("went wrong", "again"), ("replace", "no"),
-                                       ("nothing was changed", "done")], [found, failed])
-        g.go()
+                                       ("may not start", "done")], [found, failed])
+        r = g.go()
         self.assertEqual([j.write for j in jobs], [False, True])
+        self.assertNotIn("nothing was changed", view.seen)
+        self.assertEqual(r.code, 1)
+        self.assertIn("Plug it in and run: undertone rescue  (it continues where it stopped)", r.lines)
 
     def test_a_stop_in_the_middle_of_a_write_says_how_to_resume(self):
         found = u.Outcome(0, "Read-only run finished", 3, self.backups / "b.bin", b"", "BlackBox_023.fwsc")

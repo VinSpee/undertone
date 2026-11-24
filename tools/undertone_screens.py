@@ -673,7 +673,7 @@ class Guide:
         self.result = Result()
         self.kind = start if start in RESTART else None
         self.images, self.source, self.outcome, self.need_file = {}, None, None, None
-        self.writing = False
+        self.writing, self.partial = False, False
         self.trail = []
 
     def go(self):
@@ -811,6 +811,12 @@ class Guide:
         return "not_now" if key in ("no", "back") else None
 
     def s_not_now(self):
+        if self.partial:
+            self.result.code = 1
+            self.result.lines = self.resume_note()[:2]
+            return self.end(Screen("your pedal may not start", ["It may be partly updated.",
+                                                                "Run undertone again: it continues where it stopped."],
+                                   problem=True))
         self.result.lines = ["Nothing was written to your pedal."]
         return self.end(Screen("nothing was changed", ["Your pedal is as it was. The copy stays saved."]))
 
@@ -822,6 +828,7 @@ class Guide:
         if o.code == 130:
             return self.stopped(o, "rescue_ready")
         if o.code:
+            self.partial = True
             return self.failed(o, "confirm")
         self.result.lines = [o.text, "Next: unplug the cable, switch the pedal off, wait 5 seconds and switch it on."]
         lines = ["Unplug it, then switch it off and on again."]
@@ -870,6 +877,7 @@ class Guide:
         if o.code == 130:
             return self.stopped(o, "install")
         if o.code:
+            self.partial = True
             return self.failed(o, "confirm")
         self.result.lines = [o.text, ui.FIRST_RUN.format(levels=o.layout.levels)]
         return self.end(Screen("gamut is on your pedal", ["Switch it off and on again to start Gamut."]))
