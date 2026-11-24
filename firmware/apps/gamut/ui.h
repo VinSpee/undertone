@@ -613,13 +613,13 @@ static void save_draw(void)
     int restore = sv_dest == SV_FACTORY, can = !restore || st_saved(cur_preset);   /* (v42: nothing to restore: PUSH does nothing) */
     ft_box(0, F_TY, 240, !can ? "knob: slot   home: no" : restore ? "push: restore   home: no" : "knob: slot  push: save  home: no", &GF_LB, C_LABEL, C_PLATE, 1);
     /* v42: the pedal cannot rename: a copy keeps the name (the web editor renames) */
-    ft_box(0, 186, 240, restore || sv_dest == cur_preset ? "" : "Name stays: rename in the editor.", &GF_LB, C_LABEL, C_GROUND, 1);
+    ft_box(0, 186, 240, restore || sv_dest == cur_preset ? "" : "name stays: rename in the editor", &GF_LB, C_LABEL, C_GROUND, 1);
     if (restore) {
         ft_box(0, 82, 240, "", &FT_XL, C_HOUSING, C_GROUND, 1);
         ft_box(0, 132, 240, "restore factory", &GF_TX, C_HOUSING, C_GROUND, 1);
         b[0] = 's'; b[1] = 'l'; b[2] = 'o'; b[3] = 't'; b[4] = ' ';
         b[5] = (char)('0' + (cur_preset + 1u) / 10u); b[6] = (char)('0' + (cur_preset + 1u) % 10u); b[7] = 0;
-        ft_box(0, 160, 240, can ? b : "Already the factory sound.", &GF_LB, C_LABEL, C_GROUND, 1);
+        ft_box(0, 160, 240, can ? b : "already the factory sound", &GF_LB, C_LABEL, C_GROUND, 1);
         return;
     }
     px_preset_t d;
