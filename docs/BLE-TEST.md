@@ -31,7 +31,7 @@ are `firmware/build-ble/` and `build/ble/`; `make clean` removes them.
 The controller library is folded at build time (`tools/jlfold.py`, from Roberto Antonacci's ettorebox): the constants
 `ble_cfg.c` and `ble_stubs.c` define and the empty print helpers become each member's own, so the compiler drops the
 code they switch off and the log strings. The vendor's files are not changed. Without the fold the image no longer fits
-its flash window (the link overflows `XIP`); `OP_BLE_FOLD=0` builds it unfolded, to compare. The folded image has not
+its flash window (the link overflows `XIP`). The folded image has not
 yet run on a pedal: flash it once and check the radio, the link and the MIDI path before trusting it.
 
 ## Flash it

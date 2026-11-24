@@ -81,21 +81,9 @@ def run(cmd):
     return r
 
 
-def text_ir(clang, b, ll, emit, say):
-    """Member b's text IR into ll, as the bitcode holds it, no pass run on it. emit: the options found on the first
-    member (None: find them, the first the toolchain's clang accepts). Returns the options used."""
-    if emit is not None:
-        run(clang + ["-S", "-emit-llvm", "-x", "ir", b, "-o", ll] + emit)
-        return emit
-    for flags in (["-Xclang", "-disable-llvm-passes"], ["-Xclang", "-disable-llvm-optzns"], []):
-        try:
-            run(clang + ["-S", "-emit-llvm", "-x", "ir", b, "-o", ll] + flags)
-        except RuntimeError as e:
-            say(f"text IR with {' '.join(flags) or 'no option'}: refused ({str(e)[-160:]})")
-            continue
-        say("text IR emitted with " + (" ".join(flags) if flags else "no option (clang's -O0 passes ran on it)"))
-        return flags
-    raise RuntimeError("no way to emit the text IR")
+def text_ir(clang, b, ll):
+    """Member b's text IR into ll, as the bitcode holds it, no pass run on it."""
+    run(clang + ["-S", "-emit-llvm", "-x", "ir", b, "-o", ll, "-Xclang", "-disable-llvm-passes"])
 
 
 def fold_lib(argv):
@@ -109,11 +97,11 @@ def fold_lib(argv):
             raise RuntimeError("no members")
         vals = cfg_values(cfg)
         os.makedirs(out, exist_ok=True)
-        emit, nfold, nprint, skipped = None, 0, 0, set()
+        nfold, nprint, skipped = 0, 0, set()
         for b in members:
             name = os.path.basename(os.path.dirname(b)) + "_" + os.path.basename(b)[:-3]
             ll = os.path.join(out, name + ".ll")
-            emit = text_ir(clang, b, ll, emit, say)
+            text_ir(clang, b, ll)
             t, nf, sk, npr = fold(open(ll).read(), vals)
             open(ll, "w").write(t)
             run(clang + ["-Os", "-c", "-x", "ir", ll, "-o", os.path.join(out, name + ".o")])
