@@ -36,8 +36,10 @@ pull request #22), and v42's web editor in four sections (#23), the pedal's rewo
 (#24) and USB audio (#25).
 **Ivan Shevchuk ([Testing7B](https://github.com/Testing7B))**: v42's check and restore of the BlackBox V21 factory
 sounds (pull request #26).
-**Roberto Antonacci ([steponme82](https://github.com/steponme82))**, from his fork [ettorebox](https://github.com/steponme82/ettorebox):
-the build-time fold of the Bluetooth library (`tools/jlfold.py`, commit `375a253`).
+**Roberto Antonacci ([steponme82](https://github.com/steponme82))**: the BlackBox button lights (#17), and from his fork
+[ettorebox](https://github.com/steponme82/ettorebox): the build-time fold of the Bluetooth library (`tools/jlfold.py`, commit
+`375a253`), and the web editor's NAM import in browsers with no second window or script-opened file picker, such as MIDIWeb on
+an iPhone (commit `f25a720`).
 
 Sound models: the names refer to the gear that inspired each voicing (circuit analyses published by ElectroSmash,
 Electric Druid, R.G. Keen / GEOFEX, Rob Robinette, Duncan's Tone Stack Calculator; speaker data sheets; manufacturers'
