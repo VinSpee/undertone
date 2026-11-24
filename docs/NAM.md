@@ -64,6 +64,13 @@ OAuth 2.0 with PKCE and OpenPocket's publishable key (`T3K_CLIENT_ID` in `docs/p
 through `docs/t3k.html`. The access token lives in the page only while it is open. It needs that key and
 `https://isod89.github.io/openpocket/t3k.html` registered as a redirect URI in TONE3000's settings.
 
+A browser that opens no second window (an in-app browser such as MIDIWeb, the Web MIDI browser an iPhone needs for
+Bluetooth MIDI) takes TONE3000 in the editor's own tab instead, after saying so. The code verifier, the state and the
+address to come back to wait in that tab's session storage; `t3k.html` checks the state, signs in, gets the tone's A2
+captures (the one there is, or the ones chosen there) ready for the pedal, and goes back to the editor, which puts them
+in the library. Connect the pedal and send them from there. The token stays in `t3k.html`'s memory and ends with it, and
+the redirect URI is the same `t3k.html`, so the same registration serves both ways.
+
 **The library.** The pedal stores a capture but cannot send it back. So the editor keeps every capture you add in the
 browser (IndexedDB, on that computer only), with where it came from. That is what lets it rename a capture, move it to
 another slot or swap two (the presets that use them are rewritten to follow), and keep more captures than the pedal has
