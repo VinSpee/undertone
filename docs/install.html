@@ -155,7 +155,6 @@ code{font:500 14px var(--mono);background:var(--ink);color:var(--lime);padding:1
       </ul>
     </div>
     <p class="note">Nothing is sent before this page has checked the package against its SHA-256 and the firmware the pedal runs, and nothing is written before the pedal has checked it too.</p>
-    <p class="note warnbox" id="bbwarn" hidden data-t="bbwarn">M-VAVE BlackBox: v31 is the fix for issue #1 (OpenPocket restarted every 4 s after the pedal was switched off and on), still being tested on the BlackBox. Please report how it goes on GitHub. If your BlackBox restarts in a loop, use the rescue mode below.</p>
     <p class="note warnbox" id="testchan" hidden data-t="testchan">TEST CHANNEL: this installs a test build, not the release. It is for people who agreed to try it, and it is not the version the normal installer page offers. To go back, open this page without ?channel=… and press Install.</p>
     <p class="note warnbox" id="layoutwarn" hidden></p>
     <div id="newerconfirm" hidden>
@@ -212,14 +211,14 @@ code{font:500 14px var(--mono);background:var(--ink);color:var(--lime);padding:1
     <h3 class="way" data-t="r2">The pedal stays in update mode</h3>
     <p class="note" data-t="rescuenote">Do not switch the pedal off. Unplug the cable, plug it back in and press Connect: the Resume button appears in step 2 and finishes the update.</p>
     <h3 class="way" data-t="r3">The pedal shows a black screen, or this page cannot reach it</h3>
-    <p class="note" data-t="rescueusb">A BlackBox in this state can be restored over USB with no extra hardware, from a Mac or a Windows PC, with the rescue kit. A browser cannot do it: the pedal is then a USB mass-storage device, which browsers keep from web pages on every system. The kit's first run is a read-only check: it saves a full backup of the pedal's flash and writes nothing. The restore runs only once the check has passed.</p>
+    <p class="note" data-t="rescueusb">The rescue kit restores a BlackBox in this state over USB, from a Mac or a Windows PC, with no extra hardware. A browser cannot: the pedal then shows up as a USB drive, which browsers keep from web pages. The kit starts with a read-only check that saves a full backup of the pedal and writes nothing. It restores only after that check passes.</p>
     <div class="row"><a class="go" id="kit" hidden></a></div>
     <p class="note" id="kitinfo" hidden><span id="kitfw"></span> SHA-256: <code id="kitsha"></code></p>
     <p class="note" id="kitnone" hidden><span data-t="kitnone">The rescue kit is not on this copy of the page. How to get or build it:</span> <a href="https://github.com/VinSpee/undertone/blob/main/docs/RESCUE.md#the-rescue-kit">the rescue guide</a></p>
-    <p class="note warnbox" data-t="rescuev22">After the rescue of a pedal that ran M-VAVE V22 or V23, do not install Gamut or PALETTE on it. Installing writes over the end of the V22/V23 boot loader, and the pedal goes dark again. This installer refuses such a pedal and writes nothing, but older installers do not. Gamut is installed on such a pedal from a computer's Terminal instead, with <code>undertone install</code> from the Undertone repository (see "Gamut on a BlackBox with V22 or V23" in the rescue guide).</p>
+    <p class="note warnbox" data-t="rescuev22">After the rescue of a pedal that ran M-VAVE V22 or V23, do not install Gamut or PALETTE on it from an installer page. That would overwrite the end of its boot loader, and the pedal would go dark again. This page refuses such a pedal and writes nothing; older installers do not. Gamut goes on such a pedal from a Mac's Terminal instead, with <code>undertone install</code> from the project's source code: <a href="https://github.com/VinSpee/undertone/blob/main/docs/RESCUE.md#gamut-on-a-blackbox-with-v22-or-v23">Gamut on a BlackBox with V22 or V23</a>.</p>
     <details class="guide" id="rescueguide">
       <summary>How to run the rescue on your computer</summary>
-      <p class="note">Unzip the kit. It makes one folder, <code>OpenPocket-rescue-kit</code>. Its command, <code>undertone</code>, writes M-VAVE's official firmware back, and the firmware file must match the firmware the pedal had. It checks the pedal and saves a backup first, and writes nothing until you say yes.</p>
+      <p class="note">Unzip the kit. It makes one folder, <code>OpenPocket-rescue-kit</code>. Its command, <code>undertone</code>, writes M-VAVE's official firmware back, and the firmware file must match the firmware the pedal had. It checks the pedal and saves a backup first, and writes nothing until you say yes. <code>undertone</code> is new: the rescue tool it runs has worked on a real pedal from a Mac, but <code>undertone</code> itself has only run on a simulated pedal.</p>
       <ul class="note" id="rescue-paths">
         <li><strong>Path A.</strong> The pedal had M-VAVE V16, V17 or V20, and never V22 or V23. File: <code>BlackBox_020.fwsc</code>.</li>
         <li><strong>Path B.</strong> The pedal had M-VAVE V22 or V23 at any time, or you are not sure. File: <code>BlackBox_023.fwsc</code>.</li>
@@ -458,8 +457,6 @@ function showDev(d) {
   $("d-fw").textContent = ota ? `${t("loader")} (${id.text})` : alt ? `${alt.name} ${alt.version} (${id.text})`
     : IS_OPENPOCKET(id) ? `${d.product ? `${d.product.name} ${d.product.version}` : `${t("opfw")} v${id.version - 900}`} (${id.text})` : `${t("official")} ${String(id.version).padStart(3, "0")} (${id.text})`;
   $("d-port").textContent = d.name;
-  const bb = id.model === "BlackBox";               /* not supported yet: boot loop (issue #1) */
-  $("bbwarn").hidden = !bb;
 }
 
 async function connect() {
