@@ -40,7 +40,8 @@ function change(next, what) {
 }
 function undoLast() {
   stopTeach();
-  cfg = cleanConfig(JSON.parse(undo.pop()));
+  const prev = cleanConfig(JSON.parse(undo.pop()));
+  cfg = { ...cfg, profiles: { ...cfg.profiles, [cfg.model]: prev.profiles[cfg.model] } };
   said = "Undone.";
   save(); render();
 }

@@ -736,6 +736,13 @@ const free = (kind, slot) => page.locator(`#${kind}list .free [data-slot="${slot
   ok(/Should send CC 0/.test(await text("#chocsrc-A")) && await val("#chocdo-A") === "on:4" && await val("#chocdo-EXP") === "", "Back to the defaults: nothing taught, the first choices again");
   await page.click("#chocundo");
   ok(/Sends CC 40/.test(await text("#chocsrc-A")) && await val("#chocdo-A") === "tap", "and Undo brings the mapping back");
+  await page.selectOption("#chocdo-A", "preset:1");
+  await page.selectOption("#chocmodel", "chocolate");
+  await page.click("#chocundo");
+  ok(await val("#chocmodel") === "chocolate" && /Should send CC 20/.test(await text("#chocsrc-A")), "Undo after the model changed: the model on show stays, and its own mapping is restored");
+  await page.selectOption("#chocmodel", "plus");
+  ok(await val("#chocdo-A") === "preset:1", "the other model's mapping is not rolled back by it");
+  await page.selectOption("#chocdo-A", "tap");
   // out of reach, and back
   await page.evaluate(() => window.__bleDrop());
   await sleep(150);
