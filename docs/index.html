@@ -72,13 +72,15 @@ h2{font-size:clamp(40px,6.4vw,104px);line-height:.88;font-weight:900;font-variat
 .nums b small{font-size:clamp(26px,4vw,63px);font-variation-settings:"wdth" 100;margin-left:.08em}
 .nums span{font-size:clamp(18px,1.7vw,24px);max-width:32ch}
 
-/* the twelve amps, each with its error drawn as a bar */
+/* the twelve amps, each with its ESR drawn as a bar on one scale (0.124 fills it): a shorter bar is a closer match, and
+   the lime mark is at 0.05, below which a model and its capture are hard to tell apart */
 .amps{margin-top:36px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 clamp(24px,4vw,64px)}
 .amp{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 16px;padding:14px 0;border-top:2px solid var(--ink);align-items:baseline}
 .amp b{font:850 clamp(22px,2vw,28px)/1.05 var(--disp);font-variation-settings:"wdth" 88;text-transform:uppercase}
 .amp>span{grid-column:1;font-size:16px;color:var(--soft)}
 .amp>.esr{grid-column:2;grid-row:1/3;align-self:center;display:flex;flex-direction:column;gap:6px;font:500 13px/1 var(--mono)}
-.esr i{display:block;width:120px;height:14px;border:2px solid var(--ink);background:linear-gradient(var(--ink),var(--ink)) left/var(--e) 100% no-repeat}
+.esr i{position:relative;display:block;width:120px;height:14px;border:2px solid var(--ink);background:linear-gradient(var(--ink),var(--ink)) left/var(--e) 100% no-repeat}
+.esr i::after{content:"";position:absolute;left:calc(100% * .05 / .124 - 1px);top:-6px;bottom:-6px;width:2px;background:var(--lime)}
 .amps-note{font-size:16px;max-width:62ch;margin:24px 0 0;color:var(--grey)}
 .drives{margin-top:40px;display:flex;flex-wrap:wrap;align-items:baseline;gap:10px 18px;border-top:6px solid var(--ink);padding-top:18px}
 .drives h3{font:900 clamp(28px,3vw,44px)/.9 var(--disp);font-variation-settings:"wdth" 80;text-transform:uppercase;margin-right:8px}
@@ -220,23 +222,23 @@ h2{font-size:clamp(40px,6.4vw,104px);line-height:.88;font-weight:900;font-variat
 
 <section class="dark" id="amps" aria-labelledby="h-amps">
   <div class="wrap">
-    <h2 id="h-amps">Twelve amps, learnt from real captures</h2>
-    <p class="lede">Each model is a small network trained for the pedal to sound like a community capture of a real amp. The bar is its error on 20 seconds of guitar it never heard: below about 0.05 the two are hard to tell apart.</p>
+    <h2 id="h-amps">Twelve amps, trained to match real captures</h2>
+    <p class="lede">Each model is a small network trained for the pedal to sound like a community capture of a real amp. The bar is its ESR, how far it is from that capture on 20 seconds of guitar it never heard: a shorter bar is a closer match, and left of the lime mark, at 0.05, the two are hard to tell apart.</p>
     <div class="amps" style="--ink:var(--bone)">
-      <div class="amp"><b>Fender Twin Reverb</b><span>Normal, bright. Capture by Tim R</span><span class="esr"><i aria-hidden="true" style="--e:5%"></i>error 0.006</span></div>
-      <div class="amp"><b>Vox AC15 Top Boost</b><span>Capture by Phillipe P</span><span class="esr"><i aria-hidden="true" style="--e:36%"></i>error 0.045</span></div>
-      <div class="amp"><b>Magnatone Super 59 Mk II</b><span>Capture by Tim R</span><span class="esr"><i aria-hidden="true" style="--e:7%"></i>error 0.009</span></div>
-      <div class="amp"><b>Friedman Dirty Shirley Mini</b><span>Clean. Capture by Sascha S</span><span class="esr"><i aria-hidden="true" style="--e:11%"></i>error 0.014</span></div>
-      <div class="amp"><b>Marshall JCM900</b><span>50 W Dual Verb. Capture by Tim R</span><span class="esr"><i aria-hidden="true" style="--e:9%"></i>error 0.011</span></div>
-      <div class="amp"><b>Friedman Dirty Shirley Mini</b><span>Crunch. Capture by Sascha S</span><span class="esr"><i aria-hidden="true" style="--e:26%"></i>error 0.033</span></div>
-      <div class="amp"><b>Marshall JCM2000 DSL</b><span>Lead. Capture by Tim R</span><span class="esr"><i aria-hidden="true" style="--e:34%"></i>error 0.042</span></div>
-      <div class="amp"><b>Mesa Boogie Mark IV</b><span>Capture by Roman A</span><span class="esr"><i aria-hidden="true" style="--e:33%"></i>error 0.041</span></div>
-      <div class="amp"><b>Marshall JVM</b><span>OD2. Capture by Phillipe P</span><span class="esr"><i aria-hidden="true" style="--e:45%"></i>error 0.056</span></div>
-      <div class="amp"><b>Splawn Pro Mod</b><span>Second gear. Capture by Tim R</span><span class="esr"><i aria-hidden="true" style="--e:42%"></i>error 0.052</span></div>
-      <div class="amp"><b>Peavey 5150</b><span>Block letter, boosted. Capture by Helga B</span><span class="esr"><i aria-hidden="true" style="--e:52%"></i>error 0.064</span></div>
-      <div class="amp"><b>Peavey 6505+</b><span>Red channel, MXR drive. Capture by Helga B</span><span class="esr"><i aria-hidden="true" style="--e:100%"></i>error 0.124</span></div>
+      <div class="amp"><b>Fender Twin Reverb</b><span>Normal, bright. Capture by Tim R</span><span class="esr"><i aria-hidden="true" style="--e:5%"></i>ESR 0.006</span></div>
+      <div class="amp"><b>Vox AC15 Top Boost</b><span>Capture by Phillipe P</span><span class="esr"><i aria-hidden="true" style="--e:36%"></i>ESR 0.045</span></div>
+      <div class="amp"><b>Magnatone Super 59 Mk II</b><span>Capture by Tim R</span><span class="esr"><i aria-hidden="true" style="--e:7%"></i>ESR 0.009</span></div>
+      <div class="amp"><b>Friedman Dirty Shirley Mini</b><span>Clean. Capture by Sascha S</span><span class="esr"><i aria-hidden="true" style="--e:11%"></i>ESR 0.014</span></div>
+      <div class="amp"><b>Marshall JCM900</b><span>50 W Dual Verb. Capture by Tim R</span><span class="esr"><i aria-hidden="true" style="--e:9%"></i>ESR 0.011</span></div>
+      <div class="amp"><b>Friedman Dirty Shirley Mini</b><span>Crunch. Capture by Sascha S</span><span class="esr"><i aria-hidden="true" style="--e:26%"></i>ESR 0.033</span></div>
+      <div class="amp"><b>Marshall JCM2000 DSL</b><span>Lead. Capture by Tim R</span><span class="esr"><i aria-hidden="true" style="--e:34%"></i>ESR 0.042</span></div>
+      <div class="amp"><b>Mesa Boogie Mark IV</b><span>Capture by Roman A</span><span class="esr"><i aria-hidden="true" style="--e:33%"></i>ESR 0.041</span></div>
+      <div class="amp"><b>Marshall JVM</b><span>OD2. Capture by Phillipe P</span><span class="esr"><i aria-hidden="true" style="--e:45%"></i>ESR 0.056</span></div>
+      <div class="amp"><b>Splawn Pro Mod</b><span>Second gear. Capture by Tim R</span><span class="esr"><i aria-hidden="true" style="--e:42%"></i>ESR 0.052</span></div>
+      <div class="amp"><b>Peavey 5150</b><span>Block letter, boosted. Capture by Helga B</span><span class="esr"><i aria-hidden="true" style="--e:52%"></i>ESR 0.064</span></div>
+      <div class="amp"><b>Peavey 6505+</b><span>Red channel, MXR drive. Capture by Helga B</span><span class="esr"><i aria-hidden="true" style="--e:100%"></i>ESR 0.124</span></div>
     </div>
-    <p class="amps-note" style="color:var(--soft)">High-gain captures are harder for a network this small, so their error is higher. The models are amps without a cabinet: the CAB block after them plays a cabinet IR you load. Load a capture of your own into one of the 16 slots from the editor. The list and the training: <a href="https://github.com/VinSpee/undertone/blob/main/docs/NAM.md">NAM.md</a>. Product names belong to their owners and only describe the sound.</p>
+    <p class="amps-note" style="color:var(--soft)">High-gain captures are harder for a network this small, so their ESR is higher. The models are amps without a cabinet: the CAB block after them plays a cabinet IR you load. Load a capture of your own into one of the 16 slots from the editor. The list and the training: <a href="https://github.com/VinSpee/undertone/blob/main/docs/NAM.md">NAM.md</a>. Product names belong to their owners and only describe the sound.</p>
     <div class="drives">
       <h3>Four drives</h3><span>TS9</span><span>Klon</span><span>MXR M77</span><span>HM-2</span>
     </div>
