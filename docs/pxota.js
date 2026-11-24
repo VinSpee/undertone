@@ -117,16 +117,16 @@ const NEWEST_OFFICIAL = Object.fromEntries(MODELS.map((m) => [m, Math.max(...OFF
 // Installing over it would overwrite the end of its boot loader and the pedal would no longer switch on, so no
 // confirmation lifts this refusal. The update loader refuses such a head itself as well (headRefused). Both checks
 // come from upstream pull request isod89/openpocket#35. The words send the user to the install that does work on such
-// a pedal, from a Terminal through the chip's USB boot state (tools/uboot_install.py, docs/RESCUE.md "Gamut on a
+// a pedal, from a Mac's Terminal through the chip's USB boot state (tools/uboot_install.py, docs/RESCUE.md "Gamut on a
 // BlackBox with V22 or V23"); this page still sends nothing to it.
 export function layoutRefusal(id) {
   if (!IS_OFFICIAL(id) || !(id.version >= MOVED_HEAD[id.model])) return null;
   return `This ${id.model} runs M-VAVE's official firmware ${String(id.version).padStart(3, "0")} (${id.text}). From V22 on, ` +
     `that firmware has a larger boot loader at the start of the pedal's memory, and installing from this page would ` +
-    `overwrite its end: the pedal would no longer switch on. This page cannot install on it. Gamut is installed on such ` +
-    `a pedal from a computer's Terminal instead, through the chip's USB boot state, with tools/uboot_install.py, which ` +
-    `never writes that boot loader: see "Gamut on a BlackBox with V22 or V23" in the rescue guide. That install has ` +
-    `worked on one real pedal.`;
+    `overwrite its end: the pedal would no longer switch on. This page cannot install on it. Gamut goes on such a ` +
+    `pedal from a Mac's Terminal instead, through the chip's USB boot state, with tools/uboot_install.py from the ` +
+    `project's source code, which never writes that boot loader: see "Gamut on a BlackBox with V22 or V23" in the ` +
+    `rescue guide. Its steps have worked once on a real pedal, by hand.`;
 }
 
 // A warning for a pedal that runs an official firmware newer than the newest one this page knows, else null. The USB

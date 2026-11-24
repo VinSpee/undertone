@@ -4,7 +4,7 @@ Gamut is the guitar firmware formerly called OpenPocket, and part of [Undertone]
 
 !!! THIS PROJECT IS A PROOF OF CONCEPT, DONT EXPECT FULL FUNCTION AND SOUND QUALITY !!!
 
-Install here: https://isod89.github.io/openpocket/ (Donner Pocket X; M-VAVE BlackBox: v31 has the fix for issue #1, being tested)
+Install here: https://isod89.github.io/openpocket/ (Donner Pocket X and M-VAVE BlackBox)
 NEW WEB EDITOR: https://isod89.github.io/openpocket/editor.html · **v42: a new web editor, reworked pedal controls, the pedal as a USB sound card**: [docs/WHATS-NEW-v42.md](docs/WHATS-NEW-v42.md) · v41: NAM presets much lighter, a NAM amp with all 12 blocks on runs without BYP (VinSpee's work)**: [docs/WHATS-NEW-v41.md](docs/WHATS-NEW-v41.md) · v40: the effects run the stock firmware's way (from RAM, delays at half rate): [docs/WHATS-NEW-v40.md](docs/WHATS-NEW-v40.md) · v39: the delay and the reverb off the critical path: [docs/WHATS-NEW-v39.md](docs/WHATS-NEW-v39.md) · v38: changes without clicks, your own cabinet IRs: [docs/WHATS-NEW-v38.md](docs/WHATS-NEW-v38.md) · v37: neural amp models (NAM A2), load your own from TONE3000: [docs/WHATS-NEW-v37.md](docs/WHATS-NEW-v37.md) · since v33: [docs/WHATS-NEW-v34-v36.md](docs/WHATS-NEW-v34-v36.md)
 
 **Open-source guitar multi-effects firmware for the Donner Pocket X and the M-VAVE BlackBox.**

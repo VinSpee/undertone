@@ -291,7 +291,7 @@ h2{font-size:clamp(40px,6.4vw,104px);line-height:.88;font-weight:900;font-variat
       <div>
         <p class="lede" style="margin-top:0">A BlackBox with a black screen goes back to M-VAVE's firmware over USB, from a Mac or a Windows PC. You need no extra hardware.</p>
         <p class="small">A pedal that restarts in a loop, or stays in update mode, needs only the installer's rescue section.</p>
-        <p class="note-box">The installer does not work on a BlackBox that ever ran M-VAVE V22 or V23. The Windows rescue has not been tested on a real pedal yet.</p>
+        <p class="note-box">The installer cannot put Gamut on a BlackBox that ever ran M-VAVE V22 or V23. One such pedal runs Gamut, installed from a Mac's Terminal with the project's source code (<a href="https://github.com/VinSpee/undertone/blob/main/docs/RESCUE.md#gamut-on-a-blackbox-with-v22-or-v23">the steps</a>). The rescue tool has worked on a real pedal from a Mac. The <code>undertone</code> command that now runs it, and the Windows rescue, have not been tried on a real pedal yet.</p>
         <div class="row">
           <a class="btn btn--ink" href="install.html#rescueCard">Get the rescue kit</a>
           <a class="btn btn--ghost" href="https://github.com/VinSpee/undertone/blob/main/docs/RESCUE.md">Read the rescue guide</a>
@@ -329,7 +329,7 @@ h2{font-size:clamp(40px,6.4vw,104px);line-height:.88;font-weight:900;font-variat
     <div class="qa">
       <div><h3>Can I go back to the official firmware?</h3><p>Yes. Pick the official .fwsc file from Donner or M-VAVE in the installer's step 3. Your browser checks it first.</p></div>
       <div><h3>Does an update keep my presets?</h3><p>Yes. Each firmware also keeps its own presets while the pedal runs the other one.</p></div>
-      <div><h3>Does the installer work on every BlackBox?</h3><p>Not on one that ever ran M-VAVE V22 or V23: installing would write over the end of that boot loader, so the installer refuses such a pedal and writes nothing.</p></div>
+      <div><h3>Does the installer work on every BlackBox?</h3><p>Not on one that ever ran M-VAVE V22 or V23. Installing would overwrite the end of that firmware's boot loader and the pedal would not start, so the installer refuses it and writes nothing. One such pedal runs Gamut, installed from a Mac's Terminal with the project's source code.</p></div>
       <div><h3>Is PALETTE ready for a real pedal?</h3><p>It passes its tests on a simulated pedal and has not run on a real one yet.</p></div>
       <div><h3>What do I need to build my own firmware?</h3><p>Docker and Node 18 or newer. <code>node tools/op.mjs all</code> builds and tests every firmware in a pinned container.</p></div>
       <div><h3>Is this made by Donner or M-VAVE?</h3><p>No. Undertone is an independent GPL-3.0 project. You install it at your own risk.</p></div>
