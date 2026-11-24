@@ -14,8 +14,10 @@
 # package's app area also as a file of its own for M-VAVE's V22/V23 recovery mode (BlackBox_950-v23.bin), and its
 # screen in its own palette (firmware/apps/gamut/ui_palette.h) and fonts (ui_fonts.h), in small letters, the factory
 # presets' names too, USB MIDI messages stamped with the time they came in (firmware/px_usb.h), which PALETTE's pin
-# also takes, the footswitch numbers CC 116, 118 and 119 (firmware/apps/gamut/px_midi_io.h), and the second core's fault
-# record with its registers and SP (firmware/bsp/chip/fm1_cpu1.h).
+# also takes, the footswitch numbers CC 116, 118 and 119 (firmware/apps/gamut/px_midi_io.h), the second core's fault
+# record with its registers and SP (firmware/bsp/chip/fm1_cpu1.h), and its layout: the chain along a line, the selected
+# block's label beside the 58 px preset number, the tuner's 81 px note over a scale, footers of a control and what it
+# does, the update's step dots.
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 NAME="$1"
 case "$NAME" in ""|*[!a-z0-9-]*) echo "usage: tests/release_pin.sh NAME [SUMS]   (NAME: a folder of firmware/apps)"; exit 2;; esac

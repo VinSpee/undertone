@@ -45,7 +45,7 @@ Set it back to OMNI for the next steps.
 Plug the pedal into the computer (the pedal should appear as a MIDI port named **OpenPocket**) and send:
 
 - [ ] **Program Change 0, 1, 2, 11**: the pedal shows preset 01, 02, 03, 12 each time, the sound follows. Program Change 60 does nothing.
-- [ ] **CC 25 = 0 / 127** (AMP off / on): the AMP tile on the screen goes dark and back, the sound loses and gets its amp.
+- [ ] **CC 25 = 0 / 127** (AMP off / on): the AMP key on the screen drops below the line and goes dark, and comes back, the sound loses and gets its amp.
 - [ ] **CC 77 sweep 0 to 127** (AMP setting 1, GAIN): the gain bar moves and the sound changes smoothly. No crackle, no
       glitch, no mute. Also try CC 102 to 105 (DELAY settings), CC 106 (REVERB).
 - [ ] **CC 57 = 0, 64, 127** (AMP model): the model changes (first, middle, last).

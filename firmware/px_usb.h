@@ -19,7 +19,8 @@
  * service, which runs before the installer's and may be empty (px_editor.h is OpenPocket's); a_collect and the audio's
  * state (base/audio.h); the boot guard and op_diag (base/board.h, base/diag.h). It may define OP_FLASH_OWN (the flash
  * it keeps its own data in), OTA_SCRATCH (0x400 + 512 bytes lent to an update; ota.c has its own otherwise),
- * PX_LIGHTS_OFF, and OP_UAUDIO 1 with px_ua_on for USB audio.
+ * PX_LIGHTS_OFF, OP_OTA_SCREEN(step, code) to draw the update's steps and its failure on a screen of its own design
+ * (Gamut: ui.h's ui_update_show), and OP_UAUDIO 1 with px_ua_on for USB audio.
  */
 #pragma once
 
@@ -123,6 +124,12 @@ static int ota_fread(uint32_t off, void *p, uint32_t n)
 }
 static void ota_show(uint32_t step, int32_t code)
 {
+#ifdef OP_OTA_SCREEN                            /* an app whose screen has its own design draws the steps and the failure itself */
+    PX_LIGHTS_OFF();
+    OP_OTA_SCREEN(step, code);
+    if (step < 9u)
+        return;
+#else
     static const char *const STEP[] = {"", "PACKAGE", "CHECK", "LOADER", "CONFIRM", "RESTART"};
     PX_LIGHTS_OFF();
     lcd_rect(0, 0, 240, 240, UI_BG);
@@ -141,6 +148,7 @@ static void ota_show(uint32_t step, int32_t code)
         ft_box(0, 124, 240, b, &FT_SM, RED, UI_BG, 1);
         ft_box(0, 150, 240, "TRY AGAIN FROM THE INSTALLER", &FT_SM, UI_TXT, UI_BG, 1);
     }
+#endif
     for (int i = 0; i < 15; i++) { fm1_wdt_feed(); fm1_delay_ms(100); }
 }
 static void ota_commit(const uint8_t *parm)
