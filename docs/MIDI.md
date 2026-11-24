@@ -17,6 +17,7 @@ Bluetooth test image** ([BLE-TEST.md](BLE-TEST.md)).
 | Program Change 0 to 51 | Loads preset slot 1 to 52, as the footswitches do (unsaved changes are dropped). 52 and above are ignored |
 | Control Change, the map below | Switches or flips a block on or off, picks a block's model, sets one of its 5 settings, or sets the MASTER volume |
 | MIDI clock (24 per quarter note), when CLOCK > DELAY is on | Sets the delay TIME to one quarter note |
+| Control Change 116, 118, 119 at 64 and up | Tap tempo for the delay, the next preset, the previous preset (see [below](#footswitch-numbers)) |
 | Start, Continue, Stop | Restart the tempo measurement |
 | Everything else | Ignored: notes, pitch bend, bank select (0 and 32), modulation, sustain, "all notes off", system messages |
 
@@ -68,6 +69,21 @@ The order is the order of the blocks above: CC 8 + n flips what CC 20 + n switch
 block with its on/off number.
 
 CC **7** (volume) sets the MASTER volume, 0 to 127 to 0 to 100, like the MASTER knob (turning the knob takes over again).
+
+### Footswitch numbers
+
+Three numbers outside the map are for a controller's footswitches. Each acts at value 64 and up, so a switch that sends
+127 when pressed and 0 when let go acts once a press. They act on the pages where a Program Change does, and the pedal
+never sends them.
+
+| CC | What it does |
+| --- | --- |
+| 116 | A tap of the delay's tempo. Two taps 200 ms to 2 s apart set the delay TIME to their interval, the nearest TIME step, as MIDI clock does; from the third tap on, to the mean of the last three intervals. A pause of more than 2 s starts over, and a tap less than 200 ms after the last is ignored |
+| 118 | The next preset, as the up footswitch: after the last slot comes the first, and an unsaved edit is kept as a footswitch keeps it |
+| 119 | The previous preset, as the down footswitch |
+
+CC 117 is not used. These three come from Roberto Antonacci's ettorebox firmware, where they first ran with an M-VAVE
+Chocolate; a tap is timed from the moment the message arrived over USB.
 
 What the "setting" numbers mean depends on the model (the screen shows the names): for the AMP they are MODEL, GAIN,
 BASS, MID, TREBLE (the AMP and the CAB have one model each, NAM and USER IR, so their Model CC changes nothing); setting 3 of GATE is the preset LEVEL (50 = 0 dB); setting 1 of DELAY is TIME. Only the settings the model

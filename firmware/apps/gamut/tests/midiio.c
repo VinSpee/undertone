@@ -58,6 +58,14 @@ static uint32_t ft_box(uint32_t x, uint32_t y, uint32_t w, const char *s, const 
 #define C_GROUND 0
 #define OP_BLE_TEST 1
 static uint32_t ms_now(void) { return 0; }
+static int steps;                                   /* ui.h's footswitch step: the slot after or before, round the 52 */
+static void ui_preset_step(int dd)
+{
+    int n = px_preset_count();
+    cur_preset = (uint32_t)(((int)cur_preset + n + dd) % n);
+    load_preset(cur_preset);
+    steps++;
+}
 #include "../px_midi_io.h"
 
 static uint32_t cc(uint32_t ch, uint32_t n, uint32_t v) { return 0xBu | (0xB0u | ch) << 8 | n << 16 | v << 24; }
@@ -181,6 +189,58 @@ int main(void)
     {
         px_preset_t f; px_preset_factory(&f, 5);
         ok(PRESET.p[PX_B_DELAY][0] == f.p[PX_B_DELAY][0], "clock sync off (the default): the clock does nothing");
+    }
+
+    {   /* CC 116 taps the delay's tempo: two taps set TIME to their interval, a release (0) is no tap, a bounce under 200 ms
+         * is ignored, the last three intervals are averaged, a pause of more than 2 s starts over */
+        int two, bounce, avg, was, pause, restart, saved;
+        reset();
+        memset(&mid_tap, 0, sizeof mid_tap);
+        midi_enqueue(cc(0, 116, 127), 1000); midi_enqueue(cc(0, 116, 0), 1100); midi_enqueue(cc(0, 116, 127), 1500);
+        px_midi_service();
+        two = PRESET.p[PX_B_DELAY][0] == px_dly_value_for_ms(PRESET.type[PX_B_DELAY], 500.0f);
+        midi_enqueue(cc(0, 116, 127), 1550); px_midi_service();
+        bounce = PRESET.p[PX_B_DELAY][0] == px_dly_value_for_ms(PRESET.type[PX_B_DELAY], 500.0f);
+        midi_enqueue(cc(0, 116, 127), 1900); midi_enqueue(cc(0, 116, 127), 2350); px_midi_service();
+        avg = PRESET.p[PX_B_DELAY][0] == px_dly_value_for_ms(PRESET.type[PX_B_DELAY], 450.0f);   /* (500 + 400 + 450) / 3 */
+        midi_enqueue(cc(0, 116, 127), 3350); px_midi_service();
+        saved = PRESET.p[PX_B_DELAY][0] == px_dly_value_for_ms(PRESET.type[PX_B_DELAY], 617.0f);  /* (400 + 450 + 1000) / 3 */
+        midi_enqueue(cc(0, 116, 127), 4350); px_midi_service();
+        saved = saved && PRESET.p[PX_B_DELAY][0] == px_dly_value_for_ms(PRESET.type[PX_B_DELAY], 817.0f);   /* (450 + 1000 + 1000) / 3 */
+        was = PRESET.p[PX_B_DELAY][0];
+        midi_enqueue(cc(0, 116, 127), 7000); px_midi_service();
+        pause = PRESET.p[PX_B_DELAY][0] == was;
+        midi_enqueue(cc(0, 116, 127), 7600); px_midi_service();
+        restart = PRESET.p[PX_B_DELAY][0] == px_dly_value_for_ms(PRESET.type[PX_B_DELAY], 600.0f);
+        ok(two && bounce && avg && saved && pause && restart,
+           "CC 116 taps the delay's TIME (release and bounce ignored, the last three intervals averaged, a pause starts over)");
+        ok(pop_out() == 0, "the tapped TIME is not sent back to the host");
+        was = PRESET.p[PX_B_DELAY][0];
+        ui_mode = M_SAVE;
+        midi_enqueue(cc(0, 116, 127), 8000); midi_enqueue(cc(0, 116, 127), 8300); px_midi_service();
+        ok(PRESET.p[PX_B_DELAY][0] == was, "the SAVE page is open: taps are ignored");
+    }
+    {   /* CC 118 / 119: the next and the previous preset, as the footswitches, round the 52 slots */
+        reset(); steps = 0;
+        midi_enqueue(cc(0, 118, 127), 1); midi_enqueue(cc(0, 118, 0), 2); px_midi_service();
+        ok(cur_preset == 6 && steps == 1, "CC 118 at 127 steps to the next preset, its release does nothing");
+        midi_enqueue(cc(0, 119, 127), 3); midi_enqueue(cc(0, 119, 127), 4); px_midi_service();
+        ok(cur_preset == 4 && steps == 3, "CC 119 steps back, once a message");
+        cur_preset = 0; load_preset(0);
+        midi_enqueue(cc(0, 119, 64), 5); px_midi_service();
+        ok(cur_preset == (uint32_t)px_preset_count() - 1u, "from the first slot, CC 119 goes round to the last");
+        midi_enqueue(cc(0, 118, 127), 6); px_midi_service();
+        ok(cur_preset == 0, "and CC 118 back round to the first");
+        ok(pop_out() == 0, "a step made by the host is not sent back");
+        ui_mode = M_TUNER;
+        midi_enqueue(cc(0, 118, 127), 7); px_midi_service();
+        ok(cur_preset == 0, "the tuner is open: ignored");
+        {
+            px_preset_t f; px_preset_factory(&f, 0);
+            ui_mode = M_CHAIN;
+            midi_enqueue(cc(0, 116, 127), 8); midi_enqueue(cc(0, 117, 127), 9); px_midi_service();
+            ok(!memcmp(&f, &PRESET, sizeof f), "CC 116 alone and CC 117 change nothing in the sound");
+        }
     }
 
     reset();
