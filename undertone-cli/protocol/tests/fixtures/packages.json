@@ -1,0 +1,298 @@
+{
+ "broken-header": {
+  "tag": "BlackBox_023",
+  "checks": [
+   [
+    "ufw header crc",
+    false
+   ],
+   [
+    "ufw list crc",
+    true
+   ],
+   [
+    "flash.bin crc",
+    true
+   ],
+   [
+    "app_area_head entry crc",
+    true
+   ],
+   [
+    "app_area_head data crc",
+    true
+   ],
+   [
+    "app.bin entry crc",
+    true
+   ],
+   [
+    "app.bin data crc",
+    true
+   ],
+   [
+    "cfg_tool.bin entry crc",
+    true
+   ],
+   [
+    "cfg_tool.bin data crc",
+    true
+   ],
+   [
+    "VM entry crc",
+    true
+   ],
+   [
+    "PRCT entry crc",
+    true
+   ],
+   [
+    "ota.bin crc",
+    true
+   ]
+  ],
+  "rescue": {
+   "error": "BlackBox_023.fwsc: CRC check failed (ufw header crc); not using it"
+  },
+  "install": {
+   "refused": "BlackBox_023.fwsc: the package is damaged (ufw header crc)"
+  }
+ },
+ "official": {
+  "tag": "BlackBox_023",
+  "checks": [
+   [
+    "ufw header crc",
+    true
+   ],
+   [
+    "ufw list crc",
+    true
+   ],
+   [
+    "flash.bin crc",
+    true
+   ],
+   [
+    "app_area_head entry crc",
+    true
+   ],
+   [
+    "app_area_head data crc",
+    true
+   ],
+   [
+    "app.bin entry crc",
+    true
+   ],
+   [
+    "app.bin data crc",
+    true
+   ],
+   [
+    "cfg_tool.bin entry crc",
+    true
+   ],
+   [
+    "cfg_tool.bin data crc",
+    true
+   ],
+   [
+    "VM entry crc",
+    true
+   ],
+   [
+    "PRCT entry crc",
+    true
+   ],
+   [
+    "ota.bin crc",
+    true
+   ]
+  ],
+  "rescue": {
+   "ok": "fe3e813e41002b705c9a0771757af2410f7f43ac8a2d8b27a7ddbb0786b8e232"
+  },
+  "install": {
+   "what": "M-VAVE's app area from BlackBox_023.fwsc (BlackBox_023), for M-VAVE's V22/V23 head",
+   "area": "9e79f9935a58b86d450ac1b5ceef70afb27c2e44930322a9a97c3b58736db580"
+  }
+ },
+ "ours": {
+  "tag": "BlackBox_950",
+  "checks": [
+   [
+    "ufw header crc",
+    true
+   ],
+   [
+    "ufw list crc",
+    true
+   ],
+   [
+    "flash.bin crc",
+    true
+   ],
+   [
+    "app_area_head entry crc",
+    true
+   ],
+   [
+    "app_area_head data crc",
+    true
+   ],
+   [
+    "app.bin entry crc",
+    true
+   ],
+   [
+    "app.bin data crc",
+    true
+   ],
+   [
+    "cfg_tool.bin entry crc",
+    true
+   ],
+   [
+    "cfg_tool.bin data crc",
+    true
+   ],
+   [
+    "VM entry crc",
+    true
+   ],
+   [
+    "PRCT entry crc",
+    true
+   ],
+   [
+    "ota.bin crc",
+    true
+   ]
+  ],
+  "rescue": {
+   "ok": "fe3e813e41002b705c9a0771757af2410f7f43ac8a2d8b27a7ddbb0786b8e232"
+  },
+  "install": {
+   "refused": "BlackBox_023.fwsc (identity 'BlackBox_950') is not one of M-VAVE's official BlackBox packages"
+  }
+ },
+ "pocketx": {
+  "tag": "PocketX_016",
+  "checks": [
+   [
+    "ufw header crc",
+    true
+   ],
+   [
+    "ufw list crc",
+    true
+   ],
+   [
+    "flash.bin crc",
+    true
+   ],
+   [
+    "app_area_head entry crc",
+    true
+   ],
+   [
+    "app_area_head data crc",
+    true
+   ],
+   [
+    "app.bin entry crc",
+    true
+   ],
+   [
+    "app.bin data crc",
+    true
+   ],
+   [
+    "cfg_tool.bin entry crc",
+    true
+   ],
+   [
+    "cfg_tool.bin data crc",
+    true
+   ],
+   [
+    "VM entry crc",
+    true
+   ],
+   [
+    "PRCT entry crc",
+    true
+   ],
+   [
+    "ota.bin crc",
+    true
+   ]
+  ],
+  "rescue": {
+   "ok": "fe3e813e41002b705c9a0771757af2410f7f43ac8a2d8b27a7ddbb0786b8e232"
+  },
+  "install": {
+   "refused": "BlackBox_023.fwsc (identity 'PocketX_016') is not one of M-VAVE's official BlackBox packages"
+  }
+ },
+ "damaged": {
+  "tag": "BlackBox_023",
+  "checks": [
+   [
+    "ufw header crc",
+    true
+   ],
+   [
+    "ufw list crc",
+    true
+   ],
+   [
+    "flash.bin crc",
+    true
+   ],
+   [
+    "app_area_head entry crc",
+    true
+   ],
+   [
+    "app_area_head data crc",
+    false
+   ],
+   [
+    "app.bin entry crc",
+    true
+   ],
+   [
+    "app.bin data crc",
+    false
+   ],
+   [
+    "cfg_tool.bin entry crc",
+    true
+   ],
+   [
+    "cfg_tool.bin data crc",
+    true
+   ],
+   [
+    "VM entry crc",
+    true
+   ],
+   [
+    "PRCT entry crc",
+    true
+   ],
+   [
+    "ota.bin crc",
+    true
+   ]
+  ],
+  "rescue": {
+   "error": "BlackBox_023.fwsc: CRC check failed (app_area_head data crc, app.bin data crc); not using it"
+  },
+  "install": {
+   "refused": "BlackBox_023.fwsc: the package is damaged (app_area_head data crc, app.bin data crc)"
+  }
+ }
+}
