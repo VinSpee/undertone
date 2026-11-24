@@ -162,7 +162,10 @@ and a user IR's name are on the block's EDIT page, one PUSH away. EDIT shows the
 model, and up to 5 settings with value and bar; the EDIT band also shows the preset number. A value is inverted, dark on
 a pale chip, while the knob changes it. The footer of a page names each control in pale and what it does in grey
 (`knob block  push edit  home list`). The **tuner** shows the note 81 px tall over a scale of 50 cents each way, with a
-needle where the note is. The **update** screen shows a dot for each of its five steps.
+needle where the note is. The **update** screen shows a dot for each of its five steps. A **start** shows the mark, the
+name `gamut` and the version. A start that failed shows `last start failed` on an amber band for 12 s, with the figures
+a bug report needs, and the pedal then runs in `safe mode` with the effects off; a **crash** is a screen of graphite on
+amber with the same figures before the pedal restarts.
 **Text**: words are in B612 and figures in B612 Mono. Labels, hints and settings are in small letters (`gain`,
 `knob block`, `363 ms`); the name of a preset, a model or an IR is shown as it is stored.
 **Colours**: the screen is dark with pale text. Green is a lamp, and only that: the lamp of the mark at the top left of

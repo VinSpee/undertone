@@ -9,7 +9,7 @@
 #include <stdint.h>
 #define AUDIO_PROBE 0      /* 1 = audio test (find IN/OUT on the I2S) instead of the UI */
 #define DSP_CPU1 1         /* 1 = DSP engine on the 2nd core (automatic fallback to CPU0 on trouble) */
-#define OP_NAME "Gamut"                 /* the name on the boot screen (base/boot_screens.h) */
+#define OP_NAME "Gamut"                 /* the name: the boot screen draws it in small letters (ui_boot.h) */
 #define OP_RAM_CODE px_block_label      /* the engine's RAM code: a crash report gives its place (base/boot_screens.h) */
 #include "base/board.h"               /* the chip, the pins, the screen and its text (docs/BASE-FIRMWARE.md) */
 /* ---- preset: the v2 engine's struct (firmware/apps/gamut/engine/px_dsp.h), edited directly by the UI ---- */
@@ -38,6 +38,9 @@ static void load_preset(uint32_t i) { st_get(i, &PRESET); preset_new = 1; }
 #define ADC_PROBE 0        /* 1 = ADC diagnostic: shows the channels that move at the bottom (C2:512) */
 #define LED_PROBE 0        /* 1 = LED map (issue #8, led_probe.h): the knob picks a bit of the lights' 595, it blinks; no sound */
 #include "base/controls.h"            /* the controls' pins, the ADC, the battery, the debounce */
+#if !AUDIO_PROBE
+#include "ui_hooks.h"                 /* the base's screens that Gamut draws itself: a start, a crash, the rescue mode, an update */
+#endif
 #include "base/diag.h"                /* the crash screen, the boot stages kept across a reset, the stacks' use */
 #if AUDIO_PROBE
 #include "audio_probe.h"
@@ -48,7 +51,7 @@ static void load_preset(uint32_t i) { st_get(i, &PRESET); preset_new = 1; }
 
 #if !AUDIO_PROBE
 #include "ui.h"
-#define OP_OTA_SCREEN ui_update_show   /* the update's screen is Gamut's own (ui.h), not the base firmware's (px_usb.h) */
+#include "ui_boot.h"        /* the screens of a start, a crash and the rescue mode (the base draws them through ui_hooks.h) */
 #include "px_lights.h"      /* the button lights follow the blocks (issue #8; px_leds.h drives them) */
 #define PX_LIGHTS_OFF() lights_off()
 /* the flash OpenPocket keeps its own data in: the preset store (px_store.h), the NAM user models (px_models.h) and the

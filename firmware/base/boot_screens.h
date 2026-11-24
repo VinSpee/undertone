@@ -3,10 +3,15 @@
  * file in its body, after lcd_init(). They draw the boot screen (OP_NAME, OP_VERSION, the supplies, the reset's
  * cause), then, after a start that did not finish or crashed, its report for 12 s. They declare
  *     int safe;     1 = this start is in safe mode: the app keeps its DSP off, the pedal stays usable and re-flashable
+ * An app whose screen has its own design defines OP_BOOT_SCREEN(safe) and OP_BOOT_FAILED(stage, crashed): the screens are
+ * then its own, the waits and what the start keeps are still these statements' (Gamut: firmware/apps/gamut/ui_hooks.h).
  * (They are statements so that OpenPocket's app_main compiles to the code it was before the base was split off:
  * as functions they changed its stack layout.)
  */
     /* boot screen with the version: shows which image is running */
+#ifdef OP_BOOT_SCREEN                  /* an app whose screen has its own design draws a start and its report itself: */
+    OP_BOOT_SCREEN(0);                 /* OP_BOOT_SCREEN(safe) and OP_BOOT_FAILED(stage, crashed) */
+#else
     lcd_rect(0,0,240,240,UI_BG);
     ft_box(0, 98, 240, OP_NAME, &FT_MD, UI_ACC, UI_BG, 1);
 #if OP_BLE_TEST
@@ -25,6 +30,7 @@
         ft_box(0, 214, 240, l, &FT_SM, UI_DIM, UI_BG, 1);
     }
 #endif
+#endif
     for (int i = 0; i < 6; i++) { fm1_wdt_feed(); fm1_delay_ms(100); }
     /* --- report of the previous boot, if it did not finish (or crashed) --- */
     int safe = 0;
@@ -36,8 +42,13 @@
         int crashed = cc != op_diag.crash_seen;
         uint32_t st = op_diag.stage < ST_N ? op_diag.stage : 0u;
         if ((st != ST_OK || crashed) && !op_diag.safe) {
+#ifndef OP_BOOT_SCREEN
             char l[48], h[9];
+#endif
             safe = 1;                    /* this boot: DSP bypassed, so the pedal stays usable */
+#ifdef OP_BOOT_SCREEN
+            OP_BOOT_FAILED(st, crashed);
+#else
             lcd_rect(0, 0, 240, 240, UI_BG);   /* v42: what happened and what to do first, the numbers for a bug report below */
             ft_box(0, 6, 240, "LAST START FAILED", &FT_MD, RED, UI_BG, 1);
             ft_box(0, 34, 240, "THE EFFECTS ARE OFF FOR THIS START", &FT_SM, UI_TXT, UI_BG, 1);
@@ -67,10 +78,15 @@
             b_str(l, "  LOOPS "); b_num(l, op_diag.loops);
             ft_box(0, 186, 240, l, &FT_SM, UI_DIM, UI_BG, 1);
             ft_box(0, 212, 240, "PHOTO THIS FOR A BUG REPORT", &FT_SM, UI_ACC, UI_BG, 1);
+#endif
             for (int i = 0; i < 120; i++) { fm1_wdt_feed(); fm1_delay_ms(100); }   /* 12 s */
+#ifdef OP_BOOT_SCREEN
+            OP_BOOT_SCREEN(1);
+#else
             lcd_rect(0, 0, 240, 240, UI_BG);
             ft_box(0, 98, 240, OP_NAME, &FT_MD, UI_ACC, UI_BG, 1);
             ft_box(0, 126, 240, OP_VERSION " SAFE MODE", &FT_SM, UI_DIM, UI_BG, 1);
+#endif
         }
 #if OP_BLE_TEST
         ble_last = (ble_boot_t){ st != ST_OK || crashed, crashed, st, op_diag.blocks, op_diag.load, op_diag.peak, op_diag.nans, op_diag.c1,

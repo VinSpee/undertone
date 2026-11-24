@@ -207,7 +207,7 @@ cache used as RAM is all the NAM vector unit's again, as before v37. The build p
 - **Start-up safety.** A reset while the radio is starting (a hang the watchdog ends, a crash) is noted in memory that
   survives a reset. The following boots leave the radio off until a power cycle, or until you turn the row off and on again,
   so a radio that will not start on some unit costs one restart, never a loop. After any failed boot (the
-  `LAST BOOT FAILED` screen), the next boot waits for you the same way.
+  `last start failed` screen), the next boot waits for you the same way.
 - **The radio's start-up runs on the main stack.** Its crystal ramp keeps data on the caller's stack, and in v37 it crashed
   on a task stack in the cache RAM.
 - **Flash writes** (saving a preset) mask every interrupt while the flash is busy, the radio's too. A link survives the

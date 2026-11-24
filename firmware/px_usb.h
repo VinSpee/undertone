@@ -19,8 +19,8 @@
  * service, which runs before the installer's and may be empty (px_editor.h is OpenPocket's); a_collect and the audio's
  * state (base/audio.h); the boot guard and op_diag (base/board.h, base/diag.h). It may define OP_FLASH_OWN (the flash
  * it keeps its own data in), OTA_SCRATCH (0x400 + 512 bytes lent to an update; ota.c has its own otherwise),
- * PX_LIGHTS_OFF, OP_OTA_SCREEN(step, code) to draw the update's steps and its failure on a screen of its own design
- * (Gamut: ui.h's ui_update_show), and OP_UAUDIO 1 with px_ua_on for USB audio.
+ * PX_LIGHTS_OFF, OP_OTA_SCREEN(step, code) and OP_UBOOT_SCREEN() to draw the update's steps and failure and the rescue
+ * mode on a screen of its own design (Gamut: ui_hooks.h), and OP_UAUDIO 1 with px_ua_on for USB audio.
  */
 #pragma once
 
@@ -206,8 +206,12 @@ static void px_usb_service(uint32_t now)        /* every main-loop pass */
     usb_retry(now);
     if (usb.uboot_req) {                        /* SysEx soft key: the chip's UBOOT (rescue) */
         px_audio_halt();
+#ifdef OP_UBOOT_SCREEN
+        OP_UBOOT_SCREEN();
+#else
         lcd_rect(0, 0, 240, 240, UI_BG);
         ft_box(0, 110, 240, "UBOOT (USB)", &FT_MD, UI_ACC, UI_BG, 1);
+#endif
         guard.pending = 0;
         op_diag.stage = ST_OK;
         usb_detach();

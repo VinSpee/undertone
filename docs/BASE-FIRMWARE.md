@@ -38,7 +38,7 @@ bytes as the pinned release, upstream's published v42 with the bass tuner fix, t
 | The link and the build: sections, fixed regions, RAM code, the memory report | `firmware/app.ld`, `firmware/build.sh`, `tools/ramcode.py`, `tools/check_calls.py` |
 | The package and the update loader | `tools/pxpkg.py`, `tools/mkloader.py`, `loader/` |
 
-Gamut's own files are in `firmware/apps/gamut/` (`openpocket.c`, `px_audio.h`, `ui.h`, `ui_palette.h`, `ui_fonts.h`, `ui_colors.h`,
+Gamut's own files are in `firmware/apps/gamut/` (`openpocket.c`, `px_audio.h`, `ui.h`, `ui_boot.h`, `ui_hooks.h`, `ui_palette.h`, `ui_fonts.h`, `ui_colors.h`,
 `px_lights.h`, `px_store.h`, `px_models.h`, `px_irs.h`, `px_editor.h`, `px_midi.h`, `px_midi_io.h`, `px_ble_midi.h`,
 `ble/`, `memory.ld` and `engine/`). Everything under `firmware/` outside `firmware/apps/` is the base.
 
@@ -70,7 +70,7 @@ The app's file defines these names before `base/board.h`:
 | `OP_VERSION_NUM`, `OP_VERSION` | `OP_VERSION_NUM` is the package's identity number. `"50"` gives `PocketX_950`. For an app, `OP_VERSION` is `v` and that number (`"01"` gives `v01`). Gamut keeps the two apart: `OP_VERSION_TEXT` (`1.0b1`) is the version text that the boot screen and the INFO reply show, and `OP_VERSION` is that text and the test channel's tag. |
 | `OP_APP_ID` | An app other than Gamut: its folder's name under `firmware/apps`. Gamut defines none. |
 | `A_CH` | `2` when the app's sound has a left and a right side. The default is `1`. |
-| `OP_OTA_SCREEN` | Before `px_usb.h`: a function `(step, code)` that draws the update's steps and its failure, for an app whose screen has its own design. Gamut defines it (`ui.h`'s `ui_update_show`). Without it the base draws its own update screen. |
+| `OP_BOOT_SCREEN`, `OP_BOOT_FAILED`, `OP_FAULT_SCREEN`, `OP_UBOOT_SCREEN`, `OP_OTA_SCREEN` | For an app whose screen has its own design: functions that draw, in the base's place, a start (`(safe)`) and the report of one that failed (`(stage, crashed)`), a crash (`(crash record)`, before `base/diag.h`), the USB rescue mode (`()`) and an update's steps and failure (`(step, code)`, both before `px_usb.h`). The base keeps the waits, the guard and the restart. Gamut defines them all in `ui_hooks.h`. Without them the base draws its own screens. |
 
 An app that writes its own start and loop provides these functions and calls the base in this order:
 
