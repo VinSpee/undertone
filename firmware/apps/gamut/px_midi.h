@@ -35,8 +35,9 @@ static void px_midi_cfg_unpack(px_midi_cfg_t *c, uint8_t b)
 }
 /* v42: USB AUDIO (docs/USB-AUDIO.md): 1 = the pedal is a USB sound card too. The MIDI page's fourth row and the editor
  * (USB_AUDIO) set it, the store keeps it (px_store.h, st_usb), px_usb.h presents the USB device with or without the
- * audio streams. Not in the Bluetooth test image, whose RAM is full: OP_UAUDIO 0 leaves the row and the streams out. */
-#if OP_BLE_TEST
+ * audio streams. Not in the Bluetooth test image, whose RAM is full: OP_UAUDIO 0 leaves the row and the streams out.
+ * Nor in the 48 kHz test build (base/rate.h), whose rate is picked at the start: USB audio's clock figures are 44.1 kHz's. */
+#if OP_BLE_TEST || OP_RATE48
 #define OP_UAUDIO 0
 #else
 #define OP_UAUDIO 1

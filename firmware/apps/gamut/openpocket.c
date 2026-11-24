@@ -13,6 +13,7 @@
 #define OP_RAM_CODE px_block_label      /* the engine's RAM code: a crash report gives its place (base/boot_screens.h) */
 #include "base/board.h"               /* the chip, the pins, the screen and its text (docs/BASE-FIRMWARE.md) */
 /* ---- preset: the v2 engine's struct (firmware/apps/gamut/engine/px_dsp.h), edited directly by the UI ---- */
+#define PX_SR ((float)A_SR)             /* the engine's rate: the I2S's (base/audio.h) */
 #include "px_dsp.h"
 #include "px_nam.h"           /* v37: NAM A2-Lite (the engine includes px_nam.c) */
 #include "px_midi.h"                    /* MIDI map and settings (docs/MIDI.md) */
@@ -124,6 +125,10 @@ static void ir_changed(uint32_t s)   /* v38: a user IR was written or erased: th
 #define ED_DIAG_LEN 224u
 #define ED_OUT_BYTES 1536u   /* DIAG's six lines of up to 223 characters fit one reply */
 static void ed_diag_line(uint32_t i, char *out);
+#elif OP_RATE_DIAG          /* the clock's test builds (base/rate.h): DIAG's one line, the clock's report */
+#define ED_DIAG_LINES 1u
+#define ED_DIAG_LEN 224u
+static void ed_diag_line(uint32_t i, char *out) { (void)i; a_rate_text(out); }
 #endif
 #include "ui_colors.h"      /* BLK_COL: the blocks' colours, for the web editor (the pedal's screen has its own palette: ui_palette.h) */
 #include "px_editor.h"      /* the web editor (docs/EDITOR-PROTOCOL.md) */

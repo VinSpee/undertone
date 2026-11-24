@@ -154,7 +154,9 @@ static struct {
 #define UA_HI (128u + UA_DEEP)
 #endif
 #endif
+#ifndef UAC_RATE                 /* (the including file may set it: OpenPocket's px_uaconf.h) */
 #define UAC_RATE 44100u
+#endif
 /* The packets follow the I2S clock (6 MHz / 136 = 44,117.647 Hz; resampled x 160 / 147 at 48 kHz, 48,019.21 Hz) as a
  * steady pattern, as an asynchronous device's clock: 44 frames a ms and one more every ~8.5 ms (48 and one more
  * every ~52 ms at 48 kHz). The ring's fill then steers what is left (the crystals' difference) by one frame a render
@@ -441,7 +443,7 @@ static uint32_t midi_out_room(void)                  /* free slots in the out ri
     9, 4, (o), 0, 0, 1, 2, 0, 0,                           /* the output stream, alt 0: no bandwidth */ \
     9, 4, (o), 1, 1, 1, 2, 0, 0,                           /* alt 1: the stream */                      \
     7, 0x24, 1, 3, 1, 0x01, 0x00,                          /* AS general: terminal 3, delay 1, PCM */   \
-    11, 0x24, 2, 1, 2, 2, 16, 1, 0x44, 0xAC, 0x00,         /* type I: 2 ch, 16 bit, 44100 */            \
+    11, 0x24, 2, 1, 2, 2, 16, 1, UAC_RATE & 0xFF, (UAC_RATE >> 8) & 0xFF, UAC_RATE >> 16,   /* type I: 2 ch, 16 bit */ \
     9, 5, 0x04, 0x09, UO_MAXP & 0xFF, UO_MAXP >> 8, 1, 0, 0,   /* EP4 OUT isochronous adaptive, 1 ms */ \
     7, 0x25, 1, 0x00, 0, 0, 0,                             /* CS endpoint: no controls */
 #else

@@ -437,7 +437,7 @@ static void audio_reset(void)                          /* after a NaN: engine re
     ui_to_px(&pp);
     if (a_running) fm1_irq_mask(FM1_IRQ_ALNK0);
     a_collect();
-    px_engine_init(&g_eng, 44100.0f);
+    px_engine_init(&g_eng, PX_SR);
 #if DSP_CPU1
     px_wet_mode(&g_eng, a_c1 && OP_WET_LANES, A_WLAG);   /* (the init cleared it) */
 #endif
@@ -573,13 +573,16 @@ static void audio_bench(void)
 
 static void audio_start(void)
 {
+#if OP_RATE_DIAG
+    a_rate_pick();                                     /* base/rate.h: the clock's test builds, before the engine takes the rate */
+#endif
 #if BENCH_AT_BOOT
-    px_engine_init(&g_eng, 44100.0f);
+    px_engine_init(&g_eng, PX_SR);
     audio_bench();                                     /* benchmark screen (diagnostic): off by default */
     px_nam_check(b_ticks);                             /* (the bench used the NAM memory) */
 #endif
     op_stage(ST_ENG_INIT, "ENGINE INIT...");
-    px_engine_init(&g_eng, 44100.0f);
+    px_engine_init(&g_eng, PX_SR);
     px_clock = b_ticks;                                /* v38: each block's time (the tuner page shows it) */
     op_stage(ST_ENG_SET, "ENGINE SET...");
 #if DSP_CPU1

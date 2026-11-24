@@ -43,6 +43,18 @@ const number = (line, key, radix = 10) => {
   return m ? parseInt(m[1], radix) : null;
 };
 
+// the clock's test builds' one line (firmware/base/rate.h a_rate_text, docs/RATE48-TEST.md); hz is the rate measured
+// over the last 10 s window of TIMER4 (24 MHz), null before the first one ends
+const RATE_RE = /^RATE ASK (\d+) SR (\d+) GUARD (\w+) W (\d+) F (\d+) T (\d+) PLL0 (\w{8}) (\w{8}) PLL1 (\w{8}) (\w{8}) HSB (\w{8}) MUX (\w{8}) SYS (\w{8}) DIV (\w{8}) BEFORE (\w{8}) (\w{8}) (\w{8})$/;
+export function parseRate(raw) {
+  const m = RATE_RE.exec(raw);
+  if (!m) return { raw, ok: false };
+  const h = (i) => parseInt(m[i], 16), frames = +m[5], ticks = +m[6];
+  return { raw, ok: true, ask: +m[1], sr: +m[2], guard: m[3], windows: +m[4], frames, ticks, hz: ticks ? frames * 24e6 / ticks : null,
+    pll0: [h(7), h(8)], pll1: [h(9), h(10)], hsb: h(11), mux: h(12), sys: h(13), div: h(14), before: { pll0: h(15), sys: h(16), div: h(17) } };
+}
+const RATE_BIT25 = 1 << 25, RATE_SYS48 = 1 << 8;
+
 // the status line, exactly as the screen scrolls it
 export function parseBle(raw) {
   let m;
@@ -118,8 +130,9 @@ export function judge(readings, scan) {
         : `${now.id.text} answers only the identity query: it is not Gamut. There is no status to read.` };
   }
   if (now.level === "info") {
-    return { result: "unknown", reason: `${now.info.identity} ${now.info.version} runs and answers MIDI (DSP load ${now.ping.load}%), but it has no log channel: only the Bluetooth test image built with DIAG has one. Bluetooth state, counters and last-boot report cannot be read; use the screen.` };
+    return { result: "unknown", reason: `${now.info.identity} ${now.info.version} runs and answers MIDI (DSP load ${now.ping.load}%), but it has no log channel: only the Bluetooth test image and the clock's test builds built with DIAG have one. Bluetooth state, counters and last-boot report cannot be read; use the screen.` };
   }
+  if (now.level === "rate") return judgeRate(now.rate);
   const { boot, lastBoot, ble } = now;
   if (boot.safe) return { result: "fail", reason: `The last boot failed: ${lastBootWords(now)}. This boot is safe mode, so Bluetooth stayed off; the boot after this one tries again.` };
   if (ble.state === "failed") {
@@ -151,6 +164,21 @@ export function judge(readings, scan) {
   return judged("fail", `${rate} and the controller reports advertising, but this Mac saw no advertisement in ${scan.seconds} s (${scan.others} other devices seen, so the scanner works).`);
 }
 
+// the clock's test builds (docs/RATE48-TEST.md, "Reading the result"): what the gate decides
+export function judgeRate(r) {
+  const hex = (v) => v.toString(16).toUpperCase().padStart(8, "0");
+  if (!r.ok) return { result: "unknown", reason: `The clock line is not one this tool knows: ${r.raw}` };
+  if (r.pll0[1] !== r.before.pll0) return { result: "fail", reason: `PLL0 CON1 changed after the start (${hex(r.before.pll0)}, now ${hex(r.pll0[1])}): the PLL that probably clocks USB was written. Put the normal firmware back.` };
+  const bit25 = r.before.pll0 & RATE_BIT25 ? `bit 25 of PLL0 CON1 (0x119A4) is set (${hex(r.before.pll0)})` : `bit 25 of PLL0 CON1 (0x119A4) is clear (${hex(r.before.pll0)})`;
+  if (r.guard === "SAFE") return { result: "fail", reason: `This start is in safe mode, so it stayed at 44.1 kHz: the start before failed. ${bit25}.` };
+  if (r.guard === "BIT25") return { result: "fail", reason: `48 kHz refused: ${bit25}, so the 48 kHz family's source is off. The pedal runs at 44.1 kHz; no clock register was written.` };
+  if (!r.windows) return { result: "pending", reason: "No 10 s timing window has finished yet: read again in a few seconds." };
+  const off = (r.hz / r.sr - 1) * 100, at = `${r.hz.toFixed(2)} Hz (${off >= 0 ? "+" : ""}${off.toFixed(3)} % from ${r.sr})`;
+  if (Math.abs(off) > 0.5) return { result: "fail", reason: `Asked for ${r.sr} Hz, the guitar's blocks come at ${at}.` };
+  if (r.guard === "PASS") return { result: "pass", reason: `The I2S runs from the 48 kHz family at ${at}. Next: the sound (docs/RATE48-TEST.md).` };
+  return { result: "pass", reason: `The I2S runs at ${at}, and ${bit25}: ${r.before.pll0 & RATE_BIT25 ? "the rate48 build will try 48 kHz" : "the rate48 build will stay at 44.1 kHz"}.` };
+}
+
 // one reading, at the deepest level the pedal answers
 async function read(access, timing) {
   const time = new Date().toISOString();
@@ -163,7 +191,9 @@ async function read(access, timing) {
     return dev ? { time, level: "identity", id: dev.id, port: dev.name, product: dev.product } : { time, level: "silent", port: ports[0].name };
   }
   try {
-    const [boot, last, ble, link, trace, c1] = await ed.diag();
+    const lines = await ed.diag();
+    if (lines[0]?.startsWith("RATE ")) return { time, level: "rate", info, rate: parseRate(lines[0]) };
+    const [boot, last, ble, link, trace, c1] = lines;
     return { time, level: "full", info, boot: parseBoot(boot), lastBoot: parseLast(last), ble: parseBle(ble), link, trace, c1: parseC1(c1) };
   } catch (e) {
     if (e.code !== "timeout") throw e;
@@ -173,9 +203,20 @@ async function read(access, timing) {
   } finally { ed.close(); }
 }
 
-const started = (r) => r.level === "info" || r.level === "identity" || (r.level === "full" && (r.boot.safe || (r.boot.stage === STAGE_OK && r.ble.state !== "starting")));
+const started = (r) => r.level === "info" || r.level === "identity" || (r.level === "rate" && (!r.rate.ok || r.rate.windows > 0 || r.rate.guard === "BIT25" || r.rate.guard === "SAFE")) || (r.level === "full" && (r.boot.safe || (r.boot.stage === STAGE_OK && r.ble.state !== "starting")));
 
 function show(r, prev, say) {
+  if (r.level === "rate") {
+    const c = r.rate, hex = (v) => v.toString(16).toUpperCase().padStart(8, "0");
+    say(`pedal      ${r.info.identity} ${r.info.version} on "${r.info.port}"`);
+    if (!c.ok) { say(`clock      ${c.raw}`); return; }
+    say(`rate       asked ${c.ask} Hz, runs at ${c.sr} Hz, guard ${c.guard}; ${c.windows ? `measured ${c.hz.toFixed(2)} Hz over ${(c.ticks / 24e6).toFixed(2)} s (window ${c.windows}: ${c.frames} frames, ${c.ticks} ticks)` : "no 10 s window finished yet"}`);
+    say(`PLL0       CON0 ${hex(c.pll0[0])} CON1 ${hex(c.pll0[1])}: bit 25 (the 48 kHz family's source) ${c.pll0[1] & RATE_BIT25 ? "set" : "clear"}; CON1 before the I2S's rate ${hex(c.before.pll0)}`);
+    say(`0x10014    ${hex(c.sys)}: bit 8 (the I2S from the 48 kHz family) ${c.sys & RATE_SYS48 ? "set" : "clear"}; before ${hex(c.before.sys)}`);
+    say(`ALNK0 DIV  ${hex(c.div)} ([7:5] ${c.div >> 5 & 7}, [4:2] ${c.div >> 2 & 7}); before ${hex(c.before.div)}`);
+    say(`PLL1       CON0 ${hex(c.pll1[0])} CON1 ${hex(c.pll1[1])}; HSB 0x10008 ${hex(c.hsb)}; MUX 0x1000C ${hex(c.mux)}`);
+    return;
+  }
   if (r.level !== "full") {
     say(r.level === "info" ? `pedal      ${r.info.identity} ${r.info.version} on "${r.info.port}": answers MIDI, no log channel`
       : r.level === "identity" ? `pedal      ${r.id.text} on "${r.port}": ${IS_ALT(r.product) ? `${r.product.name} ${r.product.version}, an alternative firmware` : "identity only"}` : r.level === "silent" ? `pedal      "${r.port}" is there, nothing answers` : "pedal      no MIDI port");

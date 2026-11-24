@@ -8,6 +8,10 @@
 #define FELUCCA_UAC_48K 0                       /* 44.1 kHz only, as the stock firmware: no resampler in the interrupt */
 #define FELUCCA_UAC_OUT 1                       /* the computer's playback to the pedal's output (EP4 OUT, adaptive) */
 #define FELUCCA_UAC_MIDI_LAST 1                 /* audio control, the streams, then MIDI: the order macOS 13-15 need (usb.c) */
+#define UAC_RATE A_SR                           /* the streams' rate: the I2S's (base/audio.h) */
+#if A_SR != 44100u                              /* usb.c's packet pattern (UA_FRAC44) and playback step (uac_play) are the 44.1 kHz clock's */
+#error "USB audio at another rate needs that clock measured and usb.c's figures for it"
+#endif
 #define FELUCCA_UAC_SWITCH 1                    /* only while the setting is on (usb_uac_on) */
 #define HALF_FRAMES A_FR                        /* the frames a block feeds the record ring */
 #define UO_N 1024u                              /* the playback ring: 4 KB (the target, a block and a packet either way) */

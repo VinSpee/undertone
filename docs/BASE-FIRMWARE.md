@@ -152,7 +152,8 @@ code itself does not change. The base's audio path is in the list for every app.
 
 ## 5. Audio
 
-A block is 128 frames at 44.1 kHz. The guitar is mono: the converter's right input carries noise only. The base
+A block is 128 frames at 44.1 kHz: `A_SR` in `base/audio.h` is the one place the rate is set, and the block's budget,
+Gamut's engine and USB audio take it from there. The guitar is mono: the converter's right input carries noise only. The base
 turns each guitar block into `a_in`, and it sends `a_out` to the output through these stages: the NaN guard, the
 mutes, the change fade, the MASTER volume, the soft knee.
 
