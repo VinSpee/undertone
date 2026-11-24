@@ -47,6 +47,9 @@
 #    mode; an unknown head, an app area for the other layout, another chip or flash refused before any erase; the
 #    resume) against one simulated pedal that is in the recovery mode, in the USB boot state, or off the bus
 #    (tests/test_uboot_install.py)
+#  - undertone: tools/undertone.py's rescue, install and check on the simulated pedals, each write only after a typed yes;
+#    its guided screens (tools/undertone_screens.py) as a state machine, their keys and frames, and the guided rescue
+#    driven by key presses (tests/test_undertone.py)
 #  - rescue kit: rescue/build_kit.py gives the pinned bytes twice; an unzipped kit's own files restore a simulated pedal
 #    on a V20, a V22 and a V23 flash head, and refuse the file of the other head (tests/test_rescue_kit.py)
 #  - hosted simulator: tools/sim.mjs driven over HTTP (controls, held buttons, screen, flash file, SysEx, the Web MIDI shim)
@@ -129,6 +132,8 @@ echo "== recovery-mode check (tools/pd40_install.py: the pedal's own check of an
 python3 tests/test_pd40_install.py ${OP_BUILT:+--built}
 echo "== install through the USB boot state (tools/uboot_install.py: Gamut and the way back, on a simulated pedal of each flash layout)"
 python3 tests/test_uboot_install.py ${OP_BUILT:+--built}
+echo "== undertone (tools/undertone.py and its guided screens: rescue, install and check on simulated pedals, keys, frames)"
+python3 tests/test_undertone.py
 echo "== rescue kit (rescue/build_kit.py: the pinned bytes; the unzipped kit on a simulated V20, V22 and V23 pedal)"
 python3 tests/test_rescue_kit.py
 echo "== hosted simulator (tools/sim.mjs)"

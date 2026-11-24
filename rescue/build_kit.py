@@ -26,20 +26,27 @@ from head_fingerprint import OFFICIAL  # noqa: E402
 TOP = "OpenPocket-rescue-kit"                  # the folder in the zip: the guides name it, so it never changes
 STAMP = (2026, 11, 20, 0, 0, 0)
 LF, CRLF = b"\n", b"\r\n"
-# name in the kit -> (source, line ending); Windows opens the .bat and .txt files
+# name in the kit -> (source, line ending); Windows opens the .bat, .cmd and .txt files
 FILES = {
     "README.txt": (HERE / "kit/README.txt", CRLF),
+    "undertone": (REPO / "undertone", LF),
+    "undertone.cmd": (REPO / "undertone.cmd", CRLF),
     "RESCUE.bat": (REPO / "RESCUE.bat", CRLF),
     "extract-flash.bat": (HERE / "kit/extract-flash.bat", CRLF),
     "fingerprint.bat": (HERE / "kit/fingerprint.bat", CRLF),
     "LICENSE.txt": (REPO / "LICENSE", LF),
+    "tools/undertone.py": (REPO / "tools/undertone.py", LF),
+    "tools/undertone_screens.py": (REPO / "tools/undertone_screens.py", LF),
     "tools/uboot_rescue.py": (REPO / "tools/uboot_rescue.py", LF),
+    "tools/uboot_install.py": (REPO / "tools/uboot_install.py", LF),
+    "tools/pd40_install.py": (REPO / "tools/pd40_install.py", LF),
     "tools/pocketx_fw.py": (REPO / "tools/pocketx_fw.py", LF),
     "tools/pd40_recovery.py": (REPO / "tools/pd40_recovery.py", LF),
     "tools/extract_flash.py": (HERE / "kit/tools/extract_flash.py", LF),
     "tools/head_fingerprint.py": (HERE / "kit/tools/head_fingerprint.py", LF),
     "firmware/README.txt": (HERE / "kit/firmware/README.txt", CRLF),
 }
+EXECUTABLE = {"undertone"}                      # the launcher a Mac or Linux user types: rwxr-xr-x in the zip
 
 
 def version():
@@ -75,7 +82,7 @@ def build(out, official=None):
     with zipfile.ZipFile(path, "w", zipfile.ZIP_STORED) as z:
         for name, data in contents(official).items():
             info = zipfile.ZipInfo(f"{TOP}/{name}", STAMP)
-            info.external_attr = 0o644 << 16
+            info.external_attr = (0o755 if name in EXECUTABLE else 0o644) << 16
             info.create_system = 3
             z.writestr(info, data)
     digest = hashlib.sha256(path.read_bytes()).hexdigest()

@@ -240,13 +240,14 @@ sim.stdin.end(); sim = null; simLog.length = 0; buf = "";
     "rescue guide: the three paths, each with its file");
   const steps = (id) => page.$$eval(`#${id} + ol li, #${id} + p + ol li`, (li) => li.map((e) => e.textContent));
   const mac = await steps("rescue-mac"), win = await steps("rescue-windows");
-  ok(mac.some((s) => /brew install libusb/.test(s)) && mac.some((s) => /sudo python3 tools\/uboot_rescue\.py --package firmware\/BlackBox_023\.fwsc/.test(s)) &&
-     mac.some((s) => /--write --package firmware\/BlackBox_023\.fwsc/.test(s)), "rescue guide, Mac: libusb once, the read-only check, then the write");
-  ok(win.some((s) => /python\.org/.test(s)) && win.some((s) => /Run as administrator.*not PowerShell/.test(s)) && win.some((s) => /^Unplug the pedal\.$/.test(s)) && win.some((s) => /RESCUE\.bat --package firmware\\BlackBox_023\.fwsc/.test(s)) &&
-     win.some((s) => /RESCUE\.bat --write --package firmware\\BlackBox_023\.fwsc/.test(s)) && /not been tested on a real pedal/.test(await page.textContent("#rescueguide .warnbox")),
-    "rescue guide, Windows: Python once, an administrator Command Prompt, the check, then the write; said to be untested");
+  ok(mac.some((s) => /brew install libusb/.test(s)) && mac.some((s) => /Start undertone.*\.\/undertone/.test(s)) &&
+     mac.some((s) => /checks the pedal and saves a backup.*asks before it writes/.test(s)), "rescue guide, Mac: libusb once, then ./undertone: the check, then the write after a yes");
+  ok(win.some((s) => /python\.org/.test(s)) && win.some((s) => /Run as administrator.*not PowerShell/.test(s)) && win.some((s) => /^Unplug the pedal\.$/.test(s)) && win.some((s) => /^Start undertone: undertone/.test(s)) &&
+     win.some((s) => /checks the pedal and saves a backup.*asks before it writes/.test(s)) && /not been tested on a real pedal/.test(await page.textContent("#rescueguide .warnbox")),
+    "rescue guide, Windows: Python once, an administrator Command Prompt, then undertone: the check, then the write after a yes; said to be untested");
+  ok(/tools\/uboot_rescue\.py/.test(await page.textContent("#rescue-hood")), "rescue guide: says which tool undertone runs");
   ok(await page.getAttribute("#rescueguide a[href^='https://github.com/VinSpee/undertone/blob/main/docs/RESCUE.md#quick-start']", "href") !== null, "rescue guide: links the rendered full guide (RESCUE.md on GitHub)");
-  ok(await page.$$eval("#rescueguide .cmd", (c) => c.length === 6 && c.every((e) => getComputedStyle(e.querySelector("pre")).overflowWrap === "normal" && e.querySelector("button.copy"))),
+  ok(await page.$$eval("#rescueguide .cmd", (c) => c.length === 4 && c.every((e) => getComputedStyle(e.querySelector("pre")).overflowWrap === "normal" && e.querySelector("button.copy"))),
     "rescue guide: every command is a block of its own, broken only at spaces, with a copy button");
   await page.screenshot({ path: join(OUT, "page_4b_rescue_card.png"), fullPage: true });
   await page.setViewportSize({ width: 360, height: 800 });

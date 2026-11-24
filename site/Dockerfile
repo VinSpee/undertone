@@ -11,8 +11,8 @@ FROM caddy:2.11.9-alpine@sha256:003a97808e781aa9f7e75cc2f43d34d461099031faf5e20f
 # against its pin, rescue/kit.sha256: the build stops when the kit is not the pinned bytes.
 FROM python:3.13.18-alpine@sha256:9ef1a599f863231c3d91e941389bfdc4a2d6070557243d54df1a4e57015b960e AS kit
 COPY rescue/ /src/rescue/
-COPY tools/uboot_rescue.py tools/pocketx_fw.py tools/pd40_recovery.py /src/tools/
-COPY RESCUE.bat LICENSE /src/
+COPY tools/undertone.py tools/undertone_screens.py tools/uboot_rescue.py tools/uboot_install.py tools/pd40_install.py tools/pocketx_fw.py tools/pd40_recovery.py /src/tools/
+COPY undertone undertone.cmd RESCUE.bat LICENSE /src/
 RUN python3 /src/rescue/build_kit.py /kit && cd /kit && sha256sum -c /src/rescue/kit.sha256
 
 # The release to serve: the one site/RELEASE pins, with site/release.sha256; or, when it says latest, the newest

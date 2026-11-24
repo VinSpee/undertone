@@ -12,8 +12,10 @@ The zip a person downloads to restore a BlackBox that no longer starts. The guid
 | `VERSION` | The kit's number. It is in the zip's name and in the kit's `README.txt` |
 | `kit.sha256` | The pin: the SHA-256 and the name of the kit this tree builds |
 
-The rescue tool itself is not copied here. The build takes `RESCUE.bat`, `tools/uboot_rescue.py`, `tools/pocketx_fw.py`,
-`tools/pd40_recovery.py` and `LICENSE` from the repository.
+The rescue tool itself is not copied here. The build takes the `undertone` command (`undertone`, `undertone.cmd`,
+`tools/undertone.py`, `tools/undertone_screens.py`), `RESCUE.bat`, `tools/uboot_rescue.py`, `tools/uboot_install.py`,
+`tools/pd40_install.py`, `tools/pocketx_fw.py`, `tools/pd40_recovery.py` and `LICENSE` from the repository. It writes
+the kit's number into `tools/undertone.py`, and `undertone` is the one file the zip marks as a program (mode 755).
 
 ## Building
 
@@ -62,8 +64,8 @@ python3 tests/test_rescue_kit.py          # part of tests/run_tests.sh
 python3 tests/test_rescue_kit.py DIR      # the same with the full kit and M-VAVE's real packages from DIR
 ```
 
-The test unzips the kit and runs the commands of the guide with the kit's own `tools/uboot_rescue.py` against the
-simulated pedal of `tests/uboot_sim.py`. Only the USB transport and JieLi's loader are replaced. It covers a pedal on
+The test unzips the kit and runs the commands of the guide with the kit's own `tools/uboot_rescue.py` and
+`tools/undertone.py` against the simulated pedal of `tests/uboot_sim.py`. Only the USB transport and JieLi's loader are replaced. It covers a pedal on
 a V20, a V22 and a V23 flash head: the read-only run, the restore, the refusal of the other path's file, the `--image`
 route, the two helpers, and the recovery helper's probe and leave against the simulated recovery mode of
 `tests/recovery_sim.py`. Without `DIR` the firmware files are packages built by the test to the two layouts

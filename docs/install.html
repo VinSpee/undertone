@@ -216,53 +216,48 @@ code{font:500 14px var(--mono);background:var(--ink);color:var(--lime);padding:1
     <div class="row"><a class="go" id="kit" hidden></a></div>
     <p class="note" id="kitinfo" hidden><span id="kitfw"></span> SHA-256: <code id="kitsha"></code></p>
     <p class="note" id="kitnone" hidden><span data-t="kitnone">The rescue kit is not on this copy of the page. How to get or build it:</span> <a href="https://github.com/VinSpee/undertone/blob/main/docs/RESCUE.md#the-rescue-kit">the rescue guide</a></p>
-    <p class="note warnbox" data-t="rescuev22">After the rescue of a pedal that ran M-VAVE V22 or V23, do not install Gamut or PALETTE on it. Installing writes over the end of the V22/V23 boot loader, and the pedal goes dark again. This installer refuses such a pedal and writes nothing, but older installers do not. Gamut is installed on such a pedal from a computer's Terminal instead, with <code>tools/uboot_install.py</code> (see "Gamut on a BlackBox with V22 or V23" in the rescue guide).</p>
+    <p class="note warnbox" data-t="rescuev22">After the rescue of a pedal that ran M-VAVE V22 or V23, do not install Gamut or PALETTE on it. Installing writes over the end of the V22/V23 boot loader, and the pedal goes dark again. This installer refuses such a pedal and writes nothing, but older installers do not. Gamut is installed on such a pedal from a computer's Terminal instead, with <code>undertone install</code> from the Undertone repository (see "Gamut on a BlackBox with V22 or V23" in the rescue guide).</p>
     <details class="guide" id="rescueguide">
       <summary>How to run the rescue on your computer</summary>
-      <p class="note">Unzip the kit. It makes one folder, <code>OpenPocket-rescue-kit</code>. The tool writes M-VAVE's official firmware back, and the firmware file must match the firmware the pedal had. The first run only checks the pedal and saves a backup. Nothing is written until the second run.</p>
+      <p class="note">Unzip the kit. It makes one folder, <code>OpenPocket-rescue-kit</code>. Its command, <code>undertone</code>, writes M-VAVE's official firmware back, and the firmware file must match the firmware the pedal had. It checks the pedal and saves a backup first, and writes nothing until you say yes.</p>
       <ul class="note" id="rescue-paths">
         <li><strong>Path A.</strong> The pedal had M-VAVE V16, V17 or V20, and never V22 or V23. File: <code>BlackBox_020.fwsc</code>.</li>
         <li><strong>Path B.</strong> The pedal had M-VAVE V22 or V23 at any time, or you are not sure. File: <code>BlackBox_023.fwsc</code>.</li>
         <li><strong>Path C.</strong> Both files are refused. Stop, keep the backup, and do not try other files.</li>
       </ul>
-      <p class="note">The file goes in the kit's <code>firmware</code> folder. If that folder holds no <code>.fwsc</code> file, its <code>README.txt</code> says where to get the official file and what to call it. The lines below are for path B. On path A, type <code>BlackBox_020.fwsc</code> in place of <code>BlackBox_023.fwsc</code>.</p>
+      <p class="note">The file goes in the kit's <code>firmware</code> folder; put both there if you are not sure. <code>undertone</code> reads the pedal and uses the file that matches it, and says which file the pedal needs when none does. If the folder holds no <code>.fwsc</code> file, its <code>README.txt</code> says where to get the official file and what to call it.</p>
       <h3 id="rescue-mac">On a Mac</h3>
       <ol class="note">
         <li>Once: install Homebrew from <a href="https://brew.sh">brew.sh</a> and follow the "Next steps" it prints.</li>
         <li>Once: in Terminal, install libusb. Type this and press Enter: <div class="cmd"><pre><code><span class="t">brew</span> <span class="t">install</span> <span class="t">libusb</span></code></pre><button type="button" class="copy">Copy</button></div></li>
         <li>Unplug the pedal.</li>
         <li>In Terminal, type <code>cd</code> and a space, drag the <code>OpenPocket-rescue-kit</code> folder onto the Terminal window, and press Enter.</li>
-        <li>Start the read-only check. Type this, press Enter, then type your Mac password (nothing shows while you type): <div class="cmd"><pre><code><span class="t">sudo</span> <span class="t">python3</span> <span class="t">tools/uboot_rescue.py</span> <span class="t">--package</span> <span class="t">firmware/BlackBox_023.fwsc</span></code></pre><button type="button" class="copy">Copy</button></div></li>
-        <li>When it says it is waiting for the pedal, plug the pedal straight into the Mac (no hub).</li>
-        <li>Read the result. The check passed if you see these two lines (the second one goes on): <pre class="out"><span class="t">head</span> <span class="t">[0,</span> <span class="t">0x4000)</span> <span class="t">matches</span> <span class="t">the</span> <span class="t">image</span>
-<span class="t">Read-only</span> <span class="t">run</span> <span class="t">finished,</span> <span class="t">nothing</span> <span class="t">was</span> <span class="t">written</span> <span class="t">…</span></pre> Keep the backup it saved in the <code>OpenPocket-rescue</code> folder in your home folder.</li>
-        <li>Unplug the pedal, then start the restore: <div class="cmd"><pre><code><span class="t">sudo</span> <span class="t">python3</span> <span class="t">tools/uboot_rescue.py</span> <span class="t">--write</span> <span class="t">--package</span> <span class="t">firmware/BlackBox_023.fwsc</span></code></pre><button type="button" class="copy">Copy</button></div></li>
-        <li>When it says it is waiting for the pedal, plug the pedal in.</li>
-        <li>When it says <code>Done</code>, unplug the cable, switch the pedal off, wait 5 seconds and switch it on.</li>
+        <li>Start undertone. Type this, press Enter, then type your Mac password when it asks (nothing shows while you type): <div class="cmd"><pre><code><span class="t">./undertone</span></code></pre><button type="button" class="copy">Copy</button></div></li>
+        <li>Choose "fix a pedal that will not start". When it says it is looking for your pedal, plug the pedal straight into the Mac (no hub).</li>
+        <li>It checks the pedal and saves a backup in the <code>OpenPocket-rescue</code> folder in your home folder. Keep it. Then it asks before it writes anything: choose Yes, and plug the pedal in again when it is looking for it.</li>
+        <li>When it says "your pedal is fixed", unplug the cable, switch the pedal off, wait 5 seconds and switch it on.</li>
       </ol>
       <h3 id="rescue-windows">On Windows</h3>
       <p class="note warnbox">The Windows rescue has not been tested on a real pedal yet. Please report on GitHub whether it works for you.</p>
       <ol class="note">
         <li>Once: install Python 3 from <a href="https://www.python.org/downloads/">python.org</a> and tick "Add python.exe to PATH" on its first screen. No driver is needed.</li>
-        <li>Open the <code>OpenPocket-rescue-kit</code> folder until you see <code>RESCUE.bat</code>. Click the address bar at the top of the window and copy the location (Ctrl+C).</li>
+        <li>Open the <code>OpenPocket-rescue-kit</code> folder until you see <code>undertone.cmd</code>. Click the address bar at the top of the window and copy the location (Ctrl+C).</li>
         <li>Press the Windows key, type <code>cmd</code>, right-click "Command Prompt" and choose "Run as administrator". Use Command Prompt, not PowerShell.</li>
         <li>Go to the kit's folder. Type this line with the location you copied pasted between the quotes (right-click pastes), and press Enter: <div class="cmd"><pre><code><span class="t">cd</span> <span class="t">/d</span> <span class="t">"C:\path\to\OpenPocket-rescue-kit"</span></code></pre><button type="button" class="copy">Copy</button></div></li>
         <li>Unplug the pedal.</li>
-        <li>Start the read-only check: <div class="cmd"><pre><code><span class="t">RESCUE.bat</span> <span class="t">--package</span> <span class="t">firmware\BlackBox_023.fwsc</span></code></pre><button type="button" class="copy">Copy</button></div></li>
-        <li>When it says it is waiting for the pedal, plug the pedal straight into the PC (no hub). If Windows offers to format a drive, click Cancel. Never click Format.</li>
-        <li>Read the result. The check passed if you see these two lines (the second one goes on): <pre class="out"><span class="t">head</span> <span class="t">[0,</span> <span class="t">0x4000)</span> <span class="t">matches</span> <span class="t">the</span> <span class="t">image</span>
-<span class="t">Read-only</span> <span class="t">run</span> <span class="t">finished,</span> <span class="t">nothing</span> <span class="t">was</span> <span class="t">written</span> <span class="t">…</span></pre> Keep the backup it saved in the <code>OpenPocket-rescue</code> folder in your user folder.</li>
-        <li>Unplug the pedal, then start the restore: <div class="cmd"><pre><code><span class="t">RESCUE.bat</span> <span class="t">--write</span> <span class="t">--package</span> <span class="t">firmware\BlackBox_023.fwsc</span></code></pre><button type="button" class="copy">Copy</button></div></li>
-        <li>When it says it is waiting for the pedal, plug the pedal in.</li>
-        <li>When it says <code>Done</code>, unplug the cable, switch the pedal off, wait 5 seconds and switch it on.</li>
+        <li>Start undertone: <div class="cmd"><pre><code><span class="t">undertone</span></code></pre><button type="button" class="copy">Copy</button></div></li>
+        <li>Choose "fix a pedal that will not start". When it says it is looking for your pedal, plug the pedal straight into the PC (no hub). If Windows offers to format a drive, click Cancel. Never click Format.</li>
+        <li>It checks the pedal and saves a backup in the <code>OpenPocket-rescue</code> folder in your user folder. Keep it. Then it asks before it writes anything: choose Yes, and plug the pedal in again when it is looking for it.</li>
+        <li>When it says "your pedal is fixed", unplug the cable, switch the pedal off, wait 5 seconds and switch it on.</li>
       </ol>
       <h3>If it does not work</h3>
       <ul class="note">
-        <li><code>REFUSED</code>: the file is for another firmware than the pedal had. Nothing was written. Unplug the pedal and run the check with the other path's file. If both files are refused, you are on path C: stop.</li>
+        <li>"One more file needed": the pedal had another firmware than the files in the folder. Nothing was written. Put the file it names in the <code>firmware</code> folder and start undertone again. "This pedal needs a closer look" is path C: stop.</li>
         <li><code>ERROR</code> about the file: it is damaged or it is not a BlackBox firmware file. Nothing was sent to the pedal.</li>
-        <li>It stops in the middle or says it gave up: run the same line again. It continues where it stopped.</li>
+        <li>It stops in the middle or says it gave up: start it again. It continues where it stopped.</li>
         <li>The pedal still does not start: <a href="https://github.com/VinSpee/undertone/issues">open an issue on GitHub</a> with the text from the window, and keep the backup file.</li>
       </ul>
+      <p class="note" id="rescue-hood">Under the hood, <code>undertone</code> runs the kit's rescue tool, <code>tools/uboot_rescue.py</code>, unchanged. <code>undertone rescue</code> does the same as plain lines, for a script; the two lines of earlier kits (<code>RESCUE.bat</code> or <code>sudo python3 tools/uboot_rescue.py</code>, with <code>--package</code> and then <code>--write</code>) still work.</p>
       <p class="note">The full guide, with every safety check: <a href="https://github.com/VinSpee/undertone/blob/main/docs/RESCUE.md#quick-start-rescue-a-blackbox-that-will-not-boot">RESCUE.md</a>.</p>
     </details>
   </section>

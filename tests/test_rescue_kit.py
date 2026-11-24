@@ -9,7 +9,7 @@ tools/uboot_rescue.py main(). Only the USB transport and JieLi's loader are repl
 files are packages built here to the two layouts (tests/fw_layouts.py). With DIR, a folder that holds M-VAVE's official
 V20, V22 and V23 packages, the full kit is built and its real files are used.
 """
-import contextlib, hashlib, io, json, os, random, subprocess, sys, tempfile, unittest, zipfile
+import contextlib, hashlib, importlib.util, io, json, os, random, subprocess, sys, tempfile, unittest, zipfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -153,19 +153,25 @@ class Kit(unittest.TestCase):
         with zipfile.ZipFile(plain) as z:
             names = z.namelist()
             self.assertEqual(names, [f"OpenPocket-rescue-kit/{n}" for n in (
-                "README.txt", "RESCUE.bat", "extract-flash.bat", "fingerprint.bat", "LICENSE.txt", "tools/uboot_rescue.py",
-                "tools/pocketx_fw.py", "tools/pd40_recovery.py", "tools/extract_flash.py", "tools/head_fingerprint.py", "firmware/README.txt",
-                "SHA256SUMS.txt")])
+                "README.txt", "undertone", "undertone.cmd", "RESCUE.bat", "extract-flash.bat", "fingerprint.bat",
+                "LICENSE.txt", "tools/undertone.py", "tools/undertone_screens.py", "tools/uboot_rescue.py",
+                "tools/uboot_install.py", "tools/pd40_install.py", "tools/pocketx_fw.py", "tools/pd40_recovery.py",
+                "tools/extract_flash.py", "tools/head_fingerprint.py", "firmware/README.txt", "SHA256SUMS.txt")])
+            modes = {i.filename.split("/", 1)[1]: i.external_attr >> 16 for i in z.infolist()}
+            self.assertEqual({n for n, m in modes.items() if m == 0o755}, {"undertone"}, "only the launcher runs as is")
             self.assertTrue(all(i.compress_type == zipfile.ZIP_STORED and i.date_time == build_kit.STAMP for i in z.infolist()))
             for line in z.read("OpenPocket-rescue-kit/SHA256SUMS.txt").decode().splitlines():
                 digest, name = line.split("  ")
                 self.assertEqual(hashlib.sha256(z.read(f"OpenPocket-rescue-kit/{name}")).hexdigest(), digest, name)
-            for name in ("RESCUE.bat", "tools/uboot_rescue.py", "tools/pocketx_fw.py", "tools/pd40_recovery.py"):
+            for name in ("RESCUE.bat", "undertone.cmd", "tools/uboot_rescue.py", "tools/uboot_install.py",
+                         "tools/pd40_install.py", "tools/pocketx_fw.py", "tools/pd40_recovery.py",
+                         "tools/undertone_screens.py"):
                 self.assertTrue(z.read(f"OpenPocket-rescue-kit/{name}") == (ROOT / name).read_bytes(), name)
             for name, (_, eol) in build_kit.FILES.items():
                 data = z.read(f"OpenPocket-rescue-kit/{name}")
                 self.assertEqual(data.count(b"\r\n"), data.count(b"\n") if eol == b"\r\n" else 0, name)
             self.assertIn(f"Kit version {build_kit.version()}\r\n".encode(), z.read(names[0]))
+            self.assertIn(f'KIT = "{build_kit.version()}"'.encode(), z.read("OpenPocket-rescue-kit/tools/undertone.py"))
 
     def test_the_full_kit_needs_all_three_official_files(self):
         with self.assertRaises(SystemExit) as stop:
@@ -208,6 +214,30 @@ class Kit(unittest.TestCase):
         r = self.helper("tools/extract_flash.py", str(self.home / "damaged.fwsc"))
         self.assertEqual(r.returncode, 1)
         self.assertIn("CRC check failed", r.stderr)
+
+    # ---- the one command
+    def test_undertone_rescue_checks_then_restores_after_yes(self):
+        """The kit's own undertone: the check, the typed yes, the restore with the file that matches the pedal."""
+        spec = importlib.util.spec_from_file_location("kit_undertone", KIT / "tools" / "undertone.py")
+        undertone = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(undertone)
+        self.assertTrue(undertone.ur is ur and undertone.version() == str(build_kit.version()), "not the kit's tool")
+        before = pedal("023")
+        sim = uboot_sim.SimPedal(before, LOADER)
+        self.addCleanup(setattr, undertone, "rescue_transport", undertone.rescue_transport)
+        undertone.rescue_transport = lambda: SimUsb(sim)
+        a = undertone.parser().parse_args(["rescue"])
+        a.opts = undertone.Options(str(WORK / "loader.bin"), str(self.backups))
+        shown = io.StringIO()
+        rc = undertone.cmd_rescue(a, undertone.Out(shown), lambda prompt: "yes")
+        self.assertEqual(rc, 0, shown.getvalue())
+        self.assertIn("The pedal matches BlackBox_023.fwsc", shown.getvalue())
+        self.assertTrue(bytes(sim.flash[:len(IMAGE["023"])]) == IMAGE["023"])
+        self.assertTrue([b.read_bytes() for b in self.backups.glob("blackbox-*.dump.bin")][-1] == before, "the backup")
+
+    def test_the_launcher_starts_the_kits_undertone(self):
+        r = subprocess.run(["sh", str(KIT / "undertone"), "version"], capture_output=True, text=True)
+        self.assertEqual((r.returncode, r.stdout), (0, f"undertone, rescue kit {build_kit.version()}\n"), r.stderr)
 
     # ---- a pedal on M-VAVE's V22 or V23 boot loader, in its recovery mode
     def test_the_recovery_helper_probes_and_leaves_to_the_usb_boot_state(self):

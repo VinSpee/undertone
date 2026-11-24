@@ -19,7 +19,8 @@ second run.
 > simulation only: the kit's files were run against a simulated pedal with M-VAVE's real V22 and V23 packages, and the
 > pedal ended on the exact official image. This matches one community report of a real pedal restored this way
 > ([issue 31](https://github.com/isod89/openpocket/issues/31)). The Undertone team has not run that case on a real
-> pedal, and has not run the Windows launcher on a real pedal.
+> pedal, and has not run the Windows launcher on a real pedal. `undertone`, the command that now runs the tool, has
+> been run against simulated pedals only, and its Windows launcher not at all.
 
 ### 1. Find your path
 
@@ -33,9 +34,10 @@ updater after July 2026, or if it came with V22 or V23.
 | B | V22 or V23 at any time, or you are not sure | `BlackBox_023.fwsc` | Official V23 |
 | C | Something else: both files are refused | None | Stop. Keep the backup |
 
-The check in step 4 is the test, and it writes nothing. With the right file it prints
-`head [0, 0x4000) matches the image`. With the wrong file it ends with `REFUSED`. Then run the check again with the
-other path's file. If both files are refused, you are on path C: stop, do not try other files, and keep the backup.
+The check in step 4 is the test, and it writes nothing. `undertone` compares the pedal with every file in the
+`firmware` folder and uses the one that matches, so with both files there you do not have to choose. With one file, it
+says when the pedal needs the other one. If no official file matches, you are on path C: stop, do not try other files,
+and keep the backup.
 
 V22 and V23 are one group. `BlackBox_022.fwsc` works the same way on either pedal, and the pedal then ends on V22.
 
@@ -59,27 +61,45 @@ V22 and V23 are one group. `BlackBox_022.fwsc` works the same way on either peda
 
 **Windows.** Press the Windows key, type `cmd`, right-click "Command Prompt" and choose "Run as administrator". Click
 Yes. Use Command Prompt, not PowerShell: the lines below do not work in PowerShell. Open the `OpenPocket-rescue-kit`
-folder in File Explorer until you see `RESCUE.bat`, click the address bar and copy the location. In the prompt type
+folder in File Explorer until you see `undertone.cmd`, click the address bar and copy the location. In the prompt type
 `cd /d "`, right-click to paste, type `"` and press Enter.
 
 **Mac.** Open Terminal. Type `cd ` (with a space after it), drag the `OpenPocket-rescue-kit` folder onto the Terminal
 window, and press Enter.
 
-### 4. Check and back up. Nothing is written
+### 4. Check and back up, then restore
 
-Unplug the pedal. Type the line for your path and press Enter. When it says it is waiting for the pedal, plug the pedal
-straight into the computer, with no hub.
+Put the firmware files you have in the kit's `firmware` folder: the file of your path, or both. Unplug the pedal and
+type the line for your computer:
 
-| | Path B: V22 or V23, or not sure | Path A: V16, V17 or V20 |
-| --- | --- | --- |
-| Windows | `RESCUE.bat --package firmware\BlackBox_023.fwsc` | `RESCUE.bat --package firmware\BlackBox_020.fwsc` |
-| Mac | `sudo python3 tools/uboot_rescue.py --package firmware/BlackBox_023.fwsc` | `sudo python3 tools/uboot_rescue.py --package firmware/BlackBox_020.fwsc` |
+| Mac | Windows |
+| --- | --- |
+| `./undertone` | `undertone` |
 
-On Windows, if it offers to format a drive, click Cancel. Never click Format. On a Mac, type your password when asked
-(nothing shows while you type). If the Mac offers to install developer tools, click Install, then type the line again.
-The first run downloads one small loader file, so it needs internet once.
+On a Mac it first asks for your password (nothing shows while you type). If the Mac offers to install developer tools,
+click Install, then type the line again. The first run downloads one small loader file, so it needs internet once.
 
-The right file ends like this. The times, the count and the backup's name differ on your pedal:
+`undertone` shows one short screen at a time. Move with the arrow keys or a number and press Enter; Esc goes back and
+`q` quits. Choose "fix a pedal that will not start", then "start the check". When it says it is looking for your pedal,
+plug the pedal straight into the computer, with no hub. On Windows, if it offers to format a drive, click Cancel. Never
+click Format.
+
+The check writes nothing. It reads the whole pedal, saves a backup, and compares the pedal with each file in the
+`firmware` folder. With the file that matches it says "your pedal can be fixed". Then it asks: "This replaces the
+software on your pedal. A copy is saved first. Continue?" The answer is No until you choose Yes. After Yes, unplug the
+pedal and plug it in again when it looks for your pedal. Do not touch the cable while it writes. It ends on "your pedal
+is fixed" and shows where the backup is. If it stops in the middle, run it again: it continues where it stopped.
+
+If no file matches, nothing was written: it says which M-VAVE file your pedal needs (put it in the `firmware` folder
+and run it again), or that no official file fits the pedal. That is path C: stop and keep the backup.
+
+The backup is in the `OpenPocket-rescue` folder of your home (user) folder, beside a log of the tool's own lines
+(`undertone-<time>.log`). Keep the backup: it is the only copy of what the pedal held before the rescue.
+
+**Without the screens.** `./undertone rescue` (Windows: `undertone rescue`) does the same as plain lines: the tool's
+own output, then a question that needs you to type `yes`. `./undertone check` only reads the pedal, saves a backup and
+says which firmware it had. The check part ends like this with the right file (the times, the count and the backup's
+name differ on your pedal):
 
 ```
 [   0.0s] backup saved: ...OpenPocket-rescue/blackbox-20261119-230057.dump.bin
@@ -88,31 +108,24 @@ The right file ends like this. The times, the count and the backup's name differ
 [   0.0s] run-app sent: the pedal restarts
 
 Read-only run finished, nothing was written. 155 sectors differ from the image. Backup: ...
+
+The pedal matches BlackBox_023.fwsc. The restore puts M-VAVE's official V23 back.
 ```
 
-The wrong file ends like this instead. The pedal is not harmed. Unplug it and run the other path's line:
+With the wrong file it ends with `REFUSED: the flash head [0, 0x4000) is not the image's head: this package belongs to
+another layout; nothing was written`, and then says which file the pedal needs. The pedal is not harmed.
 
-```
-REFUSED: the flash head [0, 0x4000) is not the image's head: this package belongs to another layout; nothing was written
-```
+**Under the hood.** `undertone` runs `tools/uboot_rescue.py`, unchanged, with every check and refusal of that tool.
+The lines of earlier kits still work and do the same in two runs:
 
-The backup is in the `OpenPocket-rescue` folder of your home (user) folder. Keep it: it is the only copy of what the
-pedal held before the rescue.
-
-### 5. Restore
-
-Only after the check printed `head [0, 0x4000) matches the image`. Unplug the pedal, type the line with the same file,
-and plug the pedal in when it is waiting. Do not touch the cable while it writes.
-
-| | Path B | Path A |
+| | Check (writes nothing) | Restore, after the check passed |
 | --- | --- | --- |
-| Windows | `RESCUE.bat --write --package firmware\BlackBox_023.fwsc` | `RESCUE.bat --write --package firmware\BlackBox_020.fwsc` |
-| Mac | `sudo python3 tools/uboot_rescue.py --write --package firmware/BlackBox_023.fwsc` | `sudo python3 tools/uboot_rescue.py --write --package firmware/BlackBox_020.fwsc` |
+| Windows | `RESCUE.bat --package firmware\BlackBox_023.fwsc` | `RESCUE.bat --write --package firmware\BlackBox_023.fwsc` |
+| Mac | `sudo python3 tools/uboot_rescue.py --package firmware/BlackBox_023.fwsc` | `sudo python3 tools/uboot_rescue.py --write --package firmware/BlackBox_023.fwsc` |
 
-It shows the same lines as the check, counts the sectors it writes, and ends with `Done`. If it stops in the middle,
-run the same line again: it continues where it stopped.
+On path A, type `BlackBox_020.fwsc` in place of `BlackBox_023.fwsc`.
 
-### 6. Restart
+### 5. Restart
 
 Unplug the cable. Switch the pedal off, wait 5 seconds, switch it on. The pedal should start on M-VAVE's official
 firmware: V20 after path A, V23 after path B. Settings saved on the pedal may be reset. The backup holds what was there
@@ -126,13 +139,14 @@ warning at the top of this page. The install for such a pedal is a command:
 
 | What you see | What to do |
 | --- | --- |
-| `REFUSED`, one file | The file is for another firmware than your pedal had. Nothing was written. Run the check with the other path's file. |
-| `REFUSED`, both files (path C) | Stop. Do not try other files and do not use `--write`. Keep the backup. Run the fingerprint helper below and [open an issue](https://github.com/VinSpee/undertone/issues) with its output and the window's text. The other route is the SD-card recovery in `flash/`, which needs an ESP32-S3 board. |
+| `REFUSED`, or "one more file needed" | The file is for another firmware than your pedal had. Nothing was written. Put the file it names in the `firmware` folder and run it again. |
+| `REFUSED` with both files, or "this pedal needs a closer look" (path C) | Stop. Do not try other files and do not use `--write`. Keep the backup. Run the fingerprint helper below and [open an issue](https://github.com/VinSpee/undertone/issues) with its output and the window's text. The other route is the SD-card recovery in `flash/`, which needs an ESP32-S3 board. |
 | `ERROR ... CRC check failed`, or `not a firmware package` | The firmware file is damaged or is not a BlackBox firmware file. Nothing was sent to the pedal. Get the file again. |
-| `ERROR ... not found` | The firmware file is not in the kit's `firmware` folder under the name in the line you typed. |
+| `ERROR ... not found` | The firmware file is not in the kit's `firmware` folder under the name in the table of step 1. |
 | "not recognized", or `cd /d` fails | The window is PowerShell. Open Command Prompt as in step 3. |
+| "needs root", "needs your password" or "Run as administrator" | `undertone` was started without the rights to reach the pedal, and sent it nothing. On a Mac or Linux, start it as `./undertone` in a terminal and type your password when asked (or put `sudo` in front). On Windows, open the Command Prompt as administrator as in step 3. |
 | It stops in the middle, or says it gave up | Run the same line again. It continues where it stopped. |
-| No screen after step 6 | Keep the backup and [open an issue](https://github.com/VinSpee/undertone/issues) with the window's text. |
+| No screen after step 5 | Keep the backup and [open an issue](https://github.com/VinSpee/undertone/issues) with the window's text. |
 
 [Other symptoms](#other-symptoms), near the end of this page, lists more.
 
@@ -143,7 +157,9 @@ The kit is one zip that unpacks to one folder, `OpenPocket-rescue-kit`. Its numb
 
 | File | What it is |
 | --- | --- |
+| `undertone`, `undertone.cmd`, `tools/undertone.py`, `tools/undertone_screens.py` | The one command, for Mac and Linux and for Windows: its screens, and `rescue`, `install` and `check`. It runs the tools below and changes nothing in what they do |
 | `RESCUE.bat`, `tools/uboot_rescue.py`, `tools/pocketx_fw.py` | The rescue tool of this repository, unchanged |
+| `tools/uboot_install.py`, `tools/pd40_install.py` | The tool behind `undertone install` ([below](#gamut-on-a-blackbox-with-v22-or-v23)) and the checks it uses. The kit holds no Gamut file, so from the kit it only puts M-VAVE's firmware or a backup back |
 | `tools/pd40_recovery.py` | Reads M-VAVE's recovery mode on a V22 or V23 pedal and sends its leave to the USB boot state ([below](#a-pedal-on-m-vaves-v22-or-v23)) |
 | `fingerprint.bat`, `tools/head_fingerprint.py` | Says which firmware a backup or a firmware file belongs to |
 | `extract-flash.bat`, `tools/extract_flash.py` | Takes `flash.bin` out of a package, for `--image` |
@@ -163,10 +179,10 @@ the project's own site only and never in this repository or its releases.
 
 The fingerprint is the SHA-256 of the first `0x4000` bytes of the flash. `d540d2217091` is a V16, V17 or V20 pedal
 (path A). `ef3dfea17ea8` is a V22 or V23 pedal (path B). You need the extraction only if `--package` stops with an
-`ERROR` about the file: run steps 4 and 5 with `--image BlackBox_023-flash.bin` in place of `--package ...`.
+`ERROR` about the file: run `undertone rescue --image BlackBox_023-flash.bin` in place of the file in the `firmware` folder.
 
 **Checking the download.** The installer page shows the kit's SHA-256 beside its download button. Compare it with
-`certutil -hashfile OpenPocket-rescue-kit-6.zip SHA256` on Windows or `shasum -a 256 OpenPocket-rescue-kit-6.zip` on a
+`certutil -hashfile OpenPocket-rescue-kit-7.zip SHA256` on Windows or `shasum -a 256 OpenPocket-rescue-kit-7.zip` on a
 Mac, with your kit's number in the name.
 
 **Building it.** `node tools/op.mjs kit` (or `make kit`) writes the zip and `manifest.json` into `docs/rescue/`, where
@@ -476,6 +492,12 @@ The first run downloads JieLi's `wl82loader.bin` once and checks its SHA-256, as
 The order matters in every run: **start the command first, wait until it says it is waiting, and only then switch the
 pedal on with the three controls held.** The recovery mode ends about 4 seconds after power-on, and the USB boot state
 after it lasts only seconds while nothing talks to it.
+
+The short way is `./undertone` in the repository's folder: choose "put gamut on my pedal". Its screens draw the pedal
+with the three controls lit while it waits, do the dry run below, ask before they write, and then do the write. The
+same without the screens is `./undertone install 2>&1 | tee gamut-usb.log`: the dry run, a question that needs a typed
+`yes`, then the write, each with the key hold once it is waiting. Under the hood both run `tools/uboot_install.py` as
+below, unchanged.
 
 1. **The dry run. Nothing is written.**
 
