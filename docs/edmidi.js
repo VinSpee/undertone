@@ -2,6 +2,7 @@
 // Gamut web editor: the MIDI section. What is connected; the pedal's own Control Change numbers, named for the
 // current preset; controls learned from another MIDI device (a foot controller on this computer), which this page
 // passes on to the pedal as editor commands while it is open; and a monitor of what arrives. docs/MIDI.md, docs/pxmidi.js.
+// A Chocolate's own controls are docs/edchoc.js: it takes its messages before the learned controls do.
 
 import { app, $, h, icon, on, emit, blk, typeOf, slotName, say, confirmDialog } from "./edcore.js";
 import { sendParam, setOn, setType } from "./edsound.js";
@@ -15,6 +16,8 @@ let learnt = "";                      // what the last learning ended with, said
 let scope = "all";                    // new controls work in every preset ("all") or only in the current one ("preset")
 const log = [];                       // the monitor's lines, newest first
 const heard = new Map();              // controller input id -> its name
+let air = "";                         // a controller that is not a MIDI port: the name of a Chocolate over Web Bluetooth
+let claim = () => false;              // (from, message) -> true when another section took the message (docs/edchoc.js)
 
 function loadCfg() {
   try { const j = JSON.parse(localStorage.getItem(KEY) || "{}"); cfg = { mappings: cleanMappings(j.mappings), pc: j.pc !== false }; } catch (_) { }
@@ -22,7 +25,7 @@ function loadCfg() {
 function saveCfg() { try { localStorage.setItem(KEY, JSON.stringify(cfg)); } catch (_) { } }
 
 // ---- names ----
-function tgtName(t) {
+export function tgtName(t) {
   if (t.kind === "preset") return t.step > 0 ? "Next preset" : "Previous preset";
   const B = blk(t.b);
   if (t.kind === "on") return `${B.label} on / off`;
@@ -51,21 +54,36 @@ function listen() {
   for (const input of app.access.inputs.values()) {
     if (isPedal(input) || input.state === "disconnected") continue;
     heard.set(input.id || input.name, input.name || "MIDI device");
-    input.onmidimessage = (ev) => fromController(input, ev.data);
+    input.onmidimessage = (ev) => fromController(input.name || "Controller", ev.data);
     if (input.open) Promise.resolve(input.open()).catch(() => { });
   }
 }
-function note(from, m, meaning, kind = "") {
+export const controllerNames = () => (air ? [...heard.values(), air] : [...heard.values()]);
+// a controller that reaches the page another way than a MIDI port comes (its name) or goes (""): listed with the others
+export function setAirController(name) {
+  air = name;
+  if (app.view === "midi") { renderConn(); renderMap(); }
+}
+export function claimFirst(fn) { claim = fn; }
+export function note(from, m, meaning, kind = "") {
   const what = m.type === "cc" ? `CC ${m.cc} = ${m.value}` : m.type === "pc" ? `Program ${m.program}` : m.type;
   log.unshift({ t: new Date(), from, what, ch: m.ch, meaning, kind });
   if (log.length > 60) log.pop();
   if (app.view === "midi") renderMonitor();
 }
-function fromController(input, data) {
+// what an action of pxmidi.js action() does on the pedal
+export function run(a) {
+  if (a.do === "param") { sendParam(a.b, a.k, a.v); redrawSoon(); }
+  else if (a.do === "on") setOn(a.b, a.v);
+  else if (a.do === "type") { if (a.t !== app.st.preset.type[a.b]) setType(a.b, a.t); }
+  else if (a.do === "preset") stepPreset(a.step, { ask: false });
+}
+// one message of a controller named `from`, as a MIDI port delivers it
+export function fromController(from, data) {
   const m = decode(data);
   if (!m || m.type === "clock" || app.conn !== "ready") return;
-  const from = input.name || "Controller";
   if (m.type === "cc" && learning) { bind(m, from); return; }
+  if (claim(from, m)) return;
   if (m.type === "pc") {
     if (cfg.pc && m.program < app.slots.length) { note(from, m, `→ preset ${slotName(m.program)}`, "hit"); selectPreset(m.program, { ask: false }); }
     else note(from, m, cfg.pc ? "no such preset" : "Program Change is switched off below");
@@ -77,11 +95,7 @@ function fromController(input, data) {
   for (const map of hits) {
     const a = action(map, m.value, { on: (b) => app.st.preset.on[b], ntypes: (b) => blk(b).types.length });
     note(from, m, a ? `→ ${tgtName(map.tgt)}${a.do === "param" ? ` ${a.v}` : a.do === "on" ? (a.v ? ": on" : ": off") : ""}` : `${tgtName(map.tgt)}: the switch released, nothing to do`, a ? "hit" : "");
-    if (!a) continue;
-    if (a.do === "param") { sendParam(a.b, a.k, a.v); redrawSoon(); }
-    else if (a.do === "on") setOn(a.b, a.v);
-    else if (a.do === "type") { if (a.t !== app.st.preset.type[a.b]) setType(a.b, a.t); }
-    else if (a.do === "preset") stepPreset(a.step, { ask: false });
+    if (a) run(a);
   }
 }
 // a knob turned on the controller sends a stream: the sections redraw once per frame
@@ -150,7 +164,7 @@ function renderConn() {
   const el = $("midiconn");
   el.textContent = "";
   if (app.conn !== "ready") return;
-  const info = app.info, others = [...heard.values()];
+  const info = app.info, others = controllerNames();
   el.append(
     h("div", { class: "card-head" }, h("h2", { id: "midiconn-h", text: "Connection" })),
     h("dl", { class: "facts" },
@@ -212,7 +226,7 @@ function renderMap() {
       stepBtn(-1), stepBtn(1),
       h("label", { class: "check" }, pc, " Program Change loads presets")),
     h("p", { class: `learnstate${learning ? " on" : ""}`, id: "learnstate", role: "status", text: learning
-      ? `Waiting for a control for ${tgtName(learning)}: move a knob or press a switch on your controller${heard.size ? "" : " (none is connected yet)"}. Esc stops.` : learnt }),
+      ? `Waiting for a control for ${tgtName(learning)}: move a knob or press a switch on your controller${controllerNames().length ? "" : " (none is connected yet)"}. Esc stops.` : learnt }),
     h("div", { class: "cc-wrap" }, h("table", { class: "cc" },
       h("thead", {}, h("tr", {}, h("th", { scope: "col", text: "Block" }), h("th", { scope: "col", text: "Switch" }), h("th", { scope: "col", text: "Type" }), h("th", { scope: "col", colSpan: NPAR, text: `Settings in ${cur}` }))),
       h("tbody", {}, rows))),

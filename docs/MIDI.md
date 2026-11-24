@@ -84,7 +84,7 @@ number is unique, reserved ones are free, and a value sent by one pedal is appli
 
 ## From the web editor
 
-The editor's **MIDI** section ([`docs/editor.html`](editor.html), `docs/edmidi.js`, `docs/pxmidi.js`) does three things:
+The editor's **MIDI** section ([`docs/editor.html`](editor.html), `docs/edmidi.js`, `docs/pxmidi.js`) does four things:
 
 - **The map, named for the current preset.** The table above with each setting's name in the preset on the pedal
   (setting 1 of the AMP is MODEL), and the settings a type does not have marked.
@@ -96,8 +96,46 @@ The editor's **MIDI** section ([`docs/editor.html`](editor.html), `docs/edmidi.j
   page is open and connected: the pedal itself stores no mapping.
 - **Monitor.** What the controllers send and what it did, and the pedal's own messages (with SEND on), each named. A
   setting turned on the pedal lights its cell in the table, which is the quick way to find its number.
+- **A Chocolate foot controller.** See [below](#a-chocolate-through-the-editor).
 
 CHANNEL, SEND and CLOCK > DELAY stay on the pedal's MIDI page: the editor protocol has no command for them.
+
+### A Chocolate through the editor
+
+The **Chocolate foot controller** card (`docs/edchoc.js`, `docs/pxchoc.js`, `docs/pxble.js`) makes an M-VAVE Chocolate or
+Chocolate Plus drive the pedal through the page: the Chocolate talks to the browser over Bluetooth, and the page passes
+each press on to the pedal over USB as an editor command. It works with the normal firmware, which has no Bluetooth
+of its own, and it changes nothing in the Chocolate.
+
+- **Connect.** Press **Connect over Bluetooth** and choose the Chocolate in the browser's list (Web Bluetooth: Chrome
+  and Edge, on a computer and on Android; not Safari or Firefox, and not on an iPhone). A Chocolate Plus needs its
+  switch on **O**. A Chocolate that goes away, asleep or out of reach, is taken back by itself. A browser without Web
+  Bluetooth says so; a Chocolate paired with the computer as a Bluetooth MIDI device (on a Mac, in Audio MIDI Setup) is
+  a MIDI port and works in the card the same way.
+- **The model.** The card knows a Chocolate (`FootCtrl`) from a Chocolate Plus (`FootCtrlPlus` or `Chocolate Plus`) by
+  its name and shows that model's controls; the list at the top chooses it by hand. Each model has its own mapping.
+- **Teach.** A control does not say which one it is: only its message tells, and that depends on the mode the
+  Chocolate is in. So a control is taught by pressing it: **Teach**, then the footswitch (or the expression pedal), or
+  **Teach every control** for all of them in a row. The page also learns whether the switch sends a press and a
+  release, or one message per press. A model's own messages, where they are known, work before anything is taught.
+- **Assign.** Each footswitch, and A + B and C + D pressed together, takes one of: the next or the previous preset, one
+  preset, a block on or off, or tap tempo (two taps or more set the delay TIME, 200 ms to 2 s, as MIDI clock does). The
+  expression pedal takes any setting of any block. The defaults are DRIVE, MOD, DELAY and REVERB under A to D, and the
+  previous and the next preset under A + B and C + D.
+- **Undo.** Every change is kept in the browser at once. **Undo** takes back the last change, one after the other, and
+  **Back to the defaults** is itself undone by it.
+
+A message of the Chocolate that belongs to no control with something to do goes on as any controller's: a learned
+control takes it, and a Program Change loads a preset. The mapping lives in the browser and works while the page is
+open and connected to the pedal.
+
+The two models are data in `docs/pxchoc.js` (`MODELS`): the names, the controls, the messages they send and what they
+do by default. **Not checked on a real Chocolate:** the names both models give over Bluetooth, whether the browser's
+chooser lists them, and what their controls send. One message is from a real one: footswitch A of a Chocolate Plus
+sent CC 0 = 127 on channel 2. The first Chocolate's messages are from a player's write-up of its Manufacturer control
+mode: A to D send CC 20 to 23 (127 down, 0 up), A + B sends CC 24 = 0 and C + D CC 25 = 0. To make a Chocolate drive
+the pedal without a computer, see [tools/chocolate/README.md](../tools/chocolate/README.md) and
+[BLUETOOTH.md](BLUETOOTH.md).
 
 ## Tempo for the delay
 
@@ -192,6 +230,9 @@ Run `node tools/op.mjs test` (see [BUILDING.md](BUILDING.md)):
 - `firmware/apps/gamut/tests/uisim.c`: the MIDI page is drawn completely, the channel wraps, leaving saves only if changed.
 - `tests/test_installer.mjs`: an update still succeeds after a foreign SysEx.
 - `tests/test_op.mjs`, `tests/test_page.mjs`: the test package command and the installer's test channel.
+- `tests/test_editor_logic.mjs`, `tests/test_editor_page.mjs`: the Chocolate card. The Bluetooth MIDI packets are read as
+  the pedal reads them (the packets of `midisim.c`); the models, the taught controls and what they do; and the card in
+  a browser against the simulated pedal, with a simulated Chocolate Plus over Web Bluetooth and a Chocolate as a MIDI port.
 
 **Not checked, because it needs the pedal:** the USB enumeration and the port name on each OS, a real DAW or app sending, the
 timing of replies, the DSP load and any dropout with MIDI flowing, the real screen, the update path on the new build, power

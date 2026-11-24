@@ -54,7 +54,8 @@ The setting is kept with the MIDI settings (the preset store's settings byte, bi
 - **Android:** an app such as *MIDI BLE Connect*, then any MIDI app.
 - **Chocolate Plus:** switch it to **H**; it connects by itself a few seconds after the pedal starts. Its footswitches are set
   up in [tools/chocolate/README.md](../tools/chocolate/README.md). To reach the pedal from a Mac instead, put the Chocolate
-  on **O**.
+  on **O**. On **O** the web editor can also take the Chocolate itself and pass its presses on to the pedal over USB,
+  with any firmware: [MIDI.md](MIDI.md#a-chocolate-through-the-editor).
 
 No PIN is asked. One device at a time: while one is connected, the pedal is not visible to others.
 

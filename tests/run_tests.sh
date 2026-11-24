@@ -52,7 +52,8 @@
 #  - sound: the WebAssembly engine on known signals, against the native build; the bundled loops against their manifest
 #  - Chocolate Plus files: tools/chocolate/fcp.py against a made-up export
 #  - editor: docs/pxedit.js against the simulated pedal (tests/edsim.c), PING's figures, and the editor's own logic
-#    (docs/pxmidi.js: the Control Change map against docs/MIDI.md, learned controls; docs/pxlib.js: the model library)
+#    (docs/pxmidi.js: the Control Change map against docs/MIDI.md, learned controls; docs/pxble.js and docs/pxchoc.js:
+#    Bluetooth MIDI packets and a Chocolate's controls; docs/pxlib.js: the model library)
 #  - pages: docs/install.html, docs/editor.html and the pedal skin in headless Chromium (needs Playwright: npm i playwright
 #    && npx playwright install chromium)
 set -e

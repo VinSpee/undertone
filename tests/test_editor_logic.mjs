@@ -1,11 +1,15 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // OpenPocket — the web editor's own logic, without a browser or a pedal: the Control Change map and the learned
-// controls (docs/pxmidi.js) against docs/MIDI.md, and the model library and slot arithmetic (docs/pxlib.js) against
-// the engine's rule (firmware/apps/gamut/engine/px_dsp.c px_nam_model / px_nam_knob). Run by tests/run_tests.sh.
+// controls (docs/pxmidi.js) against docs/MIDI.md, the Chocolate foot controllers (docs/pxble.js: the Bluetooth MIDI
+// packets, with the packets firmware/apps/gamut/tests/midisim.c gives the pedal's reader; docs/pxchoc.js: the models and
+// the mapping), and the model library and slot arithmetic (docs/pxlib.js) against the engine's rule
+// (firmware/apps/gamut/engine/px_dsp.c px_nam_model / px_nam_knob). Run by tests/run_tests.sh.
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { ccParam, ccOn, ccToggle, ccType, ccTarget, toCc, fromCc, typeToCc, typeFromCc, decode, learn, resolve, action, cleanMappings, NBLK, NPAR } from "../docs/pxmidi.js";
+import { parsePacket } from "../docs/pxble.js";
+import { MODELS, modelById, modelFor, prefixes, msgSrc, srcText, defaultProfile, binding, controlFor, teach, assign, act, tgtKey, keyTgt, cleanConfig, tap, timeValue, TAP_MAX } from "../docs/pxchoc.js";
 import { knobIndex, indexKnob, slotRef, presetSlot, retarget, usage, packedName, renamePacked, cleanSlotName, Library, pedalKey, planMove } from "../docs/pxlib.js";
 
 const ROOT = fileURLToPath(new URL("..", import.meta.url));
@@ -77,6 +81,114 @@ await check("stored controls that are not well formed are dropped", () => {
     { src: good.src, tgt: { kind: "on", b: 1 }, slot: null }, { src: good.src, tgt: { kind: "preset", step: 2 }, slot: null }, null, "x"];
   assert.deepEqual(cleanMappings(list), [good]);
   assert.deepEqual(cleanMappings("nonsense"), []);
+});
+
+// ---- a Chocolate ----
+await check("Bluetooth MIDI packets are read as the pedal reads them (the packets of midisim.c)", () => {
+  const s = { sysex: false }, read = (...p) => parsePacket(s, Uint8Array.from(p));
+  assert.deepEqual(read(0x80, 0x8E, 0xB1, 0x00, 0x7F), [[0xB1, 0, 127]], "the Chocolate Plus, footswitch A, as captured");
+  assert.deepEqual(decode(read(0x80, 0x8E, 0xB1, 0x00, 0x7F)[0]), { type: "cc", ch: 2, cc: 0, value: 127 });
+  assert.deepEqual(read(0x80, 0x81, 0xC2, 0x05), [[0xC2, 5]], "Program Change has one data byte");
+  assert.deepEqual(read(0x93, 0xA0, 0xB0, 24, 127, 0xA1, 0xC0, 3), [[0xB0, 24, 127], [0xC0, 3]], "two messages in one packet");
+  assert.deepEqual(read(0x80, 0x80, 0xB0, 24, 127, 25, 0, 0x85, 26, 64), [[0xB0, 24, 127], [0xB0, 25, 0], [0xB0, 26, 64]], "running status, with and without a timestamp");
+  assert.deepEqual(read(0x80, 0x80, 0xB0, 24, 127, 0x81, 0xF8, 0x82, 25, 1), [[0xB0, 24, 127], [0xF8], [0xB0, 25, 1]], "a clock between messages keeps the running status");
+  assert.deepEqual(read(0x00, 0x80, 0xB0, 24, 127), [], "no header bit: not a packet");
+  assert.deepEqual(read(0x80, 0x80, 0xB0, 24), [], "a message cut short is dropped");
+  assert.deepEqual(read(0x80), []); assert.deepEqual(read(), []);
+  assert.deepEqual(read(0x80, 24, 127), [], "running status does not reach over from the last packet");
+  assert.deepEqual(read(0x80, 0x80, 0xF0, 1, 2, 3), []); assert.equal(s.sysex, true, "SysEx is skipped");
+  assert.deepEqual(read(0x80, 4, 5, 0x81, 0xF7, 0x82, 0xB0, 24, 127), [[0xB0, 24, 127]], "a SysEx over two packets ends, and what follows counts");
+  assert.equal(s.sysex, false);
+  assert.deepEqual(read(0x80, 0x80, 0xF3, 7, 0x81, 0xB0, 24, 1), [[0xB0, 24, 1]], "system common messages are skipped with their data");
+});
+await check("the Chocolate models: known by name, and each one's data holds together", () => {
+  assert.equal(modelFor("FootCtrlPlus").id, "plus");
+  assert.equal(modelFor("FootCtrlPlus Bluetooth").id, "plus");
+  assert.equal(modelFor("FootCtrl").id, "chocolate");
+  assert.equal(modelFor("M-VAVE Chocolate Plus").id, "plus");
+  assert.equal(modelFor("Foot Controller"), null, "another foot controller is not a Chocolate");
+  assert.equal(modelFor(undefined), null);
+  assert.equal(modelById("nonsense"), MODELS[0]);
+  assert.equal(modelFor("Chocolate Plus").id, "plus", "the name its manual gives");
+  assert.deepEqual(prefixes(), ["FootCtrlPlus", "Chocolate Plus", "FootCtrl", "Chocolate"]);
+  for (const m of MODELS) {
+    const ids = m.controls.map((c) => c.id);
+    assert.equal(new Set(ids).size, ids.length, `${m.name}: a control id twice`);
+    for (const n of m.names) assert.ok(modelFor(n) === m, `${m.name}: its own name ${n} is not known as it`);
+    for (const id of [...Object.keys(m.sends), ...Object.keys(m.does)]) assert.ok(ids.includes(id), `${m.name}: ${id} is no control`);
+    const sent = Object.values(m.sends).map((x) => srcText(x.src));
+    assert.equal(new Set(sent).size, sent.length, `${m.name}: two controls send the same message`);
+    // the defaults are what the browser may keep: cleaning them changes nothing
+    assert.deepEqual(cleanConfig({ model: m.id, profiles: { [m.id]: defaultProfile(m) } }).profiles[m.id], defaultProfile(m));
+    assert.ok(m.controls.some((c) => c.kind === "switch") && m.known);
+  }
+});
+await check("a Chocolate's controls: the model's own messages, a control taught, and one message for one control", () => {
+  const m = modelById("chocolate"), cc = (n, value, ch = 1) => ({ type: "cc", ch, cc: n, value });
+  let p = defaultProfile(m);
+  assert.equal(controlFor(m, p, cc(20, 127, 5)), "A", "the model's own message, on any channel");
+  assert.equal(controlFor(m, p, cc(25, 0)), "CD");
+  assert.equal(controlFor(m, p, cc(11, 64)), null);
+  assert.equal(controlFor(m, p, { type: "clock" }), null);
+  assert.deepEqual(binding(m, p, "EXP"), { src: null, press: "high", taught: false }, "nothing is known of the pedal");
+  p = teach(p, "EXP", msgSrc(cc(11, 64)), "high");
+  assert.equal(controlFor(m, p, cc(11, 3)), "EXP");
+  assert.equal(controlFor(m, p, cc(11, 3, 2)), null, "a taught control is on its channel");
+  p = teach(p, "B", msgSrc(cc(20, 127)), "any");                 // B sends what the model says A sends
+  assert.equal(controlFor(m, p, cc(20, 127)), "B");
+  assert.equal(binding(m, p, "A").src, null, "A's own message was taken: A has to be taught");
+  p = teach(p, "C", msgSrc(cc(20, 127)), "high");                // and now C does
+  assert.equal(controlFor(m, p, cc(20, 127)), "C");
+  assert.equal(p.B.src, null);
+  assert.deepEqual(msgSrc({ type: "pc", ch: 3, program: 7 }), { type: "pc", ch: 3, n: 7 });
+  assert.equal(srcText(msgSrc({ type: "noteoff", ch: 1, note: 60, value: 0 })), "Note 60 · ch 1");
+  assert.equal(srcText({ type: "cc", ch: 0, n: 20 }), "CC 20");
+});
+await check("what a Chocolate's control does: a press, not its release; one message a press; the pedal's sweep", () => {
+  const m = modelById("chocolate"), ctx = { on: (b) => b === 9, ntypes: () => 8 }, sw = m.controls[0], exp = m.controls.find((c) => c.kind === "pedal");
+  const cc = (value) => ({ type: "cc", ch: 1, cc: 20, value }), high = { press: "high" }, any = { press: "any" };
+  assert.deepEqual(act(sw, high, m.does.A, cc(127), ctx), { do: "on", b: 4, v: 1 }, "A switches DRIVE");
+  assert.deepEqual(act(sw, high, m.does.C, cc(127), ctx), { do: "on", b: 9, v: 0 }, "C switches DELAY, which is on");
+  assert.equal(act(sw, high, m.does.A, cc(0), ctx), null, "the release does nothing");
+  assert.deepEqual(act(sw, any, m.does.A, cc(0), ctx), { do: "on", b: 4, v: 1 }, "a switch that sends one message per press: a 0 is a press too");
+  assert.deepEqual(act(sw, high, m.does.CD, cc(127), ctx), { do: "preset", step: 1 });
+  const cd = m.controls.find((c) => c.id === "CD"), p0 = defaultProfile(m);
+  assert.deepEqual(act(cd, binding(m, p0, "CD"), m.does.CD, { type: "cc", ch: 1, cc: 25, value: 0 }, ctx), { do: "preset", step: 1 }, "C + D sends one 0 when pressed: that is the press");
+  assert.deepEqual(act(sw, high, { kind: "slot", slot: 7 }, { type: "pc", ch: 1, program: 3 }, ctx), { do: "slot", slot: 7 }, "a Program Change is a press");
+  assert.deepEqual(act(sw, high, { kind: "tap" }, { type: "note", ch: 1, note: 60, value: 90 }, ctx), { do: "tap" });
+  assert.equal(act(sw, high, { kind: "tap" }, { type: "noteoff", ch: 1, note: 60, value: 0 }, ctx), null);
+  assert.equal(act(sw, high, null, cc(127), ctx), null, "nothing to do");
+  assert.deepEqual(act(exp, high, { kind: "param", b: 5, k: 1 }, cc(32), ctx), { do: "param", b: 5, k: 1, v: 25 }, "the pedal sets a setting as the pedal scales it");
+  let p = assign(defaultProfile(m), "A", { kind: "tap" });
+  assert.deepEqual(p.A.tgt, { kind: "tap" }); assert.deepEqual(p.B.tgt, m.does.B);
+  for (const t of [null, { kind: "on", b: 11, mode: "toggle" }, { kind: "preset", step: -1 }, { kind: "slot", slot: 51 }, { kind: "tap" }, { kind: "param", b: 9, k: 4 }]) assert.deepEqual(keyTgt(tgtKey(t)), t);
+});
+await check("a kept Chocolate mapping that is not well formed falls back to the defaults", () => {
+  const m = modelById("plus"), d = defaultProfile(m);
+  assert.deepEqual(cleanConfig(null), { model: MODELS[0].id, profiles: Object.fromEntries(MODELS.map((x) => [x.id, defaultProfile(x)])) });
+  const c = cleanConfig({ model: "chocolate", profiles: { plus: {
+    A: { src: { type: "cc", ch: 2, n: 0 }, press: "any", tgt: { kind: "slot", slot: 3 } },
+    B: { src: { type: "sysex", ch: 1, n: 1 }, press: "odd", tgt: { kind: "on", b: 12 } },
+    C: "x", EXP: { src: null, tgt: { kind: "tap" } }, Z: { tgt: { kind: "tap" } } } } });
+  assert.equal(c.model, "chocolate");
+  assert.deepEqual(c.profiles.plus.A, { src: { type: "cc", ch: 2, n: 0 }, press: "any", tgt: { kind: "slot", slot: 3 } });
+  assert.deepEqual(c.profiles.plus.B, { src: null, press: "high", tgt: null }, "a source and a target that cannot be: none");
+  assert.deepEqual(c.profiles.plus.C, d.C);
+  assert.equal(c.profiles.plus.EXP.tgt, null, "a pedal sets a setting and nothing else");
+  assert.equal(c.profiles.plus.Z, undefined);
+  assert.deepEqual(c.profiles.chocolate, defaultProfile(modelById("chocolate")));
+});
+await check("tap tempo: the mean of the last taps, and the delay time the pedal has nearest to it", () => {
+  let t = tap([], 1000);
+  assert.deepEqual(t, { taps: [1000], ms: null }, "one tap is no tempo");
+  t = tap(t.taps, 1500); assert.equal(t.ms, 500);
+  t = tap(t.taps, 2020); assert.equal(t.ms, 510);
+  t = tap(tap(t.taps, 2500).taps, 3000); assert.deepEqual(t.taps, [1500, 2020, 2500, 3000]);
+  assert.equal(tap(t.taps, 3000 + TAP_MAX + 1).ms, null, "after a pause the count starts again");
+  assert.equal(tap([1000], 1050).ms, null, "a bounce is no tempo");
+  const texts = Array.from({ length: 101 }, (_, v) => `${Math.round(v <= 80 ? 20 + v * 12.25 : 1000 + (v - 80) * 50)} MS`);   // px_dsp.c dly_ms
+  assert.equal(timeValue(texts, 500), 39); assert.equal(timeValue(texts, 2000), 100); assert.equal(timeValue(texts, 1), 0);
+  assert.equal(timeValue(["A", "B"], 500), -1); assert.equal(timeValue(null, 500), -1);
 });
 
 // ---- slots ----

@@ -440,6 +440,17 @@ a.tone-u[href] { text-decoration: underline; }
 }
 @keyframes wait { to { background: color-mix(in oklch, var(--acc), white 22%); } }
 @keyframes flash { from { background: var(--ink); } }
+.choc { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(200px, 100%), 1fr)); gap: 10px; }
+.choc-ctl { display: grid; gap: 8px; align-content: start; padding: 12px; border: 1px solid var(--line-soft); border-radius: var(--r); background: var(--bg); }
+.choc-ctl.pedal { border-style: dashed; }
+.choc-cap { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 8px; }
+.choc-cap b { font-size: 1.25rem; font-weight: 800; line-height: 1; white-space: nowrap; }
+.choc-cap small { font-size: 0.75rem; color: var(--faint); }
+.choc-ctl select { inline-size: 100%; }
+.choc-src { display: grid; justify-items: start; gap: 6px; font-size: 0.75rem; color: var(--dim); }
+.choc-ctl.learning { border-color: var(--acc); background: var(--acc-soft); }
+.choc-ctl.hit { border-color: var(--ok); }
+.choc-ctl.hit .choc-cap b { color: var(--ok); }
 .learned { display: grid; }
 .lrow { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; min-block-size: 48px; padding-block: 6px; border-block-start: 1px solid var(--line-soft); font-size: 0.875rem; }
 .lrow .arrow { color: var(--faint); }

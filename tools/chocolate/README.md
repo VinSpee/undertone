@@ -4,6 +4,10 @@
 It is Python 3 with no dependencies. The pedal needs the Bluetooth test image (`make ble`, `docs/BLE-TEST.md`), with its MIDI
 CHANNEL set to OMNI or 2.
 
+This is the way to use a Chocolate with the pedal alone. With a computer or a phone between them, nothing in the
+Chocolate has to change: the web editor connects to it and maps its controls (`docs/MIDI.md`, "A Chocolate through the
+editor").
+
 | Mapping | Mode | Footswitches | Status |
 | --- | --- | --- | --- |
 | `today.json` | Mode 4 | A DRIVE, B MOD, C DELAY, D REVERB, alternating CC 24, 28, 29, 30 between 127 and 0 | Sent these messages to a Mac over Bluetooth |
