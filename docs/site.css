@@ -1,22 +1,17 @@
 /* SPDX-License-Identifier: GPL-3.0-only
    The look of undertone.vinspee.me, shared by the home page (index.html), the installer (install.html) and the
-   editor's top bar (editor.html): Full Volume, printed out of register. Bone paper, black ink and the lime of the
-   pedal's REV tile; Anybody (its width axis runs from 50 to 150) for display, Archivo for text. Big headings are
-   printed in black over two riso inks, lime and teal, that drift off the black plate by --mx and --my. Warnings,
-   steps and body text are never printed off register. */
-
-@property --mx { syntax: '<length>'; inherits: true; initial-value: 4px; }
-@property --my { syntax: '<length>'; inherits: true; initial-value: 3px; }
+   editor's top bar (editor.html): Full Volume. Bone paper, black ink and the lime of the pedal's REV tile; Anybody
+   (its width axis runs from 50 to 150) for display, Archivo for text. Headings are printed flat, in one colour,
+   so they read at every size. */
 
 :root {
-  --bone: #f2f0e9; --ink: #0b0b0a; --lime: #c4f542; --teal: #00747a; --teal-lt: #3fa9a3;
+  --bone: #f2f0e9; --ink: #0b0b0a; --lime: #c4f542; --teal: #00747a;
   --grey: #55534d; --soft: #c9c6bb; --rule: #d6d2c4;
   --ok: #1d6b34; --err: #b3261e; --warn: #7a4a00;
   --disp: "Anybody", "Arial Black", system-ui, sans-serif;
   --text: "Archivo", system-ui, -apple-system, "Segoe UI", sans-serif;
   --mono: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
   --edge: clamp(16px, 3.4vw, 48px);
-  --ink-a: var(--lime); --ink-b: var(--teal-lt);
   --ease: cubic-bezier(.2, .8, .2, 1);
   color-scheme: light;
   accent-color: var(--ink);
@@ -38,20 +33,13 @@ code { font: 500 .85em var(--mono); }
 .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 [hidden] { display: none !important; }
 
-/* out of register: two inks printed off the black plate */
-.reg { text-shadow: calc(var(--mx) * -1) var(--my) 0 var(--ink-a), var(--mx) calc(var(--my) * -1) 0 var(--ink-b); }
-.on-lime { --ink-a: var(--teal-lt); --ink-b: #fff8e6; }
-.on-ink { --ink-a: var(--lime); --ink-b: var(--teal); }
-.reg-in { animation: reg-in 1s .15s var(--ease) both; }
-@keyframes reg-in { from { --mx: 18px; --my: -12px; } }
-
 /* the site's bar */
 .site-nav {
   position: sticky; top: 0; z-index: 20; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0 16px;
   padding: 10px var(--edge); background: var(--ink); color: var(--bone);
 }
 .site-nav__mark {
-  --mx: 2px; --my: 2px; font: 900 20px/1 var(--disp); font-variation-settings: "wdth" 130; letter-spacing: -.01em;
+  font: 900 20px/1 var(--disp); font-variation-settings: "wdth" 130; letter-spacing: -.01em;
   text-decoration: none; padding: 12px 0; white-space: nowrap;
 }
 .site-nav__links { display: flex; gap: 4px; margin-left: auto; min-width: 0; }

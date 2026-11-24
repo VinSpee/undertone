@@ -2,8 +2,7 @@
 <!-- SPDX-License-Identifier: GPL-3.0-only
      The installer of undertone.vinspee.me: connect a pedal over Web MIDI, install one of the firmwares of the site's
      catalog (firmware/release.json), go back to the official firmware, rescue a pedal. Its look is the site's
-     (site.css): bone paper, black ink and lime, Anybody and Archivo. Only the page's h1 and the step numbers are printed
-     out of register; warnings, steps, messages and the rescue guide never are. Every id, class and data-t below is read
+     (site.css): bone paper, black ink and lime, Anybody and Archivo. Every id, class and data-t below is read
      by the script at the end of this file or by tests/test_page.mjs. -->
 <html lang="en">
 <head>
@@ -23,13 +22,13 @@
 body{font-size:17px;line-height:1.55;padding-bottom:64px}
 .wrap{max-width:900px;margin:0 auto;display:flex;flex-direction:column;gap:22px;padding:clamp(32px,6vh,56px) max(16px,env(safe-area-inset-left,0px)) 0 max(16px,env(safe-area-inset-right,0px))}
 header.page{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;border-bottom:6px solid var(--ink);padding-bottom:20px;margin-bottom:8px}
-h1{--mx:4px;--my:3px;margin:0;font:900 clamp(48px,8.4vw,104px)/.86 var(--disp);font-variation-settings:"wdth" 66;letter-spacing:-.01em;text-transform:uppercase;text-wrap:balance}
+h1{margin:0;font:900 clamp(48px,8.4vw,104px)/.86 var(--disp);font-variation-settings:"wdth" 66;letter-spacing:-.01em;text-transform:uppercase;text-wrap:balance}
 .tag{margin:16px 0 0;max-width:56ch;font-size:19px;line-height:1.5;text-wrap:pretty}
 a.edlink{font:800 16px/1 var(--disp);font-variation-settings:"wdth" 112;padding:14px 18px;border:3px solid var(--ink);text-decoration:none;transition:transform .12s var(--ease)}
 @media (hover:hover){a.edlink:hover{transform:translateY(-3px)}}
 .card{background:#f9f8f3;border:3px solid var(--ink);padding:24px;display:flex;flex-direction:column;gap:14px;min-width:0}
 .card h2{margin:0;font:850 clamp(24px,2.6vw,32px)/1.05 var(--disp);font-variation-settings:"wdth" 88;text-transform:uppercase;display:flex;align-items:baseline;gap:16px}
-.card h2 b{--mx:3px;--my:2px;font:900 clamp(44px,5vw,60px)/.8 var(--disp);font-variation-settings:"wdth" 120;min-width:1.1ch}
+.card h2 b{font:900 clamp(44px,5vw,60px)/.8 var(--disp);font-variation-settings:"wdth" 120;min-width:1.1ch}
 .row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
 button.go,a.go{display:inline-flex;align-items:center;min-height:48px;padding:12px 22px;font:800 16px/1.3 var(--disp);font-variation-settings:"wdth" 108;text-align:left;
   border:3px solid var(--ink);background:var(--lime);color:var(--ink);cursor:pointer;text-decoration:none;overflow-wrap:anywhere;transition:transform .12s var(--ease)}
@@ -60,7 +59,7 @@ button:disabled{opacity:.4;cursor:default}
 .note ul,.note ol{margin:6px 0 0;padding-left:22px}
 .why{font-weight:600}
 .note strong{font-weight:700}
-/* a warning is marked like a highlighter pass over the text, never printed off register */
+/* a warning is marked like a highlighter pass over the text */
 .warnbox{border-left:6px solid var(--ink);padding:10px 14px;background:color-mix(in srgb,var(--lime) 38%,var(--bone));font-weight:500}
 #fws:empty{min-height:260px}   /* room for the cards the catalog fills in, so nothing below jumps */
 .fws{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:14px}
@@ -96,17 +95,16 @@ code{font:500 14px var(--mono);background:var(--ink);color:var(--lime);padding:1
 #rescueCard{background:var(--lime)}
 #rescueCard a.go{background:var(--ink);color:var(--bone)}
 #rescueCard .warnbox{background:var(--bone)}
-#rescueCard h2 b{--ink-a:var(--teal-lt);--ink-b:#fff8e6}
 [hidden]{display:none!important}   /* here as well as in site.css: the script's hidden states must hold without it */
 .page-foot span{max-width:62ch}
 .page-foot{font-size:14px;display:flex;flex-direction:column;gap:8px;border-top:3px solid var(--ink);padding-top:20px;margin-top:12px}
-@media (max-width:639px){.cmd{grid-template-columns:minmax(0,1fr)}.copy{justify-self:end}.card{padding:18px}a.edlink{display:none}h1{--mx:2px;--my:2px}}
+@media (max-width:639px){.cmd{grid-template-columns:minmax(0,1fr)}.copy{justify-self:end}.card{padding:18px}a.edlink{display:none}}
 </style>
 </head>
 <body>
 <a class="skip" href="#main">Skip to the installer</a>
 <header class="site-nav">
-  <a class="site-nav__mark reg on-ink" href="./" aria-label="Undertone, home">UNDERTONE</a>
+  <a class="site-nav__mark" href="./" aria-label="Undertone, home">UNDERTONE</a>
   <nav class="site-nav__links" aria-label="Main">
     <a class="wide" href="./#firmwares">Gamut and PALETTE</a>
     <a href="install.html" aria-current="page">Install</a>
@@ -118,7 +116,7 @@ code{font:500 14px var(--mono);background:var(--ink);color:var(--lime);padding:1
 <main class="wrap" id="main">
   <header class="page">
     <div>
-      <h1 class="reg reg-in">Install a firmware</h1>
+      <h1>Install a firmware</h1>
       <p class="tag" data-t="tag">Connect a Donner Pocket X or an M-VAVE BlackBox over USB, choose a firmware and install it from this page, in Chrome or Edge on a computer.</p>
     </div>
     <a class="edlink" id="toeditor" href="editor.html" data-t="toeditor">Open the editor</a>
@@ -131,7 +129,7 @@ code{font:500 14px var(--mono);background:var(--ink);color:var(--lime);padding:1
   </section>
 
   <section class="card">
-    <h2><b class="reg">1</b><span data-t="s1">Connect the pedal</span></h2>
+    <h2><b>1</b><span data-t="s1">Connect the pedal</span></h2>
     <p class="note" data-t="s1note">Turn the pedal on, plug it in over USB (a data cable) and close any other app using it. The browser asks for MIDI access: allow it.</p>
     <div class="row">
       <button class="go" id="connect" data-t="connect">Connect</button>
@@ -145,7 +143,7 @@ code{font:500 14px var(--mono);background:var(--ink);color:var(--lime);padding:1
   </section>
 
   <section class="card" id="installCard">
-    <h2><b class="reg">2</b><span data-t="s2">Choose a firmware</span></h2>
+    <h2><b>2</b><span data-t="s2">Choose a firmware</span></h2>
     <p class="note" data-t="s2note">Each firmware below is a whole firmware for the pedal. The pedal runs one at a time: installing one replaces the one it runs, and this page puts the other back the same way. What each firmware saved on the pedal stays there while the pedal runs another one.</p>
     <div class="note warnbox" data-t="s2warn">
       <p><strong>During the install, about 1 to 2 minutes:</strong></p>
@@ -179,7 +177,7 @@ code{font:500 14px var(--mono);background:var(--ink);color:var(--lime);padding:1
   </section>
 
   <section class="card">
-    <h2><b class="reg">3</b><span data-t="s3">Back to the official firmware</span></h2>
+    <h2><b>3</b><span data-t="s3">Back to the official firmware</span></h2>
     <p class="note" data-t="s3note">Pick your pedal's official file (.fwsc), downloaded from Donner / M-VAVE. It is checked here, in your browser, and sent to no server.</p>
     <input type="file" id="offfile" accept=".fwsc">
     <p class="msg" id="offmsg" role="status"></p>
@@ -198,7 +196,7 @@ code{font:500 14px var(--mono);background:var(--ink);color:var(--lime);padding:1
   </section>
 
   <section class="card" id="rescueCard">
-    <h2><b class="reg">!</b><span data-t="rescue">Rescue</span></h2>
+    <h2><b>!</b><span data-t="rescue">Rescue</span></h2>
     <p class="note" data-t="rescueintro">Three ways back, by what the pedal does.</p>
     <h3 class="way" data-t="r1">The pedal restarts in a loop</h3>
     <label class="chk"><input type="checkbox" id="rescueOn" aria-describedby="rescueonhow"><span>Rescue mode</span></label>

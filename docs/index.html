@@ -1,7 +1,7 @@
 <!doctype html>
 <!-- SPDX-License-Identifier: GPL-3.0-only
      The home page of undertone.vinspee.me: Gamut, the firmware, and Undertone, the kit it is built on; PALETTE, the
-     installer, the editor and the rescue kit. Its look is site.css (Full Volume, printed out of register); what is only
+     installer, the editor and the rescue kit. Its look is site.css (Full Volume); what is only
      this page's is in the style below. The wordmark's letters follow the loudness of a real guitar recording,
      assets/audio/riff.m4a (assets/loops/riff.wav as AAC, Guitar-TECHS, CC BY 4.0). Every picture is the project's own: the
      pedal's screens and the editor against the simulator (tools/sim.mjs).
@@ -40,13 +40,14 @@ h2{font-size:clamp(40px,6.4vw,104px);line-height:.88;font-weight:900;font-variat
 
 /* the hero: the wordmark is a level meter */
 .hero{min-height:calc(100svh - 64px);display:flex;flex-direction:column;justify-content:flex-end;padding-top:clamp(40px,8vh,80px);padding-bottom:clamp(32px,6vh,64px)}
-/* sized by the width it fills (container units): at its widest, while the riff plays, the word still fits */
+/* sized by the width it fills (container units) */
 .hero .wrap{container-type:inline-size}
-.word{--mx:5px;--my:4px;display:flex;justify-content:space-between;align-items:flex-end;margin:0 0 clamp(16px,3vh,32px);height:18cqi;
-  font:900 23cqi/.78 var(--disp);font-variation-settings:"wdth" 96;user-select:none;animation:reg-big 1.2s .15s var(--ease) both}
-@keyframes reg-big{from{--mx:34px;--my:-24px}}
-.word span{display:block;transform-origin:50% 100%;will-change:transform;animation:slam .6s cubic-bezier(.2,.9,.3,1.15) both;animation-delay:calc(var(--i)*70ms + 120ms)}
-@keyframes slam{from{transform:scaleY(.02)}}
+/* the letters rise into place from their baseline, which hides them below it (the clip), on load; the riff lifts them
+   with its loudness (transform, set by the script) */
+.word{display:flex;justify-content:space-between;align-items:flex-end;margin:0 0 clamp(16px,3vh,32px);height:18cqi;
+  font:900 23cqi/.78 var(--disp);font-variation-settings:"wdth" 96;user-select:none;clip-path:inset(-50% -10% 0 -10%)}
+.word span{display:block;animation:rise .8s cubic-bezier(.16,1,.3,1) backwards;animation-delay:calc(var(--i)*60ms + 100ms)}
+@keyframes rise{from{translate:0 105%}}
 .hero__base{display:grid;grid-template-columns:minmax(0,7fr) minmax(0,5fr);gap:clamp(24px,4vw,64px);align-items:end;border-top:6px solid var(--ink);padding-top:clamp(18px,3vh,28px)}
 .hero h1{font-size:clamp(30px,3.6vw,56px);line-height:.95;font-weight:850;font-variation-settings:"wdth" 82;letter-spacing:-.01em;max-width:21ch;animation:up .6s .55s both}
 .hero h1 b{display:block;font-weight:900;font-variation-settings:"wdth" 120}
@@ -67,7 +68,7 @@ h2{font-size:clamp(40px,6.4vw,104px);line-height:.88;font-weight:900;font-variat
 /* numbers */
 .nums{list-style:none;margin:28px 0 0;padding:0;border-top:6px solid var(--ink)}
 .nums li{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);align-items:center;gap:24px;border-bottom:2px solid var(--ink);padding:6px 0}
-.nums b{--mx:4px;--my:3px;font:900 clamp(64px,9.6vw,150px)/.85 var(--disp);font-variation-settings:"wdth" 140;letter-spacing:-.03em;white-space:nowrap}
+.nums b{font:900 clamp(64px,9.6vw,150px)/.85 var(--disp);font-variation-settings:"wdth" 140;letter-spacing:-.03em;white-space:nowrap}
 .nums b small{font-size:clamp(26px,4vw,63px);font-variation-settings:"wdth" 100;margin-left:.08em}
 .nums span{font-size:clamp(18px,1.7vw,24px);max-width:32ch}
 
@@ -90,8 +91,8 @@ h2{font-size:clamp(40px,6.4vw,104px);line-height:.88;font-weight:900;font-variat
 @media (hover:hover){.half:hover .art{transform:translateY(-8px) rotate(-2deg)}}
 .half:focus-within .art{transform:translateY(-8px) rotate(-2deg)}
 .half--gamut{background:var(--lime);color:var(--ink)}
-.half h2{--mx:4px;--my:3px;font-size:clamp(64px,10.5vw,196px);font-variation-settings:"wdth" 60;line-height:.8}
-.half h2 small{display:block;font:500 clamp(16px,1.3vw,19px)/1.3 var(--text);text-transform:none;letter-spacing:0;margin-top:14px;text-shadow:none}
+.half h2{font-size:clamp(64px,10.5vw,196px);font-variation-settings:"wdth" 60;line-height:.8}
+.half h2 small{display:block;font:500 clamp(16px,1.3vw,19px)/1.3 var(--text);text-transform:none;letter-spacing:0;margin-top:14px}
 .half p{margin:0;max-width:42ch}
 .half .aside{font-size:16px;opacity:.85}
 .half .warn{font-size:16px;border-left:6px solid var(--lime);padding-left:12px;font-weight:600}
@@ -118,7 +119,7 @@ h2{font-size:clamp(40px,6.4vw,104px);line-height:.88;font-weight:900;font-variat
 .does li{padding:12px 0;border-top:2px solid var(--ink);font-size:17px}
 .does b{font:850 20px/1 var(--disp);font-variation-settings:"wdth" 90;text-transform:uppercase;margin-right:8px}
 
-/* rescue: on lime, as loud as the install, and never off register below its heading */
+/* rescue: on lime, as loud as the install */
 .rescue__grid{display:grid;grid-template-columns:minmax(0,6fr) minmax(0,5fr);gap:clamp(28px,5vw,80px);align-items:end;margin-top:28px}
 .steps{margin:0;padding:0;list-style:none;counter-reset:s}
 .steps li{counter-increment:s;display:grid;grid-template-columns:64px minmax(0,1fr);gap:14px;padding:16px 0;border-top:3px solid var(--ink)}
@@ -146,8 +147,8 @@ h2{font-size:clamp(40px,6.4vw,104px);line-height:.88;font-weight:900;font-variat
 .qa p{margin:6px 0 0;font-size:17px;max-width:52ch}
 
 /* the manifesto */
-.big{--mx:4px;--my:3px;font:850 clamp(48px,9.6vw,170px)/.86 var(--disp);font-variation-settings:"wdth" 64;text-transform:uppercase;margin:0}
-.big em{font-style:normal;background:var(--lime);padding:0 .08em;text-shadow:none}
+.big{font:850 clamp(48px,9.6vw,170px)/.86 var(--disp);font-variation-settings:"wdth" 64;text-transform:uppercase;margin:0}
+.big em{font-style:normal;background:var(--lime);padding:0 .08em}
 .cols{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:28px;margin-top:40px;max-width:980px}
 .cols p{margin:0;font-size:clamp(18px,1.5vw,21px)}
 .close h2{font-size:clamp(48px,8vw,140px)}
@@ -162,7 +163,6 @@ h2{font-size:clamp(40px,6.4vw,104px);line-height:.88;font-weight:900;font-variat
   .amps,.kit3,.cols,.qa{grid-template-columns:minmax(0,1fr)}
 }
 @media (max-width:560px){
-  h2,.big,.nums b{--mx:2px;--my:2px}
   .hero{min-height:auto;padding-top:48px}
   .btn{width:100%}
   .listen{width:auto}
@@ -175,7 +175,7 @@ h2{font-size:clamp(40px,6.4vw,104px);line-height:.88;font-weight:900;font-variat
 <body>
 <a class="skip" href="#main">Skip to content</a>
 <header class="site-nav">
-  <a class="site-nav__mark reg on-ink" href="./" aria-label="Undertone, home">UNDERTONE</a>
+  <a class="site-nav__mark" href="./" aria-label="Undertone, home">UNDERTONE</a>
   <nav class="site-nav__links" aria-label="Main">
     <a class="wide" href="#firmwares">Gamut and PALETTE</a>
     <a href="editor.html">Editor</a>
@@ -188,7 +188,7 @@ h2{font-size:clamp(40px,6.4vw,104px);line-height:.88;font-weight:900;font-variat
 <main id="main">
 <section class="hero" id="top" aria-labelledby="h-top">
   <div class="wrap">
-    <p class="word reg" id="word" aria-hidden="true"><span style="--i:0">G</span><span style="--i:1">A</span><span style="--i:2">M</span><span style="--i:3">U</span><span style="--i:4">T</span></p>
+    <p class="word" id="word" aria-hidden="true"><span style="--i:0">G</span><span style="--i:1">A</span><span style="--i:2">M</span><span style="--i:3">U</span><span style="--i:4">T</span></p>
     <div class="hero__base">
       <h1 id="h-top"><b>Gamut 1.0</b>Open firmware for the Donner Pocket X and <span style="white-space:nowrap">M-VAVE</span> BlackBox</h1>
       <div class="hero__side">
@@ -207,20 +207,20 @@ h2{font-size:clamp(40px,6.4vw,104px);line-height:.88;font-weight:900;font-variat
 
 <section id="numbers" aria-labelledby="h-numbers">
   <div class="wrap">
-    <h2 class="reg" id="h-numbers">Gamut in five numbers</h2>
+    <h2 id="h-numbers">Gamut in five numbers</h2>
     <ul class="nums">
-      <li><b class="reg">12</b><span>neural amp models trained for the pedal's own chip</span></li>
-      <li><b class="reg">16</b><span>slots for your own NAM captures, from TONE3000 or anywhere else, and 8 for cabinet IRs</span></li>
-      <li><b class="reg">52</b><span>preset slots you can overwrite, kept across updates</span></li>
-      <li><b class="reg">2.9<small>ms</small></b><span>a block of audio: 128 samples at 44.1 kHz</span></li>
-      <li><b class="reg">−23</b><span>LUFS for every preset, measured on real guitar, so switching keeps the volume</span></li>
+      <li><b>12</b><span>neural amp models trained for the pedal's own chip</span></li>
+      <li><b>16</b><span>slots for your own NAM captures, from TONE3000 or anywhere else, and 8 for cabinet IRs</span></li>
+      <li><b>52</b><span>preset slots you can overwrite, kept across updates</span></li>
+      <li><b>2.9<small>ms</small></b><span>a block of audio: 128 samples at 44.1 kHz</span></li>
+      <li><b>−23</b><span>LUFS for every preset, measured on real guitar, so switching keeps the volume</span></li>
     </ul>
   </div>
 </section>
 
-<section class="dark on-ink" id="amps" aria-labelledby="h-amps">
+<section class="dark" id="amps" aria-labelledby="h-amps">
   <div class="wrap">
-    <h2 class="reg" id="h-amps">Twelve amps, learnt from real captures</h2>
+    <h2 id="h-amps">Twelve amps, learnt from real captures</h2>
     <p class="lede">Each model is a small network trained for the pedal to sound like a community capture of a real amp. The bar is its error on 20 seconds of guitar it never heard: below about 0.05 the two are hard to tell apart.</p>
     <div class="amps" style="--ink:var(--bone)">
       <div class="amp"><b>Fender Twin Reverb</b><span>Normal, bright. Capture by Tim R</span><span class="esr"><i aria-hidden="true" style="--e:5%"></i>error 0.006</span></div>
@@ -250,15 +250,15 @@ h2{font-size:clamp(40px,6.4vw,104px);line-height:.88;font-weight:900;font-variat
     <div class="art" aria-hidden="true">
       <div class="pedal"><img src="assets/img/gamut-play.png" width="248" height="249" alt="" loading="lazy" decoding="async"><div class="pedal__knobs"><i></i><i></i><i></i></div><div class="pedal__fs"><i></i><i></i></div></div>
     </div>
-    <h2 class="reg reg-in" id="h-gamut">Gamut<small>1.0, the firmware for playing</small></h2>
+    <h2 id="h-gamut">Gamut<small>1.0, the firmware for playing</small></h2>
     <p>NAM amps, your own cabinet IRs, drives and effects in a chain of blocks in any order, with a preset editor in the browser and the pedal as a USB sound card.</p>
     <ul class="chip"><li>12 NAM models</li><li>16 NAM slots</li><li>8 IR slots</li><li>52 presets</li><li>USB audio</li><li>Tuner</li></ul>
     <p class="aside">Gamut is the new name of the OpenPocket firmware. The installer and the editor of the original OpenPocket project still call it OpenPocket v50.</p>
     <div class="row"><a class="btn btn--ink" href="install.html">Install Gamut</a></div>
   </article>
-  <article class="half half--palette on-ink" aria-labelledby="h-palette">
+  <article class="half half--palette" aria-labelledby="h-palette">
     <div class="art"><img class="screen" src="assets/img/pal-01-home.png" width="480" height="480" alt="PALETTE's home screen: the Clean Room preset with its four modules" loading="lazy"></div>
-    <h2 class="reg reg-in" id="h-palette">PALETTE<small>v01, a four-module stereo instrument</small></h2>
+    <h2 id="h-palette">PALETTE<small>v01, a four-module stereo instrument</small></h2>
     <p>Twenty stereo effects in four modules you can put in any order, with tap tempo and MIDI clock.</p>
     <p class="warn">It has passed its tests on a simulated pedal only. It has not run on a real pedal yet.</p>
     <div class="row"><a class="btn" href="install.html">Install PALETTE</a><a href="palette-guide.html">Read the PALETTE guide</a></div>
@@ -268,7 +268,7 @@ h2{font-size:clamp(40px,6.4vw,104px);line-height:.88;font-weight:900;font-variat
 <section id="editor" aria-labelledby="h-editor">
   <div class="wrap split">
     <div>
-      <h2 class="reg" id="h-editor">The editor, in your browser</h2>
+      <h2 id="h-editor">The editor, in your browser</h2>
       <p class="lede">Plug the pedal in over USB and change everything it holds from Chrome or Edge. Nothing to install.</p>
       <ul class="does">
         <li><b>Presets</b>Search, load, rename, copy, move and back up all 52.</li>
@@ -284,7 +284,7 @@ h2{font-size:clamp(40px,6.4vw,104px);line-height:.88;font-weight:900;font-variat
 
 <section class="lime on-lime" id="rescue" aria-labelledby="h-rescue">
   <div class="wrap">
-    <h2 class="reg" id="h-rescue">Rescue kit for a pedal that will not start</h2>
+    <h2 id="h-rescue">Rescue kit for a pedal that will not start</h2>
     <div class="rescue__grid">
       <div>
         <p class="lede" style="margin-top:0">A BlackBox with a black screen goes back to M-VAVE's firmware over USB, from a Mac or a Windows PC. You need no extra hardware.</p>
@@ -307,9 +307,9 @@ h2{font-size:clamp(40px,6.4vw,104px);line-height:.88;font-weight:900;font-variat
   </div>
 </section>
 
-<section class="dark on-ink" id="kit" aria-labelledby="h-kit">
+<section class="dark" id="kit" aria-labelledby="h-kit">
   <div class="wrap">
-    <h2 class="reg" id="h-kit">Undertone, the kit Gamut is built on</h2>
+    <h2 id="h-kit">Undertone, the kit Gamut is built on</h2>
     <p class="lede" style="color:var(--soft)">Gamut and PALETTE share one base. Build your own firmware on it, and try it on the pedal on your screen before it goes near the real one.</p>
     <code class="cmd">node tools/op.mjs sim</code>
     <div class="kit3">
@@ -323,7 +323,7 @@ h2{font-size:clamp(40px,6.4vw,104px);line-height:.88;font-weight:900;font-variat
 
 <section id="questions" aria-labelledby="h-questions">
   <div class="wrap">
-    <h2 class="reg" id="h-questions">Before you install</h2>
+    <h2 id="h-questions">Before you install</h2>
     <div class="qa">
       <div><h3>Can I go back to the official firmware?</h3><p>Yes. Pick the official .fwsc file from Donner or M-VAVE in the installer's step 3. Your browser checks it first.</p></div>
       <div><h3>Does an update keep my presets?</h3><p>Yes. Each firmware also keeps its own presets while the pedal runs the other one.</p></div>
@@ -338,7 +338,7 @@ h2{font-size:clamp(40px,6.4vw,104px);line-height:.88;font-weight:900;font-variat
 <section class="manifesto" aria-labelledby="h-manifesto">
   <div class="wrap">
     <h2 class="sr" id="h-manifesto">Why Undertone exists</h2>
-    <p class="big reg">Your pedal. <em>Your firmware.</em></p>
+    <p class="big">Your pedal. <em>Your firmware.</em></p>
     <div class="cols">
       <p>Gamut replaces the firmware of the Donner Pocket X and the M-VAVE BlackBox with one you can read, build and change. The code is GPL-3.0, written from scratch for the pedal's own chip.</p>
       <p>Changed your mind? The installer puts the official firmware back. A BlackBox that went dark comes back with the rescue kit. Neither company makes Undertone or supports it.</p>
@@ -346,9 +346,9 @@ h2{font-size:clamp(40px,6.4vw,104px);line-height:.88;font-weight:900;font-variat
   </div>
 </section>
 
-<section class="close dark on-ink" aria-labelledby="h-close">
+<section class="close dark" aria-labelledby="h-close">
   <div class="wrap">
-    <h2 class="reg" id="h-close">Install takes about two minutes</h2>
+    <h2 id="h-close">Install takes about two minutes</h2>
     <p class="lede">Chrome or Edge, a USB data cable and the pedal. The page checks each package before it sends a byte.</p>
     <div class="row"><a class="btn" href="install.html">Install a firmware</a></div>
   </div>
@@ -370,30 +370,38 @@ h2{font-size:clamp(40px,6.4vw,104px);line-height:.88;font-weight:900;font-variat
   var letters=[].slice.call(document.querySelectorAll('#word span'));
   var reduce=matchMedia('(prefers-reduced-motion: reduce)');
   var audio=document.getElementById('riff'),btn=document.getElementById('listen'),raf=0;
-  // each letter follows the loudness a little after the one before it, so the riff runs through the word
-  function frame(t){
-    var k=t/0.04;
-    letters.forEach(function(el,i){
-      var j=Math.floor(k)-i*2, v=j<0?1:ENV[j%ENV.length];
-      // a transform only: the letter grows and thins with the loudness without moving its neighbours
-      el.style.transform='scale('+(0.8+0.28*v).toFixed(3)+','+(0.22+0.78*v).toFixed(3)+')';
-      el.style.setProperty('--mx',(2+v*16).toFixed(1)+'px');el.style.setProperty('--my',(1+v*10).toFixed(1)+'px');
-    });
+  // the loudness at t seconds, between the windows; each letter hears it 80 ms after the one before, so the riff runs
+  // through the word
+  function level(t,i){
+    var k=t/0.04-i*2; if(k<0) return 0;
+    var j=Math.floor(k), a=ENV[j%ENV.length], b=ENV[(j+1)%ENV.length];
+    return a+(b-a)*(k-j);
   }
-  function rest(){letters.forEach(function(el){el.style.transform='';el.style.removeProperty('--mx');el.style.removeProperty('--my');});}
-  function run(getT,dur){cancelAnimationFrame(raf);var t0=performance.now();
-    (function loop(now){var t=getT?getT():(now-t0)/1000; if(t>=dur){rest();return;} frame(t); raf=requestAnimationFrame(loop);})(t0);}
-  if(!reduce.matches) setTimeout(function(){run(null,4.42);},1100);
+  // a level meter's ballistics: a letter rises at once with a louder note and falls back slowly; when the riff stops
+  // the letters settle back onto the line. A transform only, so nothing around the word moves.
+  var playing=false,lift=letters.map(function(){return 0}),last=0;
+  function tick(now){
+    var dt=Math.min((now-last)/1000,0.1),busy=playing;last=now;
+    letters.forEach(function(el,i){
+      var v=playing?Math.max(0,(level(audio.currentTime,i)-0.45)/0.55):0, s=lift[i];   // the quieter notes stay on the line
+      s+=(v-s)*(1-Math.exp(-dt/(v>s?0.03:0.15)));
+      if(s>0.002) busy=true; else s=0;
+      lift[i]=s;
+      el.style.transform=s?'translateY('+(-20*s).toFixed(2)+'%)':'';
+    });
+    raf=busy?requestAnimationFrame(tick):0;
+  }
+  function meter(on){playing=on;if(!raf&&!reduce.matches){last=performance.now();raf=requestAnimationFrame(tick);}}
   var label=btn.querySelector('span'),note=document.getElementById('riffnote');
   var idle=reduce.matches?'Play the riff':label.textContent;   // under reduced motion the letters stay still
   label.textContent=idle;
-  function stopped(){btn.setAttribute('aria-pressed','false');btn.removeAttribute('aria-busy');label.textContent=idle;cancelAnimationFrame(raf);rest();}
+  function stopped(){btn.setAttribute('aria-pressed','false');btn.removeAttribute('aria-busy');label.textContent=idle;meter(false);}
   btn.addEventListener('click',function(){
     if(!audio.paused){audio.pause();audio.currentTime=0;stopped();return;}
     // the file loads on the first press: say so while it does, and say it if it cannot play
     btn.setAttribute('aria-busy','true');label.textContent='Loading the riff…';note.textContent='';
     audio.play().then(function(){btn.removeAttribute('aria-busy');btn.setAttribute('aria-pressed','true');label.textContent='Stop the riff';
-      if(!reduce.matches) run(function(){return audio.currentTime;},4.4);})
+      meter(true);})
       .catch(function(err){stopped();if(err&&err.name==='AbortError')return;note.textContent='The riff could not play in this browser.';});
   });
   audio.addEventListener('ended',stopped);
