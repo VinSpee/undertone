@@ -746,10 +746,10 @@ impl Writing {
 #[test]
 fn a_first_ctrl_c_in_the_plain_view_only_warns_and_the_write_goes_on() {
     let w = Writing::start();
-    w.write(3, "writing: 25%");
+    w.write(3, "updating your pedal: 25%");
     w.ctrl_c();
     w.printed_has(REFUSED);
-    w.write(12, "writing: 100%");
+    w.write(12, "updating your pedal: 100%");
     let o = w.view.join().unwrap();
     assert_eq!(o.text, "ERROR: done");
 }
@@ -757,7 +757,7 @@ fn a_first_ctrl_c_in_the_plain_view_only_warns_and_the_write_goes_on() {
 #[test]
 fn a_second_ctrl_c_in_the_plain_view_ends_the_write_with_the_resume_note() {
     let w = Writing::start();
-    w.write(3, "writing: 25%");
+    w.write(3, "updating your pedal: 25%");
     w.ctrl_c();
     w.printed_has(REFUSED);
     w.ctrl_c();
