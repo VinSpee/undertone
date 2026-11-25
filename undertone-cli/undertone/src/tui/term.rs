@@ -260,7 +260,7 @@ impl View for TermView {
                             // the next run resumes
                             Self::restore();
                             println!(
-                                "\nstopped; running undertone again starts over, and a rescue resumes where it stopped"
+                                "\nStopped. Start undertone again to start over; a fix that was under way continues where it stopped."
                             );
                             for l in &self.note {
                                 println!("{l}");

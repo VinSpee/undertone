@@ -213,8 +213,33 @@ struct Recording {
     seen: Rc<RefCell<Vec<Value>>>,
 }
 
+/// A screen as an 80 x 24 terminal shows it: no line so long that it wraps, and nothing pushed off the bottom, with
+/// the hints of a long wait under it.
+fn fits(screen: &Screen, hint: &[String]) {
+    for (texts, room) in [(&screen.lines[..], look::WIDTH), (hint, look::WIDTH - 2)] {
+        for text in texts {
+            assert!(look::width(text) <= room, "wraps at {room} columns: {text}");
+        }
+    }
+    let caps = Caps {
+        depth: Depth::TrueColor,
+        theme: Some(Theme::Dark),
+        unicode: true,
+        motion: false,
+    };
+    let shown = Screen {
+        status: (!hint.is_empty()).then(|| Status::Spin("looking for your pedal…".into())),
+        warn: hint.to_vec(),
+        ..screen.clone()
+    };
+    let frame = look::plain(&look::compose(&shown, &caps, 80, 24, 0.0, "7"));
+    let last = hint.last().or(screen.choices.last().map(|(_, label)| label)).unwrap();
+    assert!(frame.contains(last.as_str()), "{}: cut off at 24 rows", screen.title);
+}
+
 impl View for Recording {
     fn ask(&mut self, screen: &Screen) -> String {
+        fits(screen, &[]);
         let key = self.keys.remove(0);
         self.seen
             .borrow_mut()
@@ -223,6 +248,7 @@ impl View for Recording {
     }
 
     fn work(&mut self, screen: &Screen, job: WorkFn, _log: &mut Log, write: bool, hint: &[String]) -> Outcome {
+        fits(screen, hint);
         let mut progress = Progress::new(write);
         let mut phases: Vec<&str> = vec![];
         let o = job(
@@ -254,6 +280,169 @@ fn shown(text: &str) -> String {
         })
         .collect::<Vec<_>>()
         .join(" ")
+}
+
+/// The copy these screens changed, each text beside the Python screens' text it stands for: a title, a label or a
+/// line, or all the lines of a screen where their number changed. The Python command keeps its copy, so a flow is
+/// compared with Python's after each of these is read as Python's; every other text must be Python's word for word.
+const EDITED: &[(&[&str], &[&str])] = &[
+    (&["how can undertone help?"], &["what would you like to do?"]),
+    (
+        &["Have your pedal and its USB cable ready."],
+        &["Undertone works on your pedal over its USB cable."],
+    ),
+    (&["fix your pedal"], &["fix a pedal that will not start"]),
+    (
+        &["First undertone checks your pedal and saves a copy of it."],
+        &["First a safe check: undertone saves a copy of your pedal."],
+    ),
+    (
+        &["Nothing changes until you say yes."],
+        &["Nothing changes until you say so."],
+    ),
+    (
+        &["Leave it plugged in: undertone catches it as it restarts."],
+        &["A pedal that will not start shows up between restarts."],
+    ),
+    (
+        &["Undertone will put M-VAVE's V23 software back on it."],
+        &["Undertone puts M-VAVE V23 back on it."],
+    ),
+    (
+        &["A copy of what is on it now is saved first. Continue?"],
+        &["A copy is saved first. Continue?"],
+    ),
+    (&["no, stop here"], &["no"]),
+    (&["yes, replace it"], &["yes"]),
+    (
+        &["Then leave the cable alone until undertone finishes."],
+        &["Leave the cable alone while undertone works."],
+    ),
+    (
+        &[
+            "Unplug the cable, then switch your pedal off and on again.",
+            "To add Gamut later, use undertone, not an installer page.",
+            "An installer page can stop this pedal starting again.",
+        ],
+        &[
+            "Unplug it, then switch it off and on again.",
+            "To add Gamut later, use undertone, not the installer page.",
+        ],
+    ),
+    (
+        &["Your pedal is fixed. Everything put on it was checked."],
+        &["Done: 155 sectors written and verified. Power-cycle the pedal. Backup: BACKUP"],
+    ),
+    (
+        &["Next: unplug the cable, switch your pedal off, wait 5 seconds, then switch it on."],
+        &["Next: unplug the cable, switch the pedal off, wait 5 seconds and switch it on."],
+    ),
+    (
+        &["Do not put Gamut on it from an installer page: use undertone instead."],
+        &["Do not install Gamut on it from an installer page: use undertone install."],
+    ),
+    (
+        &["Nothing was changed on your pedal."],
+        &["Nothing was written to your pedal."],
+    ),
+    (&["this needs a closer look"], &["this pedal needs a closer look"]),
+    (
+        &["Open the guide to see how to ask for help."],
+        &["The guide says how to ask for help."],
+    ),
+    (
+        &["No M-VAVE file fits your pedal. Keep the copy and ask for help: \
+             https://github.com/VinSpee/undertone/blob/main/docs/RESCUE.md#if-it-does-not-work"],
+        &["No official file fits this pedal. Keep the copy and ask for help: \
+             https://github.com/VinSpee/undertone/blob/main/docs/RESCUE.md#if-it-does-not-work"],
+    ),
+    (
+        &["Start undertone again: it continues where it stopped."],
+        &["Run undertone again: it continues where it stopped."],
+    ),
+    (
+        &["Plug it in and start undertone again (or run: undertone rescue). It continues where it stopped."],
+        &["Plug it in and run: undertone rescue  (it continues where it stopped)"],
+    ),
+    (
+        &[
+            "Switch your pedal off. Hold HOME, PUSH and the right",
+            "footswitch, switch it on, and hold until it says RECOVERY.",
+        ],
+        &[
+            "Switch your pedal off. Hold these three, switch it on,",
+            "and keep holding until its screen says RECOVERY.",
+        ],
+    ),
+    (&["hold the three buttons again"], &["once more: hold the three"]),
+    (
+        &["Gamut is on your pedal. Everything put on it was checked."],
+        &["Done: 9 sectors written and verified, on M-VAVE's V22/V23 head. Backup: BACKUP"],
+    ),
+    (
+        &["Switch your pedal off and on again to start Gamut."],
+        &["Switch it off and on again to start Gamut."],
+    ),
+    (
+        &[
+            "Plug your pedal straight into this computer. If it starts,",
+            "switch it on holding HOME, PUSH and the right footswitch.",
+        ],
+        &[
+            "Plug it straight into this computer, with no hub.",
+            "If it starts, hold these three as you switch it on.",
+        ],
+    ),
+    (&["your pedal is checked"], &["undertone does not know this pedal"]),
+    (
+        &[
+            "Undertone does not know this pedal.",
+            "It now runs M-VAVE's own software.",
+            "A copy of your pedal is saved.",
+        ],
+        &["It now runs M-VAVE's own software.", "A copy of your pedal is saved."],
+    ),
+    (
+        &[
+            "Next, your computer asks for the password you log in with.",
+            "Type it and press Enter. Nothing shows while you type.",
+        ],
+        &[
+            "Your computer asks for it once, to reach the pedal.",
+            "Nothing shows while you type.",
+        ],
+    ),
+];
+
+/// Texts as the Python screens have them: all of them at once where `EDITED` lists them so, else one by one.
+fn python(texts: &[String]) -> Vec<String> {
+    match EDITED.iter().find(|(ours, _)| ours.iter().eq(texts)) {
+        Some((_, theirs)) => theirs.iter().map(|t| t.to_string()).collect(),
+        None if texts.len() > 1 => texts.iter().flat_map(|t| python(std::slice::from_ref(t))).collect(),
+        None => texts.to_vec(),
+    }
+}
+
+/// A recorded flow with its copy read as Python's.
+fn as_python(flow: &mut Value) {
+    let lines = |v: &mut Value| *v = json!(python(&strings(v)));
+    let text = |v: &mut Value| *v = json!(python(&[v.as_str().unwrap().to_string()])[0]);
+    for step in flow["screens"].as_array_mut().unwrap() {
+        if let Some(hint) = step.get_mut("hint") {
+            lines(hint);
+        }
+        let screen = if step.get("ask").is_some() {
+            &mut step["ask"]
+        } else {
+            &mut step["work"]
+        };
+        text(&mut screen["title"]);
+        lines(&mut screen["lines"]);
+        for choice in screen["choices"].as_array_mut().unwrap() {
+            text(&mut choice[1]);
+        }
+    }
+    lines(&mut flow["lines"]);
 }
 
 fn layouts() -> Vec<Layout> {
@@ -325,11 +514,12 @@ fn guided(name: &str, flow: Flow) {
         seen: seen.clone(),
     };
     let result = Guide::new(&mut view, w, "menu", Log::new(None)).go();
-    let got = json!({
+    let mut got = json!({
         "screens": *seen.borrow(), "opened": *opened.borrow(), "code": result.code, "restart": result.restart,
         "lines": result.lines.iter().map(|l| shown(l)).collect::<Vec<_>>(), "backup": result.backup.is_some(),
         "flash": hex(&sha256(&pedal.lock().flash)),
     });
+    as_python(&mut got);
     for (i, (g, w)) in got["screens"]
         .as_array()
         .unwrap()

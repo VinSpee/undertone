@@ -127,7 +127,9 @@ pub fn main(start: &str) -> i32 {
         }
     };
     if interrupted {
-        println!("\nstopped; running undertone again starts over, and a rescue resumes where it stopped");
+        println!(
+            "\nStopped. Start undertone again to start over; a fix that was under way continues where it stopped."
+        );
         return exit::STOPPED;
     }
     if let Some(task) = result.restart {
