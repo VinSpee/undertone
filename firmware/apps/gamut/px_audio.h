@@ -15,6 +15,9 @@
 #include <math.h>
 #include "px_dsp.h"
 #include "base/audio.h"                                 /* the I2S, a_input, dsp_out, dsp_load, a_output, the tuner */
+#if !OP_RATE48                                          /* (that test build picks its rate at the start) */
+_Static_assert(A_SR == PX_FS, "the engine is built for another rate than the I2S's (px_dsp.h PX_FS, base/audio.h A_SR)");
+#endif
 
 /* ===================== engine + interrupt-time processing ===================== */
 static px_engine g_eng __attribute__((section(".pool"), aligned(8)));   /* ~250 KB: "POOL" RAM region */

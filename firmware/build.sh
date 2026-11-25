@@ -56,6 +56,7 @@ fi
 # A test channel build (OP_CHANNEL=midi-test): its own version number (OP_TEST_VERSION, default 37) and a boot-screen tag, its
 # own files (build/apps/gamut/openpocket-midi-test.bin, build/apps/gamut/midi-test/). The release files are not touched.
 CHAN="${OP_CHANNEL:-}"
+ENGINE48=0                                            # 1: the engine built for 48 kHz (px_dsp.h PX_FS) and its memory
 : > "$O/channel.h"
 if [ -n "$CHAN" ]; then
   case "$CHAN" in *[!a-z0-9-]*|"") echo "ERROR: OP_CHANNEL must be lowercase letters, digits and -"; exit 1;; esac
@@ -64,7 +65,7 @@ if [ -n "$CHAN" ]; then
   # the I2S clock's two test builds (firmware/base/rate.h, docs/RATE48-TEST.md): the report at 44.1 kHz, then 48 kHz guarded
   case "$CHAN" in
     rate-diag) echo '#define OP_RATE_DIAG 1' >> "$O/channel.h";;
-    rate48) echo '#define OP_RATE48 1' >> "$O/channel.h";;
+    rate48) echo '#define OP_RATE48 1' >> "$O/channel.h"; ENGINE48=1;;
   esac
   APP="$HERE/../build/apps/gamut/openpocket-$CHAN.bin"; PKG="$HERE/../build/apps/gamut/$CHAN"
   rm -f "$APP"
@@ -73,6 +74,7 @@ fi
 # AC791N hardware FPU (same options as the JieLi SDK for the WL82); the engine's rate is the I2S's (base/audio.h A_SR)
 FP="-mcpu=r3 -mfprev1"
 DSPDEF="-DPX_OVERSAMPLE=4"
+[ "$ENGINE48" = 1 ] && DSPDEF="$DSPDEF -DPX_FS=48000"
 [ -n "$OP_BLE" ] && DSPDEF="$DSPDEF -DPXN_LEAN=1 -DPXN_HOT_RAM=1 -DPX_RUNS=0"   # v40.2: the test image's flash is full (firmware/apps/gamut/engine/px_nam.c; v40.4: px_dsp.c PX_RUNS)
 [ -n "$OP_APP" ] && DSPDEF="$APP_DEFS"
 INC="-I$HERE -I$HERE/inc -I$HERE/apps/gamut/engine"
@@ -119,7 +121,7 @@ python3 "$HERE/../tools/ramcode.py" "$MOBJ" $RAM_FW
 # a direct call between the flash code and the RAM code is out of the CPU's call range: refuse it with its name
 # (v40: the audio path's RAM code, .ram_text.dsp.*, is within range by its place, firmware/app.ld)
 python3 "$HERE/../tools/check_calls.py" "$O/crt0.o" "$O/vec.o" "$O/isr.o" $CPU1OBJ "$MOBJ" $EOBJ "$O/px_math.o"
-"$TC/pi32v2/bin/ld" --defsym "op_guard_stack=$GUARD_STACK" -L "$MEM" -T "$HERE/app.ld" "$O/crt0.o" "$O/vec.o" "$O/isr.o" $CPU1OBJ "$MOBJ" $EOBJ "$O/px_math.o" "$O/iis.o" $BLEOBJ $MAPOPT -o "$O/openpocket.elf"
+"$TC/pi32v2/bin/ld" --defsym "op_guard_stack=$GUARD_STACK" --defsym "op_engine48=$ENGINE48" -L "$MEM" -T "$HERE/app.ld" "$O/crt0.o" "$O/vec.o" "$O/isr.o" $CPU1OBJ "$MOBJ" $EOBJ "$O/px_math.o" "$O/iis.o" $BLEOBJ $MAPOPT -o "$O/openpocket.elf"
 # symbol map: used to translate a crash address (PC) into a function name
 "$TC/common/bin/objdump" -t "$O/openpocket.elf" 2>/dev/null | sort > "$O/symbols.txt" || true
 "$TC/common/bin/objcopy" -O binary -j .text     "$O/openpocket.elf" "$O/text.bin"

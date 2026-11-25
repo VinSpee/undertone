@@ -38,6 +38,11 @@
 #endif
 
 #define PI_F 3.14159265f
+/* counts of samples set at 44.1 kHz (the shifters' windows, the per-sample decays), for the rate the engine is built
+ * for (px_dsp.h PX_FS): constants, the same ones at 44.1 kHz */
+#define PX_N44 ((float)PX_FS / 44100.0f)                 /* samples at PX_FS a sample at 44.1 kHz is */
+#define PS_W(n) ((float)(n) * PX_N44)                    /* a window of n samples at 44.1 kHz */
+#define PX_DK(c) (1.0f - (1.0f - (c)) / PX_N44)          /* a per-sample decay c at 44.1 kHz */
 
 /* ================================================================ tools ===== */
 static inline float px_tanh(float x)                   /* rational, err < 1e-3 on [-3,3] */
@@ -783,13 +788,13 @@ static void rc_pitch(px_engine *e)
         break;
     case PX_PIT_POLYOCT:                               /* two delay-line shifters: -12 and +12 */
         e->ps_nv = 2; e->ps_dry = f01(q[0]);
-        e->ps_W[0] = 1400.0f; e->ps_inc[0] = 0.5f / 1400.0f; e->ps_lvl[0] = f01(q[1]) * 1.2f;
-        e->ps_W[1] = 1000.0f; e->ps_inc[1] = -1.0f / 1000.0f; e->ps_lvl[1] = f01(q[2]);
+        e->ps_W[0] = PS_W(1400); e->ps_inc[0] = 0.5f / PS_W(1400); e->ps_lvl[0] = f01(q[1]) * 1.2f;
+        e->ps_W[1] = PS_W(1000); e->ps_inc[1] = -1.0f / PS_W(1000); e->ps_lvl[1] = f01(q[2]);
         break;
     case PX_PIT_WHAMMY: {
         float st = (f01(q[0]) - 0.5f) * 48.0f, m = f01(q[1]);
         e->ps_nv = 1; e->ps_dry = 1.0f - m; e->ps_lvl[0] = m;
-        e->ps_W[0] = 1400.0f; e->ps_invW = 1.0f / 1400.0f;
+        e->ps_W[0] = PS_W(1400); e->ps_invW = 1.0f / PS_W(1400);
         e->ps_rt = expf(st * 0.05776227f);             /* 2^(st/12) */
         if (e->ps_r <= 0.0f) e->ps_r = e->ps_rt;
         e->ps_glide = onepole_k(sr, 0.003f + f01(q[2]) * f01(q[2]) * 0.6f);
@@ -797,14 +802,14 @@ static void rc_pitch(px_engine *e)
     case PX_PIT_HARMONY: {
         float r = expf((float)HARM_ST[harm_idx(q[0])] * 0.05776227f);
         e->ps_nv = 1; e->ps_dry = 1.0f; e->ps_lvl[0] = f01(q[1]) * 1.1f;
-        e->ps_W[0] = r < 1.0f ? 1400.0f : 1100.0f; e->ps_inc[0] = (1.0f - r) / e->ps_W[0];
+        e->ps_W[0] = r < 1.0f ? PS_W(1400) : PS_W(1100); e->ps_inc[0] = (1.0f - r) / e->ps_W[0];
     } break;
     default: {                                         /* doubler: +c and -c cents */
         float c = 3.0f + f01(q[0]) * 27.0f, m = f01(q[1]);
         float r0 = expf(c * 0.000577623f), r1 = expf(-c * 0.000577623f);
         e->ps_nv = 2; e->ps_dry = 1.0f - 0.5f * m;
-        e->ps_W[0] = 1200.0f; e->ps_inc[0] = (1.0f - r0) / 1200.0f; e->ps_lvl[0] = 0.6f * m;
-        e->ps_W[1] = 1100.0f; e->ps_inc[1] = (1.0f - r1) / 1100.0f; e->ps_lvl[1] = 0.6f * m;
+        e->ps_W[0] = PS_W(1200); e->ps_inc[0] = (1.0f - r0) / PS_W(1200); e->ps_lvl[0] = 0.6f * m;
+        e->ps_W[1] = PS_W(1100); e->ps_inc[1] = (1.0f - r1) / PS_W(1100); e->ps_lvl[1] = 0.6f * m;
     } break;
     }
     if (e->ps_ph[1] == 0.0f && e->ps_ph[0] == 0.0f) e->ps_ph[1] = 0.37f;
@@ -1488,7 +1493,7 @@ static void rv_layout(px_rev *e, int16_t *m, int t, float srs)
         int tot = 0;
         for (int u = 0; u < 13; u++) tot += n[u] + 1;
         if (tot <= PX_RV_M) break;
-        f = (float)PX_RV_M / (float)tot * 0.98f;           /* (above 44.1 kHz only) shorter lines */
+        f = (float)PX_RV_M / (float)tot * 0.98f;           /* shorter lines (the plate's: 0.96 of its size) */
     }
     int b = 0;
     for (int u = 0; u < 13; u++) { e->rv_b[u] = b; e->rv_n[u] = n[u]; b += n[u] + 1; }   /* a unit lives n + 1 slots */
@@ -1590,17 +1595,17 @@ static void rc_syn(px_engine *e)
     switch (t) {
     case PX_SYN_ORGAN: {                               /* drawbars: 16' = -12, 8' = the guitar, 4' = +12, perc = +19 */
         float n = 1.0f / (0.35f + a + b + c);
-        syn_voice(e, 0, -12.0f, 1400.0f, a * n * 1.3f);
-        syn_voice(e, 1, 12.0f, 1000.0f, c * n);
+        syn_voice(e, 0, -12.0f, PS_W(1400), a * n * 1.3f);
+        syn_voice(e, 1, 12.0f, PS_W(1000), c * n);
         e->syn_d8 = b * n;
-        if (d > 0.0f) { syn_voice(e, 2, 19.0f, 700.0f, 0.0f); e->syn_plvl = d * n * 1.6f; }
+        if (d > 0.0f) { syn_voice(e, 2, 19.0f, PS_W(700), 0.0f); e->syn_plvl = d * n * 1.6f; }
         e->syn_clk = 0.08f; e->syn_dry = f; e->syn_out = 1.1f;
     } break;
     case PX_SYN_CHURCH: {                              /* pipe organ: 16' 8' 4' 2', slow speech, long release */
         float n = 1.0f / (0.35f + a + b + c + d);
-        syn_voice(e, 0, -12.0f, 1400.0f, a * n * 1.3f);
-        syn_voice(e, 1, 12.0f, 1000.0f, c * n);
-        syn_voice(e, 2, 24.0f, 800.0f, d * n * 0.8f);
+        syn_voice(e, 0, -12.0f, PS_W(1400), a * n * 1.3f);
+        syn_voice(e, 1, 12.0f, PS_W(1000), c * n);
+        syn_voice(e, 2, 24.0f, PS_W(800), d * n * 0.8f);
         e->syn_d8 = b * n;
         e->syn_ka = onepole_k(sr, 0.06f); e->syn_kr = onepole_k(sr, 0.45f);
         e->syn_lpk = opk(sr, 2200.0f); e->syn_dry = f; e->syn_out = 1.1f;
@@ -1612,8 +1617,8 @@ static void rc_syn(px_engine *e)
         e->syn_ka = onepole_k(sr, syn_att_ms(a) * 0.001f); e->syn_kr = onepole_k(sr, syn_rel_ms(b) * 0.001f);
         float n = 1.0f / (1.0f + oct * 0.8f + 0.3f);
         e->syn_d8 = n;
-        syn_voice(e, 0, 12.0f, 1000.0f, oct * 0.8f * n);
-        syn_voice(e, 1, -12.0f, 1400.0f, 0.3f * n);
+        syn_voice(e, 0, 12.0f, PS_W(1000), oct * 0.8f * n);
+        syn_voice(e, 1, -12.0f, PS_W(1400), 0.3f * n);
         e->syn_cdep[0] = 0.0015f * sr; e->syn_cdep[1] = 0.00025f * sr;   /* ensemble: slow + fast vibrato */
         e->syn_linc[0] = 0.6f / sr; e->syn_linc[1] = 6.0f / sr; e->syn_cbase = 0.007f * sr;
         if (t == PX_SYN_STRINGS) {
@@ -1654,7 +1659,7 @@ static void rc_syn(px_engine *e)
         break;
     case PX_SYN_12STR: {                               /* octave strings (+12, detuned, thin) + unison doubling */
         float cents = b * 15.0f;
-        syn_voice(e, 0, 12.0f + cents * 0.01f, 1000.0f, a * 0.85f);
+        syn_voice(e, 0, 12.0f + cents * 0.01f, PS_W(1000), a * 0.85f);
         e->syn_hpk = opk(sr, 150.0f + c * c * 1500.0f);
         e->syn_cdep[0] = 0.0004f * sr * b; e->syn_linc[0] = 0.35f / sr; e->syn_cbase = 0.006f * sr;
         e->syn_dry = 1.0f; e->syn_out = 0.35f * b;     /* unison copy level */
@@ -1675,7 +1680,7 @@ static void rc_syn(px_engine *e)
         int base = 0;
         for (int i = 0; i < 6; i++) {
             float fr = root * expf((float)ST[i] * 0.05776227f);
-            int L = (int)(sr / fr + 0.5f); if (L > 340) L = 340; if (L < 8) L = 8;
+            int L = (int)(sr / fr + 0.5f); if (L > 340 * PX_FS / 44100) L = 340 * PX_FS / 44100; if (L < 8) L = 8;
             e->syn_cl[i] = L; e->syn_c0[i] = base; base += L;
             if (e->syn_cp[i] >= L) e->syn_cp[i] = 0;
         }
@@ -1685,7 +1690,7 @@ static void rc_syn(px_engine *e)
         e->syn_dry = 1.0f; e->syn_out = 0.7f;
     } break;
     default: {                                         /* baritone: the whole guitar a few semitones down */
-        syn_voice(e, 0, (float)syn_bari_st(q[0]), 1400.0f, c);
+        syn_voice(e, 0, (float)syn_bari_st(q[0]), PS_W(1400), c);
         bq_lowshelf(&e->syn_f[0], sr, 180.0f, b * 6.0f); bq_highshelf(&e->syn_f[1], sr, 3500.0f, -b * 4.0f);
         e->syn_nf = 2; e->syn_dry = 1.0f - c; e->syn_out = 1.0f;
     } break;
@@ -2294,8 +2299,14 @@ static inline float mod_tap(const px_engine *e, float d)
  * One 16-bit ring for every line: the write pointer turns once per tick, unit u writes at (ptr + base u) and what it
  * wrote k ticks ago is at (ptr + base u + k). The tank works in the ring's units (x RV_Q): no scaling per access. */
 #define RV_Q 16384.0f                                  /* reverb memory: 16 bits, +-2.0 */
-#define RV_MASK (PX_RV_M - 1)
-#define RV_RD(u, k) ((float)m[(p + b[u] + (k)) & RV_MASK])
+#if PX_RV_M & (PX_RV_M - 1)                            /* (not a power of two: above 44.1 kHz, px_dsp.h) */
+#define RV_AT(i) ((i) >= PX_RV_M ? (i) - PX_RV_M : (i))  /* the ring's slot of i, 0 <= i < 2 PX_RV_M */
+#define RV_BACK(p) ((p) ? (p) - 1 : PX_RV_M - 1)        /* the write pointer's turn */
+#else
+#define RV_AT(i) ((i) & (PX_RV_M - 1))
+#define RV_BACK(p) (((p) - 1) & (PX_RV_M - 1))
+#endif
+#define RV_RD(u, k) ((float)m[RV_AT(p + b[u] + (k))])
 static inline int16_t rv_q(float v, float rq)          /* rq: 0.5 = rounded, 0 = cut towards zero */
 {
     union { float f; uint32_t u; } a, r;
@@ -2305,12 +2316,12 @@ static inline int16_t rv_q(float v, float rq)          /* rq: 0.5 = rounded, 0 =
     v = v < -32767.0f ? -32767.0f : v;
     return (int16_t)v;
 }
-#define RV_WR(u, v) (m[(p + b[u]) & RV_MASK] = rv_q((v), rq))
+#define RV_WR(u, v) (m[RV_AT(p + b[u])] = rv_q((v), rq))
 static inline float rv_lin(const int16_t *m, int at, float k)      /* fractional read, k ticks back from `at` */
 {
     int ki = (int)k; float f = k - (float)ki;
-    float a = (float)m[(at + ki) & RV_MASK];
-    return a + ((float)m[(at + ki + 1) & RV_MASK] - a) * f;
+    float a = (float)m[RV_AT(at + ki)];
+    return a + ((float)m[RV_AT(at + ki + 1)] - a) * f;
 }
 /* pre-delay, early reflections, Dattorro's 4 input diffusers */
 PX_AINL static inline float rv_front(px_rev *e, int16_t *m, int p, const int *b, float rq, float in, float *er)
@@ -2392,12 +2403,12 @@ static inline float ps_voice(const float *buf, int w, float *ph, float inc, floa
     a = wrap1(a);
     *ph = a;
     float b = a + 0.5f; if (b >= 1.0f) b -= 1.0f;
-    float pa = (float)w - (3.0f + a * W); if (pa < 0.0f) pa += (float)PX_PS_N;
-    float pb = (float)w - (3.0f + b * W); if (pb < 0.0f) pb += (float)PX_PS_N;
+    float pa = (float)w - (3.0f + a * W); if (pa < 0.0f) pa += (float)PX_SH_N;
+    float pb = (float)w - (3.0f + b * W); if (pb < 0.0f) pb += (float)PX_SH_N;
     float s = lfo_sin(a * 0.5f), g = s * s;            /* sin^2 / cos^2 crossfade: sums to 1 */
-    return rd_frac(buf, PX_PS_N - 1, pa) * g + rd_frac(buf, PX_PS_N - 1, pb) * (1.0f - g);
+    return rd_frac(buf, PX_SH_N - 1, pa) * g + rd_frac(buf, PX_SH_N - 1, pb) * (1.0f - g);
 }
-#define PS_OFFMAX 512                                  /* one period of low E */
+#define PS_OFFMAX (512 * PX_FS / 44100)                 /* one period of low E */
 #if !PX_RUNS
 PX_HOT static float ps_align(const float *buf, int w, float d_ref, float d_new)
 {                                                      /* SOLA: offset that puts the fading-in tap in phase */
@@ -2506,7 +2517,7 @@ static inline float polyblep(float t, float dt)        /* band-limited step corr
 static inline float syn_saw(float ph, float dt) { return 2.0f * ph - 1.0f - polyblep(ph, dt); }
 static inline float syn_ladder(px_engine *e, float in, float fc)
 {   /* 4 one-poles, tanh on the feedback: a 24 dB/oct "transistor ladder" low-pass, resonant */
-    if (fc > e->sr * 0.42f) fc = e->sr * 0.42f;
+    if (fc > e->sr * (0.42f / PX_N44)) fc = e->sr * (0.42f / PX_N44);   /* (0.42 of 44.1 kHz, whatever the rate) */
     float wc = PI_F * fc / e->sr, g = wc / (1.0f + wc);
     float u = px_tanh(in - e->syn_res * 4.0f * e->syn_lad[3]);
     e->syn_lad[0] += g * (u - e->syn_lad[0]);
@@ -2544,7 +2555,7 @@ static inline int syn_track(px_engine *e, float x)
 {
     /* a steep fixed low-pass far below most notes: whatever the note, its fundamental comes out on top */
     float b = bq_run(&e->syn_f[1], bq_run(&e->syn_f[0], bq_run(&e->syn_f[2], x))), ab = px_abs(b);
-    e->syn_sq = ab > e->syn_sq ? ab : e->syn_sq * 0.998f;
+    e->syn_sq = ab > e->syn_sq ? ab : e->syn_sq * PX_DK(0.998f);
     float h = e->syn_sq * 0.2f;
     int trig = 0;
     e->syn_cnt += 1.0f;
@@ -2590,7 +2601,7 @@ PX_INL static inline float syn_run(px_engine *e, int t, float x)
         if (e->syn_click > 1e-4f) {                    /* key click: a 2 ms burst */
             e->syn_rnd = e->syn_rnd * 1664525u + 1013904223u;
             y += ((float)(e->syn_rnd >> 8) * (2.0f / 16777216.0f) - 1.0f) * e->syn_click * e->syn_clk;
-            e->syn_click *= 0.985f;
+            e->syn_click *= PX_DK(0.985f);
         }
         if (e->syn_cdep[0] > 0.0f) {                   /* church: slow celeste */
             e->syn_cb[e->syn_cw] = y;
@@ -2664,7 +2675,7 @@ PX_INL static inline float syn_run(px_engine *e, int t, float x)
         e->syn_kg += ((on ? 1.0f : 0.0f) - e->syn_kg) * (on ? e->syn_ka : e->syn_kr);
         if (e->syn_kg < 1e-6f) e->syn_kg = 0.0f;
         float b = bq_run(&e->syn_f[1], bq_run(&e->syn_f[0], x)), ab = px_abs(b);
-        e->syn_sq = ab > e->syn_sq ? ab : e->syn_sq * 0.9995f;
+        e->syn_sq = ab > e->syn_sq ? ab : e->syn_sq * PX_DK(0.9995f);
         e->syn_lfo[0] = wrap1(e->syn_lfo[0] + e->syn_linc[0]);
         float th = e->syn_sq * (e->syn_pw0 + e->syn_pwd * lfo_sin(e->syn_lfo[0]));
         float sq = b > th ? 1.0f : -1.0f;
@@ -2682,7 +2693,7 @@ PX_INL static inline float syn_run(px_engine *e, int t, float x)
         e->syn_kg += ((on ? 1.0f : 0.0f) - e->syn_kg) * (on ? e->syn_ka : e->syn_kr);
         if (e->syn_kg < 1e-6f) e->syn_kg = 0.0f;
         float b = bq_run(&e->syn_f[1], bq_run(&e->syn_f[0], x)), ab = px_abs(b);
-        e->syn_sq = ab > e->syn_sq ? ab : e->syn_sq * 0.9995f;
+        e->syn_sq = ab > e->syn_sq ? ab : e->syn_sq * PX_DK(0.9995f);
         float h = e->syn_sq * 0.2f;
         if (e->syn_prev <= 0.0f && b > h) {            /* flip-flops: -1 and -2 octaves */
             e->syn_prev = 1.0f; e->syn_ff = -e->syn_ff;
@@ -2754,7 +2765,10 @@ PX_INL static inline float syn_run(px_engine *e, int t, float x)
  * the output is the same, bit for bit (the engine's golden output). */
 #if PX_RUNS
 #define PS_RUN 32                                      /* a run: the shifters read up to 1,985 samples back in a 2,048-sample
-                                                          ring, so no more than 63 new samples may be written ahead of them */
+                                                          ring, so no more than 63 new samples may be written ahead of them
+                                                          (at 48 kHz: 2,154 in 4,096) */
+_Static_assert(3 + 1400 * PX_FS / 44100 + 1 + PS_OFFMAX + 7 + 63 + PS_RUN <= PX_PS_N,
+               "the shifters' window, their alignment's search and a run reach past their ring (px_dsp.h PX_PS_N)");
 /* a shifter voice over n samples from ring position w: y[k] += its sample x lvl (ps_voice_al, with *ph and off in locals) */
 PX_AINL static inline float ps_step(const float *buf, int w, float *pa0, float *po0, float *po1, float inc, float W, float *xs)
 {
@@ -2866,7 +2880,7 @@ static __attribute__((noinline)) void syn_organ_run(px_engine *e, int organ, flo
                 if (click > 1e-4f) {                   /* key click: a 2 ms burst */
                     rnd = rnd * 1664525u + 1013904223u;
                     v += ((float)(rnd >> 8) * (2.0f / 16777216.0f) - 1.0f) * click * clk;
-                    click *= 0.985f;
+                    click *= PX_DK(0.985f);
                 }
                 if (cdep > 0.0f) {                     /* church: slow celeste */
                     cb[cw] = v;
@@ -2930,7 +2944,7 @@ static __attribute__((noinline)) void gate_run(px_engine *e, int on, float *xb, 
         float x = xb[k];
         if (on) {
             const float a = px_abs(x);
-            env = (a > env) ? a : a + (env - a) * 0.9995f;
+            env = (a > env) ? a : a + (env - a) * PX_DK(0.9995f);
             const float tg = (env > thr) ? 1.0f : 0.0f;
             g = (tg > g) ? tg : tg + (g - tg) * rel;
             if (g < 1e-6f) g = 0.0f;                   /* closed: exact zero, never a denormal */
@@ -3043,7 +3057,7 @@ PX_AINL static inline void dly_loop(px_dly *e, int16_t *buf, float lag, const fl
             float fbk = bq_run(&e->dly_hp, bq_run(&e->dly_lp, fsrc)) * e->dly_fb;
             if (S) fbk = px_tanh(fbk * e->dly_sat) * e->dly_satn;   /* unity for small signals */
             float wv = x + fbk, av = px_abs(wv);
-            e->dly_env = av > e->dly_env ? av : e->dly_env * 0.9999f;   /* (0.99995 a sample before) */
+            e->dly_env = av > e->dly_env ? av : e->dly_env * PX_DK(0.9999f);   /* (0.99995 a sample before) */
             e->dly_rq = e->dly_env < 2e-4f ? 0.0f : 0.5f;
             buf[e->dly_w] = dl_q(wv, e->dly_rq);
             if (++e->dly_w >= e->dly_hi) dly_wrap(e);
@@ -3090,10 +3104,10 @@ PX_AINL static inline void rv_loop(px_rev *e, int16_t *m, float *shb, const floa
             else {                                     /* one tick of the tank every 2 samples */
                 float in2 = 0.5f * (e->rv_xa + inr);
                 float y = ALG ? rv_plate(e, m, in2) : rv_fdn(e, m, in2), aa = px_abs(y) + px_abs(in2);
-                e->rv_ptr = (e->rv_ptr - 1) & RV_MASK;
-                e->rv_env = aa > e->rv_env ? aa : e->rv_env * 0.9999f;
+                e->rv_ptr = RV_BACK(e->rv_ptr);
+                e->rv_env = aa > e->rv_env ? aa : e->rv_env * PX_DK(0.9999f);
                 /* the last bits of a tail: fade it out over ~0.5 s, then let the ring empty itself (cut towards zero) */
-                if (e->rv_env < 5e-4f) e->rv_fade *= 0.9997f; else e->rv_fade = 1.0f;
+                if (e->rv_env < 5e-4f) e->rv_fade *= PX_DK(0.9997f); else e->rv_fade = 1.0f;
                 e->rv_rq = e->rv_fade < 0.03f ? 0.0f : 0.5f;
                 y = bq_run(&e->rv_hp, y * e->rv_fade * e->rv_out);   /* v40: the low cut at the tank's rate, as the stock */
                 e->rv_y0 = e->rv_y1; e->rv_y1 = y; e->rv_tick = 0;
@@ -3102,15 +3116,15 @@ PX_AINL static inline void rv_loop(px_rev *e, int16_t *m, float *shb, const floa
             acc = bq_run(&e->rv_tone, acc);            /* (TONE at the full rate: it also takes the half rate's images down) */
             if (SH) {                   /* octave-up shifter in the feedback loop */
                 shb[e->sh_w] = acc;
-                float s = ps_voice(shb, e->sh_w, &e->sh_ph, -1.0f / 1024.0f, 1024.0f);
-                if (++e->sh_w >= PX_PS_N) e->sh_w = 0;
+                float s = ps_voice(shb, e->sh_w, &e->sh_ph, -1.0f / PS_W(1024), PS_W(1024));
+                if (++e->sh_w >= PX_SH_N) e->sh_w = 0;
                 e->sh_lp += (s - e->sh_lp) * e->sh_k;
                 e->sh_hp += (e->sh_lp - e->sh_hp) * e->sh_hk;   /* v35: only the upper octave goes round again */
                 e->sh_out = (e->sh_lp - e->sh_hp) * e->rv_shim;
             } else e->sh_out = 0.0f;
             if (GT) {
                 float a = px_abs(x);
-                e->rv_genv = a > e->rv_genv ? a : a + (e->rv_genv - a) * 0.999f;
+                e->rv_genv = a > e->rv_genv ? a : a + (e->rv_genv - a) * PX_DK(0.999f);
                 if (e->rv_genv > 0.01f) e->rv_hold_n = (int)e->rv_hold;
                 float tg = 0.0f;
                 if (e->rv_hold_n > 0) { e->rv_hold_n--; tg = 1.0f; }
@@ -3365,7 +3379,7 @@ PX_HOT void px_engine_part(px_engine *e, const float *in, float *out, int n, int
         float x;
         if (pass == 0) {
             x = in[k] + e->dn;
-            { float y = x - e->dc_x1 + 0.9995f * e->dc_y1; e->dc_x1 = x; e->dc_y1 = y; x = y; }
+            { float y = x - e->dc_x1 + PX_DK(0.9995f) * e->dc_y1; e->dc_x1 = x; e->dc_y1 = y; x = y; }
         } else x = part == PX_PART_POST ? in[k] : e->nam_buf[k];
         xb[k] = x;
     }
@@ -3464,7 +3478,7 @@ PX_HOT void px_engine_part(px_engine *e, const float *in, float *out, int n, int
             /* ---- gate ---- */
             if (p->on[PX_B_GATE]) {
                 float a = px_abs(x);
-                e->gate_env = (a > e->gate_env) ? a : a + (e->gate_env - a) * 0.9995f;
+                e->gate_env = (a > e->gate_env) ? a : a + (e->gate_env - a) * PX_DK(0.9995f);
                 float tg = (e->gate_env > e->gate_thr) ? 1.0f : 0.0f;
                 e->gate_g = (tg > e->gate_g) ? tg : tg + (e->gate_g - tg) * e->gate_rel;
                 if (e->gate_g < 1e-6f) e->gate_g = 0.0f;   /* closed: exact zero, never a denormal */
@@ -3498,7 +3512,7 @@ PX_HOT void px_engine_part(px_engine *e, const float *in, float *out, int n, int
                 if (pit_t == PX_PIT_OCTAVER) {
                     float b = bq_run(&e->oct_lp2, bq_run(&e->oct_lp, x));
                     float a = px_abs(b);
-                    e->oct_env = a + (e->oct_env - a) * 0.995f;
+                    e->oct_env = a + (e->oct_env - a) * PX_DK(0.995f);
                     if (e->oct_prev <= 0.0f && b > 0.0f && e->oct_env > 0.002f) {
                         e->oct_ff = -e->oct_ff;
                         if (e->oct_ff > 0.0f) e->oct_ff2 = -e->oct_ff2;
@@ -3696,7 +3710,7 @@ PX_HOT void px_engine_part(px_engine *e, const float *in, float *out, int n, int
     }
     for (int k = 0; k < n; k++) {
         float x = xb[k];
-        { float y = x - e->odc_x1 + 0.9990f * e->odc_y1; e->odc_x1 = x; e->odc_y1 = y; x = y; }
+        { float y = x - e->odc_x1 + PX_DK(0.9990f) * e->odc_y1; e->odc_x1 = x; e->odc_y1 = y; x = y; }
         x *= pg;
         {   /* v36: soft limiter instead of a hard clip: transparent up to 0.8, then rounds off smoothly to 1.2 */
             float a = px_abs(x);

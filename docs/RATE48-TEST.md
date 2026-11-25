@@ -25,14 +25,17 @@ Both cases write the same divider byte and clear bit 9 of `0x10014`. The rate48 
 - Bit 25 of `0x119A4` is already set at the start, so the 48 kHz family's source is already on.
 - The start is not a safe-mode start. A start after a failed one always runs at 44.1 kHz.
 
-At 48 kHz the rate48 build also gives the engine, the block budget and the load figures the 48 kHz rate. It has no USB
-audio, because USB audio's clock figures are for 44.1 kHz; USB MIDI, the editor and the installer work as usual. Known
-differences at 48 kHz, which are expected and not part of this test:
+At 48 kHz the rate48 build also gives the engine, the tuner, the block budget and the load figures the 48 kHz rate. Its
+engine is built for 48 kHz (`PX_FS` in `firmware/apps/gamut/engine/px_dsp.h`): its memory holds the 2 s delay, and its
+effects sound as they do at 44.1 kHz (`sh tests/rate48/score.sh` compares them). It has no USB audio, because USB
+audio's clock figures are for 44.1 kHz; USB MIDI, the editor and the installer work as usual. Known differences at
+48 kHz, which are expected and not part of this test:
 
-- The tuner reads 1.47 semitones flat.
 - The NAM amps and the factory cabinet sound brighter.
-- The pitch effects and the synths sound slightly different.
-- The longest delay is 1.85 s.
+- The bitcrusher's SR DIV divides 48 kHz, so its reduced rate is 9 % higher.
+
+When the build stays at 44.1 kHz, its pitch effects and synths sound slightly different from the release's, because
+their windows are set for 48 kHz.
 
 Both builds answer the editor protocol's `DIAG` with one line, which `node tools/op.mjs log` reads and explains. It
 shows the rate asked for and the rate in use, the guard, and the rate measured over the last 10 s from the guitar's

@@ -127,7 +127,7 @@ static float tail_diff(int at, int from, int to, int shift, float *pk)
     *pk = 0.0f;
     for (int i = at; i < to; i++) {
         const float g = i - at < FADE ? (float)(i - at + 1) / (float)FADE : 1.0f;
-        const float x = (ya[i] - yb[i]) / (shift ? 1.0f : g), f = x - x1 + 0.9990f * f1;
+        const float x = (ya[i] - yb[i]) / (shift ? 1.0f : g), f = x - x1 + PX_DK(0.9990f) * f1;
         x1 = x; f1 = f;
         if (i < from) continue;
         const float t = yc[i - shift] - yb[i - shift], d = fabsf(f - t);

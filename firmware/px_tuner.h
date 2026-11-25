@@ -1,12 +1,14 @@
 /* SPDX-License-Identifier: GPL-3.0-only
- * OpenPocket — the tuner: the interrupt stores the input decimated by 4 (11025 Hz); the main loop estimates the note.
+ * OpenPocket — the tuner: the interrupt stores the input decimated by 4 (A_SR / 4: 11,025 Hz at 44.1 kHz); the main
+ * loop estimates the note.
  *
- * The including file provides TN_MEM (where the buffers live) and TN_READY (whether they can be used) (base/audio.h);
- * tests/test_tuner.c runs this file on a PC.
+ * The including file provides A_SR (the input's rate), TN_MEM (where the buffers live) and TN_READY (whether they can
+ * be used) (base/audio.h); tests/test_tuner.c runs this file on a PC.
  */
 #pragma once
 
 #define TN_N 1024u
+#define TN_SR ((float)A_SR / 4.0f)   /* the rate it reads at */
 static float tn_buf[TN_N] TN_MEM;
 static volatile uint32_t tn_w;
 static void tn_capture(const float *x, uint32_t n)
@@ -20,11 +22,11 @@ static void tn_capture(const float *x, uint32_t n)
     tn_w = w;
 }
 #define TN_W 600u
-#define TN_TMAX 400u   /* 27.6 Hz: a five-string bass's low B (30.9 Hz), tuned up from flat */
+#define TN_TMAX 400u   /* 27.6 Hz (30 Hz at 48 kHz): a five-string bass's low B (30.9 Hz), tuned up from flat */
 static float tn_lin[TN_W + TN_TMAX] TN_MEM;   /* the newest W + TMAX samples in order: all the difference function reads */
 static float tuner_estimate(void)      /* frequency in Hz, or 0 (silence / unclear). YIN algorithm. */
 {
-    const uint32_t W = TN_W, TMIN = 10u, TMAX = TN_TMAX;  /* 27.6 Hz .. 1100 Hz at 11025 Hz */
+    const uint32_t W = TN_W, TMIN = 10u, TMAX = TN_TMAX;  /* 27.6 Hz .. 1100 Hz at 44.1 kHz */
     uint32_t w = tn_w;
     float e = 0.0f;
     if (!TN_READY) return 0.0f;
@@ -54,5 +56,5 @@ static float tuner_estimate(void)      /* frequency in Hz, or 0 (silence / uncle
     if (!best) return 0.0f;
     float den = a - 2.0f * m + c;
     float tf = (float)best + ((den != 0.0f) ? 0.5f * (a - c) / den : 0.0f);
-    return 11025.0f / tf;
+    return TN_SR / tf;
 }

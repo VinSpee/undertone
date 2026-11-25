@@ -5,7 +5,7 @@
 #  - the audio callbacks' order (v42, firmware/px_aorder.h): the I2S driver calls the output's callback before the
 #    input's when its interrupt enters late; every output block must still be the sound of that interrupt's guitar block
 #  - tuner (firmware/px_tuner.h): bass and guitar notes, sine and plucked, in tune and off it, read every 100 ms: the
-#    note and its octave, within 2 cents from a five-string bass's low B (31 Hz) to the high E string
+#    note and its octave, within 2 cents from a five-string bass's low B (31 Hz) to the high E string; at 44.1 and 48 kHz
 #  - base audio (firmware/base/audio.h, audio_plain.h): the audio stages every app shares, for a mono and for a stereo
 #    app: the guitar through an app's sound to the output channels, MASTER, the mutes, the fades, the soft knee, the
 #    load's bypass
@@ -75,6 +75,7 @@ echo "== audio callbacks' order (the output block is its interrupt's, whichever 
 $CC -O1 -Wall -Ifirmware tests/test_aorder.c -o build/test_aorder && build/test_aorder | tail -1
 echo "== tuner (bass and guitar notes through the pedal's capture and estimate)"
 $CC -O1 -Wall -Ifirmware tests/test_tuner.c -lm -o build/test_tuner && build/test_tuner | tail -1
+base_test test_tuner48 $CC -O1 -Wall -Ifirmware -DA_SR=48000u tests/test_tuner.c -lm
 echo "== base audio (the stages every app shares, under the plain schedule: firmware/base/audio.h, audio_plain.h)"
 BAF="-O1 -Wall -Wno-unused-function -Wno-unused-variable -Wno-int-to-pointer-cast -Ifirmware"
 base_test test_base_audio $CC $BAF tests/test_base_audio.c firmware/px_math.c -lm
