@@ -1,12 +1,13 @@
 /* SPDX-License-Identifier: GPL-3.0-only
  * OpenPocket — host test of the tuner (firmware/px_tuner.h): bass and guitar notes, made here, through the pedal's own
- * capture and estimate, as the interrupt and the main loop call them (a 128-frame block at 44100 Hz; an estimate
- * every 100 ms). Each note is a sine and a plucked string (harmonics falling with their number and dying faster the
- * higher they are), the plucked one also with a weak fundamental (a bridge pickup), in tune and 5 to 30 cents off.
+ * capture and estimate, as the interrupt and the main loop call them (a 128-frame block at the pedal's rate, A_SR:
+ * 44.1 kHz, or 48 kHz for tests/rate48/score.sh; an estimate every 100 ms). Each note is a sine and a plucked string
+ * (harmonics falling with their number and dying faster the higher they are), the plucked one also with a weak
+ * fundamental (a bridge pickup), in tune and 5 to 30 cents off.
  * Every estimate from 0.2 s to 2 s after the pluck must name the note and its octave, within 2 cents up to the high E
  * string. Above it the estimate's lag is a few samples long and it reads sharp (as it always has): within 4 cents at
  * 650 Hz, 12 at 990 Hz.
- *   cc -O1 -Wall -Ifirmware tests/test_tuner.c -lm -o build/test_tuner && build/test_tuner [all]
+ *   cc -O1 -Wall -Ifirmware [-DA_SR=48000u] tests/test_tuner.c -lm -o build/test_tuner && build/test_tuner [all]
  * (`all` prints every note's reading.)
  */
 #include <math.h>
@@ -14,12 +15,16 @@
 #include <stdio.h>
 #include <string.h>
 
+#ifndef A_SR
+#define A_SR 44100u
+#endif
 #define TN_MEM
 #define TN_READY 1
 #include "px_tuner.h"
 
-#define FS 44100.0
+#define FS ((double)A_SR)
 #define FR 128u
+#define EVERY ((uint32_t)(0.1 * FS / FR + 0.5))   /* blocks between two estimates: 100 ms */
 static const char *NOTE_N[12] = {"C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"};
 static int semis(double hz) { return (int)lround(12.0 * log2(hz / 440.0)); }   /* from A4 */
 static void name(int s, char *b) { sprintf(b, "%s%d", NOTE_N[((s % 12) + 12 + 9) % 12], (s + 9 + 48) / 12); }
@@ -53,7 +58,7 @@ static void note(const char *what, double f0, int kind, double tol, int all)
         for (uint32_t i = 0; i < FR; i++) x[i] = (float)(sample(kind, f0, (b * FR + i) / FS) + 3e-4 * noise());
         tn_capture(x, FR);
         double t = (b + 1) * FR / FS;
-        if (t < 0.2 || (b + 1) % 34u) continue;    /* every 34 blocks: 99 ms */
+        if (t < 0.2 || (b + 1) % EVERY) continue;
         double hz = tuner_estimate(), c = hz > 0.0 ? 1200.0 * log2(hz / f0) : 1e9;
         n++;
         if (hz <= 0.0 || semis(hz) != want || fabs(c) > tol) {
