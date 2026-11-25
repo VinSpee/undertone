@@ -244,9 +244,9 @@ unit and the symbols stripped.
   the same choices against the same simulated pedal, must walk through the same screens, progress and outcomes to the
   same end (`guided.json`).
 - **The real program in a pseudo-terminal.** Built with the `sim` feature and started with `UNDERTONE_SIM=rescue`,
-  `install` or `check`, the program runs its guided screens against the simulated pedal, slowed a little; a script
-  drives it with keys in a pseudo-terminal, answers its theme question as a dark or light terminal, and keeps each
-  screen as the terminal shows it. The feature is never in a release.
+  `install` or `check`, the program runs its guided screens against the simulated pedal, slowed a little. Keys sent
+  through a pseudo-terminal drive it by hand, and the terminal's own answer to the theme question decides dark or light;
+  no script for this is kept in this folder. The feature is never in a release.
 
 Nothing here runs on a real pedal. Each stage's pull request says what the owner should check on a pedal and on
 Windows.
