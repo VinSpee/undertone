@@ -3,10 +3,23 @@ name: undertone-cli
 # where the runner can run them, a release build and its size against the budget. It never publishes anything.
 on:
   pull_request:
-    paths: ["undertone-cli/**", ".github/workflows/undertone-cli.yml", "rescue/VERSION"]
+    paths: &paths
+      - undertone-cli/**
+      - .github/workflows/undertone-cli.yml
+      - rescue/VERSION
+      # the Python tools and simulated pedals the golden transcripts are recorded from
+      - tools/uboot_rescue.py
+      - tools/uboot_install.py
+      - tools/pd40_recovery.py
+      - tools/pd40_install.py
+      - tools/pocketx_fw.py
+      - tools/pxpkg.py
+      - tests/uboot_sim.py
+      - tests/recovery_sim.py
+      - tests/fw_layouts.py
   push:
     branches: [main]
-    paths: ["undertone-cli/**", ".github/workflows/undertone-cli.yml", "rescue/VERSION"]
+    paths: *paths
   workflow_dispatch:
 permissions:
   contents: read
@@ -33,6 +46,8 @@ jobs:
         run: rustup toolchain install
       - run: cargo fmt --check
       - run: cargo clippy --locked --all-targets -- -D warnings
+      - name: The golden transcripts are still what the Python tools send (protocol/tests/fixtures/record.py)
+        run: python3 protocol/tests/fixtures/record.py && git diff --exit-code -- protocol/tests/fixtures
 
   build:
     strategy:
