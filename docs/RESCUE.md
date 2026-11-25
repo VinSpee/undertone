@@ -569,7 +569,7 @@ below, unchanged.
    [   ...s] flash read: 1024 KiB
    [   ...s] backup saved: ...OpenPocket-rescue/blackbox-<time>.dump.bin
    [   ...s] boot area [0, 0x6000) CRC-32 0xb19d96a1: M-VAVE's V22/V23 head; its app area is in [0x6000, 0x9f000)
-   [   ...s] image: the pedal's own boot area, then Gamut's app area BlackBox_950-v23.bin, identity ..., in [0x6000, 0x9f000)
+   [   ...s] image: the pedal's own boot area, then Gamut's app area BlackBox_950-v23.bin, identity ... in [0x6000, 0x9f000)
    [   ...s] the sectors that differ, the only ones --write erases and writes: [0x6000, 0x9f000)
    [   ...s] head [0, 0x6000) matches the image
    [   ...s] 153 of 153 sectors in [0x6000, 0x9f000) differ
