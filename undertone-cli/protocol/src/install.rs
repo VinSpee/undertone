@@ -5,7 +5,7 @@
 use crate::crc::crc32;
 use crate::fw::{Package, Unreadable, check_area};
 use crate::recovery::{self, RECOVERY, Recovery};
-use crate::uboot::{Chip, FLASH_SIZE, Plan, Planned, Window, hex, sha256};
+use crate::uboot::{Chip, FLASH_SIZE, Plan, Planned, SECTOR, Window, hex, sha256};
 use crate::{Bus, Error, Msc};
 
 /// A flash layout of the official firmware.
@@ -185,6 +185,20 @@ pub fn backup_area(dump: &[u8], name: &str, layouts: &[Layout]) -> Result<Source
     )
 }
 
+/// The [start, end) runs of 4 KiB sectors in [lo, hi) where flash and image differ.
+fn runs(flash: &[u8], image: &[u8], lo: usize, hi: usize) -> Vec<(usize, usize)> {
+    let mut out: Vec<(usize, usize)> = Vec::new();
+    for a in (lo..hi).step_by(SECTOR) {
+        if flash[a..a + SECTOR] != image[a..a + SECTOR] {
+            match out.last_mut() {
+                Some(run) if run.1 == a => run.1 = a + SECTOR,
+                _ => out.push((a, a + SECTOR)),
+            }
+        }
+    }
+    out
+}
+
 /// The plan of an install: once the pedal's flash is read, the image it should hold (its own boot area, then the
 /// source's app area) and the only window that may be written; or a refusal.
 pub fn plan_for<'a>(source: &'a Source, layouts: &'a [Layout], log: &'a mut dyn FnMut(&str)) -> Box<Plan<'a>> {
@@ -223,6 +237,18 @@ pub fn plan_for<'a>(source: &'a Source, layouts: &'a [Layout], log: &'a mut dyn 
         ));
         let mut image = flash[..layout.base].to_vec();
         image.extend_from_slice(&source.area);
+        let differ: Vec<String> = runs(flash, &image, layout.base, end)
+            .iter()
+            .map(|(lo, hi)| format!("[{lo:#x}, {hi:#x})"))
+            .collect();
+        log(&format!(
+            "the sectors that differ, the only ones --write erases and writes: {}",
+            if differ.is_empty() {
+                "none".to_string()
+            } else {
+                differ.join(" ")
+            }
+        ));
         Ok(Planned {
             image,
             window: Window {

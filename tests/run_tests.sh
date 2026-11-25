@@ -46,10 +46,11 @@
 #    the control endpoint when bulk IN sends zeros; --write refused with nothing sent) against the same simulated
 #    recovery mode on a simulated V23 flash (tests/test_pd40_install.py)
 #  - install through the USB boot state: tools/uboot_install.py (the dry run, Gamut's app area installed and M-VAVE's
-#    or a backup's put back, on the old head at 0x4000 and on the V22/V23 head at 0x6000; the leave from the recovery
-#    mode; an unknown head, an app area for the other layout, another chip or flash refused before any erase; the
-#    resume) against one simulated pedal that is in the recovery mode, in the USB boot state, or off the bus
-#    (tests/test_uboot_install.py)
+#    or a backup's put back, on the old head at 0x4000 and on the V22/V23 head at 0x6000; another app area of this
+#    project, such as a test build's, after a typed yes; the leave from the recovery mode; an unknown head, an app area
+#    for the other layout, an image that is not one of this project's app areas, another chip or flash refused before
+#    any erase; the resume) against one simulated pedal that is in the recovery mode, in the USB boot state, or off the
+#    bus (tests/test_uboot_install.py)
 #  - undertone: tools/undertone.py's rescue, install and check on the simulated pedals, each write only after a typed yes;
 #    its guided screens (tools/undertone_screens.py) as a state machine, their keys and frames, and the guided rescue
 #    driven by key presses (tests/test_undertone.py)

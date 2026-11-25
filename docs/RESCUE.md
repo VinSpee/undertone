@@ -182,7 +182,7 @@ The fingerprint is the SHA-256 of the first `0x4000` bytes of the flash. `d540d2
 `ERROR` about the file: run `undertone rescue --image BlackBox_023-flash.bin` in place of the file in the `firmware` folder.
 
 **Checking the download.** The installer page shows the kit's SHA-256 beside its download button. Compare it with
-`certutil -hashfile OpenPocket-rescue-kit-8.zip SHA256` on Windows or `shasum -a 256 OpenPocket-rescue-kit-8.zip` on a
+`certutil -hashfile OpenPocket-rescue-kit-9.zip SHA256` on Windows or `shasum -a 256 OpenPocket-rescue-kit-9.zip` on a
 Mac, with your kit's number in the name.
 
 **Building it.** `node tools/op.mjs kit` (or `make kit`) writes the zip and `manifest.json` into `docs/rescue/`, where
@@ -466,7 +466,10 @@ These facts come from reading the V22/V23 boot loader's code (V22 and V23 carry 
   depend on where it sits. At `0x6000` it fills `[0x6000, 0x9F000)` exactly and ends where the stock settings begin; at
   `0x4000` it fills `[0x4000, 0x9D000)`. The build writes it as a file of its own beside the BlackBox package,
   `build/apps/gamut/BlackBox_950-v23.bin`; its SHA-256 is in the release pin, `firmware/apps/gamut/release.sha256`,
-  and `uboot_install.py` installs no other build.
+  and `uboot_install.py` installs no other build by default. Any other app image, such as a test build's
+  (`docs/RATE48-TEST.md`), goes with `--image FILE`. It must be whole 4 KiB sectors that fit the app area and must not
+  begin with a boot area; its SHA-256 is printed for the record, one the boot loader would not start gets a warning,
+  and `--write` asks for a typed `yes`.
 - **In the USB boot state the whole flash can be read and written**, so the tool, not the pedal, keeps the write
   inside the app area. `uboot_install.py` composes the image from the pedal's own boot area and the app area, and its
   writer refuses every erase and write outside `[0x6000, 0x9F000)` on this layout (`[0x4000, 0xA5000)` on the old one).
@@ -526,7 +529,8 @@ are left as they are, and the load at them is measured by the first-run check be
 1. A Mac with Python 3 and libusb (`brew install libusb`). The tool needs `sudo`: macOS keeps its mass-storage driver
    on the USB boot state. Linux has not been tried. The tool does not run on Windows.
 2. Gamut is built: `node tools/op.mjs package`, which ends with `release pin: gamut's image and packages are the
-   release's`. The tool installs `build/apps/gamut/BlackBox_950-v23.bin` and refuses a file that is not the pin's.
+   release's`. The tool installs `build/apps/gamut/BlackBox_950-v23.bin` and refuses, with `--gamut`, a file that is
+   not the pin's.
 3. You have M-VAVE's `BlackBox_023.fwsc` for the way back (from M-VAVE, or the full rescue kit's `firmware` folder).
 4. The pedal is plugged straight into the Mac, with no hub, and you know the key hold: pedal off, hold HOME, the right
    footswitch and the knob's PUSH, switch on, keep holding until the screen shows `RECOVERY`.

@@ -45,8 +45,10 @@ blocks against the 24 MHz timer. It also shows the clock registers now and as th
 
 ## Steps on the pedal
 
-Flash only one pedal, and only with the owner's go-ahead. Use a Pocket X, or a BlackBox on M-VAVE V21 or older: the
-flasher refuses a BlackBox on V22 or later. Close the browser installer and any other MIDI program first.
+Flash only one pedal, and only with the owner's go-ahead. On a Pocket X, or a BlackBox on M-VAVE V21 or older, use the
+flasher, as below. On a BlackBox that ever ran M-VAVE V22 or V23 the flasher refuses, because its write would overwrite
+the end of that boot loader: use [the USB boot state](#on-a-blackbox-with-m-vave-v22-or-v23) instead. Close the
+browser installer and any other MIDI program first.
 
 ### Once
 
@@ -57,7 +59,8 @@ node tools/op.mjs package-test rate48
 node tools/op.mjs package
 ```
 
-The last command builds the release again, for the way back. Each command prints the SHA-256 of what it built.
+The last command builds the release again, for the way back. Each command prints the SHA-256 of what it built, the
+BlackBox app area `BlackBox_942-v23.bin` included.
 
 ### Gate A: the clock report at 44.1 kHz
 
@@ -111,7 +114,50 @@ If Gate B fails, the possible results are these:
 - **A restart loop.** Run `node tools/op.mjs flash --rescue --confirm-flash` (`docs/BUILDING.md`), then
   `docs/RESCUE.md` if needed.
 
+### On a BlackBox with M-VAVE V22 or V23
+
+This route writes the same builds' app areas through the chip's USB boot state with `tools/uboot_install.py --image`,
+as [`docs/RESCUE.md`](RESCUE.md#gamut-on-a-blackbox-with-v22-or-v23) installs Gamut. Read that section's "Before the
+first run" once: a Mac with `brew install libusb`, `sudo`, the pedal straight on the Mac with no hub, and M-VAVE's
+`BlackBox_023.fwsc` at hand for the way back. The tool names the pedal's layout by its boot area's CRC-32, backs up the
+whole flash first, never writes below `0x6000` or from `0x9F000` up, and writes, reads back and compares only the
+sectors that differ; a rerun resumes. `--image` takes any app image: it refuses only a file that is not whole 4 KiB
+sectors, is longer than the pedal's app area, or begins with a boot area. It prints the file's SHA-256 for the record
+and does not compare it with a list. It warns, loudly, when the boot loader would not start the image; the boot area is
+never written, so the way back below works even then.
+
+In every run, **start the command first, wait for `waiting for the pedal`, then do the key hold**: pedal off, hold
+HOME, the right footswitch and the knob's PUSH, switch on, keep holding until the screen shows `RECOVERY`.
+
+Gate A:
+
+```
+sudo python3 tools/uboot_install.py --image build/apps/gamut/rate-diag/BlackBox_942-v23.bin 2>&1 | tee rate-diag-dry.log
+sudo python3 tools/uboot_install.py --image build/apps/gamut/rate-diag/BlackBox_942-v23.bin --write 2>&1 | tee rate-diag-write.log
+```
+
+The first command is the dry run and writes nothing. It prints the file, its identity `BlackBox_942` and its SHA-256
+(the same as the `package-test rate-diag` line for that file), the layout `M-VAVE's V22/V23 head`, the sectors that
+differ, the backup's path and the way back. Check the SHA-256 and the layout. A `WARNING` or any `REFUSED` here means
+the wrong file: stop and send the log. The second command asks for a typed `yes` before it looks for the pedal, then
+writes and ends with `Done: N sectors written and verified`. Switch the pedal off and on, then run `log` as in Gate A above, from `node tools/op.mjs log --wait 30`.
+
+Gate B, only after Gate A has passed: the same two commands with `rate48` in place of `rate-diag`, then `log` and the
+checks of Gate B above.
+
+The way back, the same way, each with its dry run first (without `--write`):
+
+```
+sudo python3 tools/uboot_install.py --write                                   # the release, Gamut 1.0b1
+sudo python3 tools/uboot_install.py --official BlackBox_023.fwsc --write      # M-VAVE's V23
+```
+
+`--restore` with the backup the first run saved puts back the whole app area as it was. If a write stops halfway, the
+pedal may not start, but its boot loader is untouched: the key hold still works, and the same command resumes.
+
 ### The way back
+
+On a Pocket X or a BlackBox on V21 or older:
 
 ```
 node tools/op.mjs flash --dry-run

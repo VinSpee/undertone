@@ -34,7 +34,7 @@ const OUT = "build/apps/gamut";   // OpenPocket's outputs, as each app's are in 
 const OUTS = `${OUT}/openpocket.bin ${OUT}/*.fwsc ${OUT}/*-v23.bin ${OUT}/manifest.json`;   // (*-v23.bin: tools/pxpkg.py)
 // the test channels (firmware/build.sh OP_CHANNEL), never a release: the MIDI test, the I2S clock's report and its 48 kHz build
 const CHANNELS = ["midi-test", "rate-diag", "rate48"];
-const TEST = (c) => `${OUT}/openpocket-${c}.bin ${OUT}/${c}/*.fwsc ${OUT}/${c}/manifest.json`;
+const TEST = (c) => `${OUT}/openpocket-${c}.bin ${OUT}/${c}/*.fwsc ${OUT}/${c}/*-v23.bin ${OUT}/${c}/manifest.json`;
 
 function fail(message) {
   console.error(`\nERROR: ${message}`);

@@ -3,9 +3,11 @@
 """tools/uboot_install.py against one simulated pedal that is in M-VAVE's recovery mode (tests/recovery_sim.py), in the
 chip's USB boot state (tests/uboot_sim.py), or off the bus: the dry run, the install of Gamut and the way back from an
 official package and from a backup, on both flash layouts (the old head, app area at 0x4000, and the V22/V23 head, at
-0x6000); the leave from the recovery mode and the USB boot state taken the moment it appears; the refusals of an unknown
-head, of an app area for the other layout, of another chip or flash, each before any erase; the resume. Nothing below
-the app area's start or from the layout's limit up is ever written. No hardware.
+0x6000); any other app image (--image, such as a test build's) after a typed yes, with a warning when the boot loader
+would not start it; the leave from the recovery mode and the USB boot state taken the moment it appears; the refusals
+of an unknown head, of an app area for the other layout, of an image that is not whole sectors, too long or begins with
+a boot area, of another chip or flash, each before any erase; the resume. Nothing below the app area's start or from
+the layout's limit up is ever written. No hardware.
   python3 tests/test_uboot_install.py [--built] [BlackBox_020.fwsc BlackBox_023.fwsc ...]
 The heads are synthetic ones built to the two layouts (tests/fw_layouts.py). --built also installs the Gamut app area
 the build made, against the real release pin; an official package (not in this repository) is also used on a simulated
@@ -50,10 +52,11 @@ def pedal_with(flash_bin):
     return flash_bin + noise(99, ur.FLASH_SIZE - len(flash_bin))
 
 
-def differing(flash, layout):
-    """The sectors of the pedal's app area that are not Gamut's."""
-    return [layout.base + o for o in range(0, len(AREA), SECTOR)
-            if flash[layout.base + o:layout.base + o + SECTOR] != AREA[o:o + SECTOR]]
+def differing(flash, layout, area=None):
+    """The sectors of the pedal's app area that are not Gamut's (or area's)."""
+    area = AREA if area is None else area
+    return [layout.base + o for o in range(0, len(area), SECTOR)
+            if flash[layout.base + o:layout.base + o + SECTOR] != area[o:o + SECTOR]]
 
 
 LOADER = noise(1, ur.LOADER_SIZE)
@@ -75,6 +78,12 @@ GAMUT_BIN = WORK / "gamut" / "BlackBox_999-v23.bin"
 AREA = GAMUT_BIN.read_bytes()
 PIN = WORK / "release.sha256"
 PIN.write_text(f"{hashlib.sha256(AREA).hexdigest()}  {GAMUT_BIN}\n")
+# another build of this project, as a test channel makes one (node tools/op.mjs package-test rate48)
+test_app = b"OP-PRODUCT:PocketX_942".ljust(32, b"\0") + noise(8, 0x10000)
+with contextlib.redirect_stdout(io.StringIO()):
+    pxpkg.build(test_app, b"OTA" * 100, WORK / "rate48", 42, None, ROOT / "firmware" / "sdk" / "packager")
+IMAGE_BIN = WORK / "rate48" / "BlackBox_942-v23.bin"
+IMAGE = IMAGE_BIN.read_bytes()
 
 
 def once_per_file(load):
@@ -92,7 +101,7 @@ def once_per_file(load):
     return cached
 
 
-LOADS = {name: once_per_file(getattr(ui, name)) for name in ("gamut_area", "official_area", "backup_area")}
+LOADS = {name: once_per_file(getattr(ui, name)) for name in ("gamut_area", "image_area", "official_area", "backup_area")}
 
 
 class Bench:
@@ -447,6 +456,166 @@ class UbootInstall(unittest.TestCase):
                 self.assertEqual(bench.calls, 0, "the bus was looked at before the file passed its checks")
         with contextlib.redirect_stderr(io.StringIO()), self.assertRaises(SystemExit):
             ui.main(["--official", str(V23_PKG), "--restore", str(WORK / "half.dump.bin")])
+
+    # ---- another app area of this project: --image
+    def typed(self, *answers):
+        """input() answering in turn; a question past them fails the test."""
+        it = iter(answers)
+
+        def answer():
+            a = next(it, None)
+            if a is None:
+                raise AssertionError("asked once more than expected")
+            if a is EOFError:
+                raise EOFError
+            return a
+        return mock.patch("builtins.input", answer)
+
+    def test_an_image_dry_run_confirmed_write_and_the_way_back(self):
+        digest = hashlib.sha256(IMAGE).hexdigest()
+        for layout, official in ((NEW, "BlackBox_023.fwsc"), (OLD, "BlackBox_020.fwsc")):
+            with self.subTest(layout=layout.name):
+                before, end = PEDALS[layout], layout.base + len(IMAGE)
+                todo = differing(before, layout, IMAGE)
+                self.new_backups()
+                bench = self.bench(layout)
+                with self.typed():
+                    rc, shown = self.run_tool(bench, "--image", IMAGE_BIN)
+                self.assertEqual(rc, 0, shown)
+                self.assert_untouched(bench, before, shown)
+                self.assertIn(f"the app area {IMAGE_BIN}, identity BlackBox_942, SHA-256 {digest}", shown)
+                self.assertIn("the sectors that differ, the only ones --write erases and writes: "
+                              f"[{todo[0]:#x}, ", shown)
+                self.assertIn(f"--official {official} --write", shown)
+                self.assertIn("tools/uboot_install.py --restore ", shown)
+                self.new_backups()
+                bench = self.bench(layout)
+                with self.typed("yes"):
+                    rc, shown = self.run_tool(bench, "--image", IMAGE_BIN, "--write")
+                self.assertEqual(rc, 0, shown)
+                self.assertIn("it is not the release's app area. Type yes", shown)
+                self.assertTrue(bench.uboot.flash[layout.base:end] == IMAGE, "the area is the image's")
+                self.assert_only_the_area(bench, layout, before, end)
+                self.assertEqual(bench.uboot.erases(), todo, "each sector that differed, once, and no other")
+                self.assertEqual(v23_boot(bench.uboot.flash), (layout.base, ENTRY), "the boot loader's checks pass")
+                self.assertIn(f"Done: {len(todo)} sectors written and verified, on {layout.name}", shown)
+                self.assertIn(f"--official {official} --write", shown)
+                self.assertNotIn("op.mjs dsp", shown)
+                back = self.bench(layout, bytes(bench.uboot.flash))
+                with self.typed():
+                    rc, shown = self.run_tool(back, "--write")
+                self.assertEqual(rc, 0, shown)
+                self.assertTrue(back.uboot.flash[layout.base:layout.base + len(AREA)] == AREA, "the release is back")
+                self.assert_only_the_area(back, layout, bytes(bench.uboot.flash))
+
+    def test_an_image_is_written_only_after_a_typed_yes(self):
+        for answers in (("",), ("y",), ("YES please",), (EOFError,)):
+            with self.subTest(answer=answers[0]):
+                bench = self.bench(NEW)
+                with self.typed(*answers):
+                    rc, shown = self.run_tool(bench, "--image", IMAGE_BIN, "--write")
+                self.assertEqual(rc, 4, shown)
+                self.assertIn("not confirmed: nothing was sent to the pedal", shown)
+                self.assertEqual(bench.calls, 0, "the bus was looked at before the yes")
+        bench = self.bench(NEW)
+        with self.typed():                                   # the release's own bytes: no question
+            rc, shown = self.run_tool(bench, "--image", GAMUT_BIN, "--write")
+        self.assertEqual(rc, 0, shown)
+        self.assertTrue(bench.uboot.flash[NEW.base:NEW.limit] == AREA)
+
+    def test_an_image_resumes_when_the_pedal_drops_off(self):
+        end, todo = NEW.base + len(IMAGE), differing(PEDALS[NEW], NEW, IMAGE)
+        bench = self.bench(NEW, drops=(250,))
+        with self.typed("yes"):
+            rc, shown = self.run_tool(bench, "--image", IMAGE_BIN, "--write", "--attempts", "1")
+        self.assertEqual(rc, 1, shown)
+        done = len(set(bench.uboot.erases()))
+        self.assertTrue(0 < done < len(todo))
+        again = self.bench(NEW, bytes(bench.uboot.flash))
+        with self.typed("yes"):
+            rc, shown = self.run_tool(again, "--image", IMAGE_BIN, "--write")
+        self.assertEqual(rc, 0, shown)
+        self.assertLessEqual(len(again.uboot.erases()), len(todo) + 1 - done, "only the sectors that still differed")
+        self.assertTrue(again.uboot.flash[NEW.base:end] == IMAGE)
+        self.assert_only_the_area(again, NEW, PEDALS[NEW], end)
+
+    def test_a_custom_image_installs_after_the_warning_and_a_typed_yes(self):
+        """No app area head the boot loader knows: it warns, and writes after the yes; the boot area stays."""
+        custom = noise(5, 0x20000)
+        path = WORK / "custom.bin"
+        path.write_bytes(custom)
+        for layout in (NEW, OLD):
+            with self.subTest(layout=layout.name):
+                before, end = PEDALS[layout], layout.base + len(custom)
+                self.new_backups()
+                bench = self.bench(layout)
+                with self.typed():
+                    rc, shown = self.run_tool(bench, "--image", path)
+                self.assertEqual(rc, 0, shown)
+                self.assert_untouched(bench, before, shown)
+                self.assertIn("WARNING: the boot loader would not start this image (its first 32 bytes are not an app "
+                              "area head", shown)
+                self.assertIn(f"the app area {path}, SHA-256 {hashlib.sha256(custom).hexdigest()}", shown)
+                self.assertIn("--official BlackBox_0", shown)
+                self.new_backups()
+                bench = self.bench(layout)
+                with self.typed("yes"):
+                    rc, shown = self.run_tool(bench, "--image", path, "--write")
+                self.assertEqual(rc, 0, shown)
+                self.assertLess(shown.index("WARNING"), shown.index("Type yes"), "the warning comes before the question")
+                self.assertTrue(bench.uboot.flash[layout.base:end] == custom)
+                self.assert_only_the_area(bench, layout, before, end)
+                back = self.bench(layout, bytes(bench.uboot.flash), starts=("uboot",))
+                rc, shown = self.run_tool(back, "--official", PACKAGES[layout], "--write")
+                self.assertEqual(rc, 0, shown)
+                self.assertTrue(bytes(back.uboot.flash) == before, "the official firmware is back, byte for byte")
+
+    def test_images_that_are_refused(self):
+        roomy = max(l.limit - l.base for l in (OLD, NEW))
+        files = {"truncated.bin": IMAGE[:-1], "empty.bin": b"", "oversized.bin": IMAGE + b"\xFF" * (roomy - len(IMAGE) + SECTOR),
+                 "v20-flash.bin": V20, "v23-flash.bin": V23, "v23-boot-area.bin": V23[:NEW.base] + IMAGE[:0x10000]}
+        for name, data in files.items():
+            (WORK / name).write_bytes(data)
+        cases = [("truncated.bin", 2, "not a whole number of 4 KiB sectors"),
+                 ("empty.bin", 2, "not a whole number of 4 KiB sectors"),
+                 ("oversized.bin", 2, "more than the largest app area of a known layout"),
+                 ("v20-flash.bin", 2, "more than the largest app area of a known layout"),
+                 ("v23-flash.bin", 2, "starts with a flash head"),
+                 ("v23-boot-area.bin", 2, "starts with a flash head"),
+                 ("missing.bin", 1, "cannot read")]
+        for name, code, why in cases:
+            with self.subTest(file=name):
+                bench = self.bench(NEW)
+                with self.typed("yes"):
+                    rc, shown = self.run_tool(bench, "--image", WORK / name, "--write")
+                self.assertEqual(rc, code, shown)
+                self.assertIn(why, shown)
+                self.assertNotIn("Type yes", shown)
+                self.assertEqual(bench.calls, 0, "the bus was looked at before the file passed its checks")
+        for package in (WORK / "rate48" / "BlackBox_942.fwsc", V23_PKG):
+            with self.subTest(file=package.name):
+                bench = self.bench(NEW)
+                rc, shown = self.run_tool(bench, "--image", package, "--write")
+                self.assertEqual(rc, 2, shown)
+                self.assertEqual(bench.calls, 0)
+        with contextlib.redirect_stderr(io.StringIO()), self.assertRaises(SystemExit):
+            ui.main(["--image", str(IMAGE_BIN), "--gamut", str(GAMUT_BIN)])
+
+    def test_an_image_for_the_old_layout_only_is_refused_on_the_new_head(self):
+        """It fits [0x4000, 0xA5000) but not [0x6000, 0x9F000): refused once the pedal's layout is known."""
+        wide = WORK / "wide.bin"
+        wide.write_bytes(IMAGE + b"\xFF" * (OLD.limit - OLD.base - len(IMAGE)))
+        bench = self.bench(NEW)
+        with self.typed("yes"):
+            rc, shown = self.run_tool(bench, "--image", wide, "--write")
+        self.assertEqual(rc, 2, shown)
+        self.assertIn(f"would end at {NEW.base + OLD.limit - OLD.base:#x}, past {NEW.limit:#x}; nothing was written", shown)
+        self.assert_untouched(bench, PEDALS[NEW], shown)
+        bench = self.bench(OLD)
+        with self.typed("yes"):
+            rc, shown = self.run_tool(bench, "--image", wide, "--write")
+        self.assertEqual(rc, 0, shown)
+        self.assert_only_the_area(bench, OLD, PEDALS[OLD])
 
     def test_the_window_guard_holds_whatever_the_plan(self):
         """The plan gives the window, and uboot_rescue's Uboot refuses every erase and write outside it."""

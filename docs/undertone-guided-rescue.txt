@@ -2,7 +2,7 @@ The guided rescue of `undertone`, run by tests/test_undertone.py on a simulated 
 
 +--------------------------------------------------------------------------------+
 |                                                                                |
-|          ▐▌ undertone                                    rescue kit 8          |
+|          ▐▌ undertone                                    rescue kit 9          |
 |          ────────────────────────────────────────────────────────────          |
 |                                                                                |
 |          what would you like to do?                                            |
@@ -29,7 +29,7 @@ The guided rescue of `undertone`, run by tests/test_undertone.py on a simulated 
 
 +--------------------------------------------------------------------------------+
 |                                                                                |
-|          ▐▌ undertone                                    rescue kit 8          |
+|          ▐▌ undertone                                    rescue kit 9          |
 |          ────────────────────────────────────────────────────────────          |
 |                                                                                |
 |          fix a pedal that will not start                                       |
@@ -56,7 +56,7 @@ The guided rescue of `undertone`, run by tests/test_undertone.py on a simulated 
 
 +--------------------------------------------------------------------------------+
 |                                                                                |
-|          ▐▌ undertone                                    rescue kit 8          |
+|          ▐▌ undertone                                    rescue kit 9          |
 |          ────────────────────────────────────────────────────────────          |
 |                                                                                |
 |          checking your pedal                                                   |
@@ -83,7 +83,7 @@ The guided rescue of `undertone`, run by tests/test_undertone.py on a simulated 
 
 +--------------------------------------------------------------------------------+
 |                                                                                |
-|          ▐▌ undertone                                    rescue kit 8          |
+|          ▐▌ undertone                                    rescue kit 9          |
 |          ────────────────────────────────────────────────────────────          |
 |                                                                                |
 |          checking your pedal                                                   |
@@ -110,7 +110,7 @@ The guided rescue of `undertone`, run by tests/test_undertone.py on a simulated 
 
 +--------------------------------------------------------------------------------+
 |                                                                                |
-|          ▐▌ undertone                                    rescue kit 8          |
+|          ▐▌ undertone                                    rescue kit 9          |
 |          ────────────────────────────────────────────────────────────          |
 |                                                                                |
 |          your pedal can be fixed                                               |
@@ -137,7 +137,7 @@ The guided rescue of `undertone`, run by tests/test_undertone.py on a simulated 
 
 +--------------------------------------------------------------------------------+
 |                                                                                |
-|          ▐▌ undertone                                    rescue kit 8          |
+|          ▐▌ undertone                                    rescue kit 9          |
 |          ────────────────────────────────────────────────────────────          |
 |                                                                                |
 |          replace the software?                                                 |
@@ -164,7 +164,7 @@ The guided rescue of `undertone`, run by tests/test_undertone.py on a simulated 
 
 +--------------------------------------------------------------------------------+
 |                                                                                |
-|          ▐▌ undertone                                    rescue kit 8          |
+|          ▐▌ undertone                                    rescue kit 9          |
 |          ────────────────────────────────────────────────────────────          |
 |                                                                                |
 |          replace the software?                                                 |
@@ -191,7 +191,7 @@ The guided rescue of `undertone`, run by tests/test_undertone.py on a simulated 
 
 +--------------------------------------------------------------------------------+
 |                                                                                |
-|          ▐▌ undertone                                    rescue kit 8          |
+|          ▐▌ undertone                                    rescue kit 9          |
 |          ────────────────────────────────────────────────────────────          |
 |                                                                                |
 |          fixing your pedal                                                     |
@@ -218,7 +218,7 @@ The guided rescue of `undertone`, run by tests/test_undertone.py on a simulated 
 
 +--------------------------------------------------------------------------------+
 |                                                                                |
-|          ▐▌ undertone                                    rescue kit 8          |
+|          ▐▌ undertone                                    rescue kit 9          |
 |          ────────────────────────────────────────────────────────────          |
 |                                                                                |
 |          fixing your pedal                                                     |
@@ -245,7 +245,115 @@ The guided rescue of `undertone`, run by tests/test_undertone.py on a simulated 
 
 +--------------------------------------------------------------------------------+
 |                                                                                |
-|          ▐▌ undertone                                    rescue kit 8          |
+|          ▐▌ undertone                                    rescue kit 9          |
+|          ────────────────────────────────────────────────────────────          |
+|                                                                                |
+|          fixing your pedal                                                     |
+|                                                                                |
+|          Unplug your pedal, then plug it back in.                              |
+|          Leave the cable alone while undertone works.                          |
+|                                                                                |
+|          writing                       ────────────────────────    0%          |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|          please wait: do not unplug your pedal                                 |
+|                                                                                |
++--------------------------------------------------------------------------------+
+
++--------------------------------------------------------------------------------+
+|                                                                                |
+|          ▐▌ undertone                                    rescue kit 9          |
+|          ────────────────────────────────────────────────────────────          |
+|                                                                                |
+|          fixing your pedal                                                     |
+|                                                                                |
+|          Unplug your pedal, then plug it back in.                              |
+|          Leave the cable alone while undertone works.                          |
+|                                                                                |
+|          writing                       ━━──────────────────────   10%          |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|          please wait: do not unplug your pedal                                 |
+|                                                                                |
++--------------------------------------------------------------------------------+
+
++--------------------------------------------------------------------------------+
+|                                                                                |
+|          ▐▌ undertone                                    rescue kit 9          |
+|          ────────────────────────────────────────────────────────────          |
+|                                                                                |
+|          fixing your pedal                                                     |
+|                                                                                |
+|          Unplug your pedal, then plug it back in.                              |
+|          Leave the cable alone while undertone works.                          |
+|                                                                                |
+|          writing                       ━━━━━───────────────────   21%          |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|          please wait: do not unplug your pedal                                 |
+|                                                                                |
++--------------------------------------------------------------------------------+
+
++--------------------------------------------------------------------------------+
+|                                                                                |
+|          ▐▌ undertone                                    rescue kit 9          |
+|          ────────────────────────────────────────────────────────────          |
+|                                                                                |
+|          fixing your pedal                                                     |
+|                                                                                |
+|          Unplug your pedal, then plug it back in.                              |
+|          Leave the cable alone while undertone works.                          |
+|                                                                                |
+|          writing                       ━━━━━━━─────────────────   31%          |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|          please wait: do not unplug your pedal                                 |
+|                                                                                |
++--------------------------------------------------------------------------------+
+
++--------------------------------------------------------------------------------+
+|                                                                                |
+|          ▐▌ undertone                                    rescue kit 9          |
 |          ────────────────────────────────────────────────────────────          |
 |                                                                                |
 |          fixing your pedal                                                     |
@@ -272,7 +380,61 @@ The guided rescue of `undertone`, run by tests/test_undertone.py on a simulated 
 
 +--------------------------------------------------------------------------------+
 |                                                                                |
-|          ▐▌ undertone                                    rescue kit 8          |
+|          ▐▌ undertone                                    rescue kit 9          |
+|          ────────────────────────────────────────────────────────────          |
+|                                                                                |
+|          fixing your pedal                                                     |
+|                                                                                |
+|          Unplug your pedal, then plug it back in.                              |
+|          Leave the cable alone while undertone works.                          |
+|                                                                                |
+|          writing                       ━━━━━━━━━━━━────────────   52%          |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|          please wait: do not unplug your pedal                                 |
+|                                                                                |
++--------------------------------------------------------------------------------+
+
++--------------------------------------------------------------------------------+
+|                                                                                |
+|          ▐▌ undertone                                    rescue kit 9          |
+|          ────────────────────────────────────────────────────────────          |
+|                                                                                |
+|          fixing your pedal                                                     |
+|                                                                                |
+|          Unplug your pedal, then plug it back in.                              |
+|          Leave the cable alone while undertone works.                          |
+|                                                                                |
+|          writing                       ━━━━━━━━━━━━━━━─────────   62%          |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|          please wait: do not unplug your pedal                                 |
+|                                                                                |
++--------------------------------------------------------------------------------+
+
++--------------------------------------------------------------------------------+
+|                                                                                |
+|          ▐▌ undertone                                    rescue kit 9          |
 |          ────────────────────────────────────────────────────────────          |
 |                                                                                |
 |          fixing your pedal                                                     |
@@ -299,7 +461,34 @@ The guided rescue of `undertone`, run by tests/test_undertone.py on a simulated 
 
 +--------------------------------------------------------------------------------+
 |                                                                                |
-|          ▐▌ undertone                                    rescue kit 8          |
+|          ▐▌ undertone                                    rescue kit 9          |
+|          ────────────────────────────────────────────────────────────          |
+|                                                                                |
+|          fixing your pedal                                                     |
+|                                                                                |
+|          Unplug your pedal, then plug it back in.                              |
+|          Leave the cable alone while undertone works.                          |
+|                                                                                |
+|          writing                       ━━━━━━━━━━━━━━━━━━━━────   83%          |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|          please wait: do not unplug your pedal                                 |
+|                                                                                |
++--------------------------------------------------------------------------------+
+
++--------------------------------------------------------------------------------+
+|                                                                                |
+|          ▐▌ undertone                                    rescue kit 9          |
 |          ────────────────────────────────────────────────────────────          |
 |                                                                                |
 |          fixing your pedal                                                     |
@@ -326,7 +515,7 @@ The guided rescue of `undertone`, run by tests/test_undertone.py on a simulated 
 
 +--------------------------------------------------------------------------------+
 |                                                                                |
-|          ▐▌ undertone                                    rescue kit 8          |
+|          ▐▌ undertone                                    rescue kit 9          |
 |          ────────────────────────────────────────────────────────────          |
 |                                                                                |
 |          ● your pedal is fixed                                                 |
@@ -335,7 +524,7 @@ The guided rescue of `undertone`, run by tests/test_undertone.py on a simulated 
 |          To add Gamut later, use undertone, not the installer page.            |
 |                                                                                |
 |          copy of your pedal:                                                   |
-|          ~/OpenPocket-rescue/blackbox-20261124-093959.dump.bin                 |
+|          ~/OpenPocket-rescue/blackbox-20261125-144332.dump.bin                 |
 |                                                                                |
 |          ╭──────────────────────────────────────────────────────────╮          |
 |          │                                                          │          |
