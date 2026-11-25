@@ -187,7 +187,7 @@ export async function startSim(opts = {}) {
   const controls = app ? APP_CONTROLS : CONTROLS;
   mkdirSync(dirname(flash), { recursive: true });
   const args = () => update ? [update, ...(opts.stock ? ["--stock", opts.stock] : []), "--dump", join(BUILD, "update-dump.bin")]
-    : ["--persist", flash, ...(app && opts.failedStart ? ["--failed-start"] : [])];
+    : ["--persist", flash, ...(app ? (opts.failedStart ? ["--failed-start"] : []) : ["--rate", "48000"])];
   if (!update && opts.reset) rmSync(flash, { force: true });
   let pedal = new Pedal(kind, args(), app);
   const clients = new Set();                          // SSE responses
