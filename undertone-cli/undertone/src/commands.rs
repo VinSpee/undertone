@@ -323,7 +323,8 @@ fn advise(ctx: &mut Ctx, flash: &[u8], images: &[(String, Vec<u8>)]) -> i32 {
     exit::FAILED
 }
 
-/// Gamut's app area: the file given, else the one the release pin names, under the kit's folder.
+/// The app area to install: the file given, a test build or custom firmware among them, else Gamut's, the one the
+/// release pin names, under the kit's folder.
 pub fn gamut_source(root: &Path, path: Option<&Path>, layouts: &[Layout]) -> Result<Source, Error> {
     let (pinned, digest) = install::gamut_pin(GAMUT_PIN)
         .ok_or_else(|| Error::Setup(format!("{} names no app area (*-v23.bin)", install::GAMUT_PIN)))?;
@@ -341,7 +342,7 @@ pub fn gamut_source(root: &Path, path: Option<&Path>, layouts: &[Layout]) -> Res
             ),
         }));
     }
-    install::gamut_area(read(&file)?, &name(&file), digest, layouts)
+    install::app_area(read(&file)?, &name(&file), digest, layouts)
 }
 
 pub enum InstallFrom<'a> {
@@ -372,6 +373,13 @@ pub fn cmd_install(ctx: &mut Ctx, from: InstallFrom) -> i32 {
         Ok(s) => s,
         Err(e) => return finished(ctx.out, &Outcome::failed(&e)),
     };
+    if source.custom {
+        ctx.out.strong(&format!(
+            "This is a {}: its SHA-256 is not the release pin's. undertone checks that the boot loader would start \
+             it and that it stays inside the app area, not what it does.",
+            install::CUSTOM
+        ));
+    }
     ctx.out.line(&format!(
         "Step 1 of 2: a dry run with {}. It saves a backup and writes nothing.",
         source.what

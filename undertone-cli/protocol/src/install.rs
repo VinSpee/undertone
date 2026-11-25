@@ -81,15 +81,20 @@ pub fn layout_of<'l>(flash: &[u8], whose: &str, layouts: &'l [Layout]) -> Result
 }
 
 /// The app area to write. `boot`: the boot area the pedal must hold, byte for byte, when the area belongs to one (an
-/// official package's, a backup's); None for Gamut's area, which is the same on every known layout.
+/// official package's, a backup's); None for an app area of this project, which is the same on every known layout.
+/// `custom`: an app area of this project that is not the release pin's, such as a test build.
 #[derive(Debug, Clone)]
 pub struct Source {
     pub what: String,
     pub area: Vec<u8>,
     pub boot: Option<Vec<u8>>,
+    pub custom: bool,
 }
 
-/// Where the release pin is kept, for the refusal's words.
+/// How an app area that is not the release pin's is named wherever it is shown.
+pub const CUSTOM: &str = "custom image, not the release";
+
+/// Where the release pin is kept.
 pub const GAMUT_PIN: &str = "firmware/apps/gamut/release.sha256";
 
 /// The file and SHA-256 of Gamut's app area (`*-v23.bin`) in the release pin's text.
@@ -100,21 +105,30 @@ pub fn gamut_pin(text: &str) -> Option<(&str, &str)> {
         .find(|(name, _)| name.ends_with("-v23.bin"))
 }
 
-/// Gamut's app area: the bytes of the release pin (`digest`), and no other build.
-pub fn gamut_area(area: Vec<u8>, name: &str, digest: &str, layouts: &[Layout]) -> Result<Source, Error> {
-    if hex(&sha256(&area)) != digest {
-        return Err(Error::Refused(format!(
-            "{name} is not the Gamut app area of the release pin (SHA-256 {digest}, in {GAMUT_PIN}): only the pinned \
-             release is installed this way"
-        )));
-    }
+/// An app area of this project for the BlackBox, as tools/pd40_install.py's `load_image` checks one: whole 4 KiB
+/// sectors that fit the app area of every known layout, so that it never reaches a boot loader or the stock settings;
+/// its head under the chip key, its entry and every file's CRC; and a BlackBox identity. Gamut's release when its
+/// SHA-256 is `digest`, the release pin's; any other is a custom image, and says so.
+pub fn app_area(area: Vec<u8>, name: &str, digest: &str, layouts: &[Layout]) -> Result<Source, Error> {
     let room = layouts.iter().map(|l| l.limit - l.base).min().unwrap_or(0);
-    let identity = check_area(&area, 0, room)?;
-    let identity = identity.as_deref().unwrap_or("None");
+    let identity = check_area(&area, 0, room).map_err(|e| Error::Refused(format!("{name}: {}", e.message())))?;
+    let Some(identity) = identity.filter(|i| i.starts_with("BlackBox_")) else {
+        return Err(Error::Refused(format!(
+            "{name} holds no BlackBox identity (OP-PRODUCT:BlackBox_<number>): an app image must be a BlackBox app \
+             area built from this project (*-v23.bin)"
+        )));
+    };
+    let custom = hex(&sha256(&area)) != digest;
+    let what = if custom {
+        format!("the app area {name}, identity {identity} ({CUSTOM})")
+    } else {
+        format!("Gamut's app area {name}, identity {identity}")
+    };
     Ok(Source {
-        what: format!("Gamut's app area {name}, identity {identity}"),
+        what,
         area,
         boot: None,
+        custom,
     })
 }
 
@@ -133,6 +147,7 @@ pub fn flash_source(image: &[u8], what: &str, whose: &str, layouts: &[Layout]) -
         what: format!("{what}, for {}", layout.name),
         area,
         boot: Some(image[..layout.base].to_vec()),
+        custom: false,
     })
 }
 

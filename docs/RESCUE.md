@@ -234,7 +234,15 @@ password through `sudo`.
 
 `rescue`, `install` and `check` work as above, for example `./undertone-macos rescue`. Like the kit's `undertone`, it
 installs Gamut only from the Undertone repository: put it in the repository's top folder after `node tools/op.mjs
-package`, or pass `--gamut FILE`. During a write, Esc, q and a first Ctrl-C only remind you not to unplug the pedal; a
+package`, or pass `--gamut FILE`.
+
+It also installs an app image of your own, such as a test build or firmware built on Undertone: pass
+`install --gamut FILE`, or choose "a file of my own" in its screens, which list the `.bin` files of the kit's
+`firmware` folder. It takes any BlackBox app image (`*-v23.bin`) that the boot loader would start: whole 4 KiB
+sectors that fit the app area of both heads, so never the boot loader of a pedal that ran M-VAVE V22 or V23, an app
+area head under the chip key, every file's CRC and a `BlackBox_` identity. An image that is not the release pin's is
+named "custom image, not the release" before the dry run, at the question and at the end. These checks say that the
+pedal can start the image, not what it does. The dry run and the typed `yes` come first, as for Gamut. During a write, Esc, q and a first Ctrl-C only remind you not to unplug the pedal; a
 second Ctrl-C leaves the program, and the next run continues where it stopped.
 
 ## How it works

@@ -10,7 +10,7 @@ use std::rc::Rc;
 use serde_json::Value;
 use undertone_protocol::crc::crc32;
 use undertone_protocol::install::{self, Layout};
-use undertone_protocol::sim::{Bench, Start, flash_image, noise, package};
+use undertone_protocol::sim::{Bench, Start, app_area, flash_image, noise, package};
 use undertone_protocol::uboot::{FLASH_SIZE, LOADER_SIZE, hex, sha256};
 
 use crate::commands::{self, Ctx, InstallFrom, Out};
@@ -183,4 +183,86 @@ fn the_way_back_to_m_vaves_firmware_goes_through_the_recovery_mode_as_python_doe
 #[test]
 fn the_check_names_the_pedal_as_python_does() {
     command("check", Cmd::Check, on_v23(), &[Start::Recovery], "");
+}
+
+/// `undertone install --gamut FILE` with `file`'s bytes on a pedal on the V22/V23 head: the window, the exit code and
+/// the pedal's flash before and after.
+fn install_own(scenario: &str, file: &[u8], answer: &str) -> (Vec<String>, i32, Vec<u8>, Vec<u8>) {
+    let root = scratch(scenario);
+    let path = root.join("BlackBox_951-v23.bin");
+    std::fs::write(&path, file).unwrap();
+    let before = on_v23();
+    let mut bench = Bench::new(
+        before.clone(),
+        noise(1, LOADER_SIZE),
+        &[Start::Recovery, Start::Recovery],
+    );
+    let window = Window::default();
+    let mut out = Out::to(Box::new(window.clone()));
+    let mut reader = |_: &str| Some(answer.to_string());
+    let loader = || Ok(noise(1, LOADER_SIZE));
+    let mut ctx = Ctx {
+        root: root.clone(),
+        out: &mut out,
+        reader: &mut reader,
+        bus: &mut bench,
+        loader: &loader,
+        backups: root.join("backups"),
+        attempts: 10,
+        layouts: layouts(),
+        heads: install::HEADS.to_vec(),
+        windows: false,
+    };
+    let code = commands::cmd_install(&mut ctx, InstallFrom::Gamut(Some(&path)));
+    let text = String::from_utf8(window.0.borrow().clone()).unwrap();
+    let after = bench.uboot.lock().flash.clone();
+    let _ = std::fs::remove_dir_all(&root);
+    (shown(&text, &root), code, before, after)
+}
+
+#[test]
+fn an_app_area_of_ones_own_is_installed_as_a_custom_image() {
+    let area = app_area("BlackBox_951", 51, 0x10000);
+    let (shown, code, before, after) = install_own("install-own", &area, "yes");
+    assert_eq!(code, 0, "{shown:#?}");
+    for line in [
+        "This is a custom image, not the release: its SHA-256 is not the release pin's. undertone checks that the boot \
+         loader would start it and that it stays inside the app area, not what it does.",
+        "Step 1 of 2: a dry run with the app area BlackBox_951-v23.bin, identity BlackBox_951 (custom image, not the \
+         release). It saves a backup and writes nothing.",
+        "[time] image: the pedal's own boot area, then the app area BlackBox_951-v23.bin, identity BlackBox_951 \
+         (custom image, not the release) in [0x6000, 0x16000)",
+    ] {
+        assert!(shown.iter().any(|l| l == line), "{line}\n{shown:#?}");
+    }
+    assert!(shown.iter().any(|l| l.starts_with("Done: ")), "{shown:#?}");
+    // the boot loader and everything from the end of the image up are as they were
+    assert_eq!(after[..0x6000], before[..0x6000]);
+    assert_eq!(after[0x6000..0x16000], area[..]);
+    assert_eq!(after[0x16000..], before[0x16000..]);
+}
+
+#[test]
+fn an_app_area_of_ones_own_is_written_only_after_a_yes() {
+    let (shown, code, before, after) = install_own("install-own-no", &app_area("BlackBox_951", 51, 0x10000), "no");
+    assert_eq!(code, undertone_protocol::exit::NOT_CONFIRMED);
+    assert!(
+        shown.iter().any(|l| l.starts_with("Stopped. Nothing was written.")),
+        "{shown:#?}"
+    );
+    assert_eq!(after, before);
+}
+
+#[test]
+fn a_file_the_pedal_could_not_start_is_refused_before_the_pedal_is_reached() {
+    let (shown, code, before, after) = install_own("install-own-refused", &noise(5, 0x10000), "yes");
+    assert_eq!(code, undertone_protocol::exit::REFUSED);
+    assert!(
+        shown
+            .iter()
+            .any(|l| l.contains("BlackBox_951-v23.bin: its first 32 bytes are not an app area head")),
+        "{shown:#?}"
+    );
+    assert!(!shown.iter().any(|l| l.contains("waiting for the pedal")), "{shown:#?}");
+    assert_eq!(after, before);
 }

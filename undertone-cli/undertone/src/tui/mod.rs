@@ -90,7 +90,7 @@ fn world(root: PathBuf, backups: PathBuf, loader: Option<PathBuf>, windows: bool
         attempts: 10,
         root,
         permission: Box::new(crate::permission_problem),
-        gamut: Box::new(move || crate::commands::gamut_source(&gamut_root, None, &gamut_layouts)),
+        gamut: Box::new(move |file| crate::commands::gamut_source(&gamut_root, file, &gamut_layouts)),
         open_url: Box::new(open_in_browser),
         windows,
     }

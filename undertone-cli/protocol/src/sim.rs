@@ -763,6 +763,14 @@ pub fn flash_image(base: usize, app: &[u8], length: usize) -> Vec<u8> {
     head
 }
 
+/// An app area of `len` bytes, as the build writes one beside its BlackBox package (`*-v23.bin`): `flash_image`'s area,
+/// its app holding the identity `product` in its OP-PRODUCT field.
+pub fn app_area(product: &str, seed: u64, len: usize) -> Vec<u8> {
+    let mut app = format!("OP-PRODUCT:{product}\0").into_bytes();
+    app.extend(noise(seed, 0x2000));
+    flash_image(0x6000, &app, 0x6000 + len)[0x6000..].to_vec()
+}
+
 /// A .fwsc package of `flash` and `ota` with the identity `product` (tools/pxpkg.py's `ufw`).
 pub fn package(flash: &[u8], ota: &[u8], product: &str) -> Vec<u8> {
     let mut off = 0x400usize;

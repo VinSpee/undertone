@@ -12,7 +12,7 @@ use ratatui::style::{Color, Modifier};
 use serde_json::{Value, json};
 use undertone_protocol::crc::crc32;
 use undertone_protocol::install::{self, Layout, Source};
-use undertone_protocol::sim::{Bench, Start, flash_image, noise, package};
+use undertone_protocol::sim::{Bench, Start, app_area, flash_image, noise, package};
 use undertone_protocol::uboot::{FLASH_SIZE, LOADER_SIZE, hex, sha256};
 use undertone_protocol::{Bus, Error};
 
@@ -415,6 +415,9 @@ const EDITED: &[(&[&str], &[&str])] = &[
     ),
 ];
 
+/// The choices these screens added, which the Python screens do not have: they are left out before a flow is compared.
+const ADDED: &[&str] = &["a file of my own"];
+
 /// Texts as the Python screens have them: all of them at once where `EDITED` lists them so, else one by one.
 fn python(texts: &[String]) -> Vec<String> {
     match EDITED.iter().find(|(ours, _)| ours.iter().eq(texts)) {
@@ -439,7 +442,9 @@ fn as_python(flow: &mut Value) {
         };
         text(&mut screen["title"]);
         lines(&mut screen["lines"]);
-        for choice in screen["choices"].as_array_mut().unwrap() {
+        let choices = screen["choices"].as_array_mut().unwrap();
+        choices.retain(|c| !ADDED.contains(&c[1].as_str().unwrap()));
+        for choice in choices {
             text(&mut choice[1]);
         }
     }
@@ -464,10 +469,14 @@ struct Flow {
     drops: Vec<usize>,
     attempts: u32,
     password: bool,
+    /// Files put in the firmware folder for "a file of my own", by name.
+    own: Vec<(&'static str, Vec<u8>)>,
+    /// The kit holds no Gamut file.
+    no_gamut: bool,
 }
 
-fn guided(name: &str, flow: Flow) {
-    let want = &fixture("guided")[name];
+/// A flow walked against a simulated pedal: each screen, what it was answered, and how the screens ended.
+fn walk(name: &str, flow: Flow) -> Value {
     let root = std::env::temp_dir().join(format!("undertone-guided-{}-{name}", std::process::id()));
     let _ = std::fs::remove_dir_all(&root);
     let firmware = root.join("firmware");
@@ -480,6 +489,9 @@ fn guided(name: &str, flow: Flow) {
     )
     .unwrap();
     std::fs::write(firmware.join("BlackBox_023.fwsc"), package(&v23, &ota, "BlackBox_023")).unwrap();
+    for (file, bytes) in &flow.own {
+        std::fs::write(firmware.join(file), bytes).unwrap();
+    }
 
     let bench = Bench::new(flow.flash, noise(1, LOADER_SIZE), &flow.starts).drops(&flow.drops);
     let pedal = bench.uboot.clone();
@@ -490,6 +502,7 @@ fn guided(name: &str, flow: Flow) {
         what: "Gamut's app area of the test".into(),
         area: v23[0x6000..0x9F000].to_vec(),
         boot: None,
+        custom: false,
     };
     let w = World {
         bus: Arc::new(Mutex::new(Some(bus))),
@@ -505,7 +518,14 @@ fn guided(name: &str, flow: Flow) {
         } else {
             Box::new(|| None)
         },
-        gamut: Box::new(move || Ok(gamut.clone())),
+        gamut: {
+            let (own_root, no_gamut) = (root.clone(), flow.no_gamut);
+            Box::new(move |file| match file {
+                Some(file) => crate::commands::gamut_source(&own_root, Some(file), &layouts()),
+                None if no_gamut => Err(Error::Setup("no Gamut in this kit".into())),
+                None => Ok(gamut.clone()),
+            })
+        },
         open_url: Box::new(move |url| opened_in.borrow_mut().push(url.to_string())),
         windows: false,
     };
@@ -515,11 +535,18 @@ fn guided(name: &str, flow: Flow) {
         seen: seen.clone(),
     };
     let result = Guide::new(&mut view, w, "menu", Log::new(None)).go();
-    let mut got = json!({
+    let got = json!({
         "screens": *seen.borrow(), "opened": *opened.borrow(), "code": result.code, "restart": result.restart,
         "lines": result.lines.iter().map(|l| shown(l)).collect::<Vec<_>>(), "backup": result.backup.is_some(),
         "flash": hex(&sha256(&pedal.lock().flash)),
     });
+    let _ = std::fs::remove_dir_all(&root);
+    got
+}
+
+fn guided(name: &str, flow: Flow) {
+    let want = &fixture("guided")[name];
+    let mut got = walk(name, flow);
     as_python(&mut got);
     for (i, (g, w)) in got["screens"]
         .as_array()
@@ -531,7 +558,6 @@ fn guided(name: &str, flow: Flow) {
         assert_eq!(g, w, "{name}: step {i}");
     }
     assert_eq!(got, *want, "{name}");
-    let _ = std::fs::remove_dir_all(&root);
 }
 
 fn dark() -> Vec<u8> {
@@ -556,6 +582,8 @@ fn flow(flash: Vec<u8>, starts: &[Start], keys: &'static [&'static str]) -> Flow
         drops: vec![],
         attempts: 10,
         password: false,
+        own: vec![],
+        no_gamut: false,
     }
 }
 
@@ -793,4 +821,161 @@ fn ctrl_c_outside_a_write_ends_the_program_as_the_default_does() {
     let payload = std::panic::catch_unwind(|| press(&writing, &presses, ended)).expect_err("the program ended");
     assert_eq!(payload.downcast::<Ended>().unwrap().0, 130);
     assert_eq!(presses.load(Ordering::SeqCst), 0);
+}
+
+/// The titles of a walked flow's screens, in order.
+fn titles(got: &Value) -> Vec<String> {
+    got["screens"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|s| {
+            s.get("ask").unwrap_or_else(|| &s["work"])["title"]
+                .as_str()
+                .unwrap()
+                .to_string()
+        })
+        .collect()
+}
+
+/// The screen of a walked flow with this title.
+fn screen<'a>(got: &'a Value, title: &str) -> &'a Value {
+    got["screens"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|s| s.get("ask").unwrap_or_else(|| &s["work"]))
+        .find(|s| s["title"] == title)
+        .unwrap_or_else(|| panic!("no screen {title}"))
+}
+
+#[test]
+fn a_file_of_my_own_goes_on_the_pedal_as_a_custom_image() {
+    let area = app_area("BlackBox_951", 51, 0x10000);
+    let own = vec![("BlackBox_951-v23.bin", area.clone()), ("notes.bin", noise(5, 0x1000))];
+    let got = walk(
+        "own",
+        Flow {
+            own,
+            ..flow(on_v23(), &[R, R], &["install", "own", "0", "go", "go", "yes", "done"])
+        },
+    );
+    assert_eq!(
+        titles(&got),
+        [
+            "how can undertone help?",
+            "put gamut on your pedal",
+            "which file?",
+            "put your file on your pedal",
+            "hold the three lit buttons",
+            "ready to put your file on",
+            "replace the software?",
+            "hold the three buttons again",
+            "your file is on your pedal",
+        ]
+    );
+    assert_eq!(
+        screen(&got, "which file?")["choices"],
+        json!([["0", "BlackBox_951-v23.bin"], ["1", "notes.bin"], ["back", "back"]])
+    );
+    assert_eq!(
+        screen(&got, "put your file on your pedal")["lines"][0],
+        "This is a custom image, not the release."
+    );
+    assert_eq!(
+        screen(&got, "ready to put your file on")["lines"][1],
+        "Your file is a custom image, not the release."
+    );
+    assert_eq!(
+        got["lines"][0],
+        "BlackBox_951-v23.bin is on your pedal (custom image, not the release). Everything put on it was checked."
+    );
+    assert_eq!(got["code"], 0);
+    let mut want = on_v23();
+    want[0x6000..0x16000].copy_from_slice(&area);
+    assert_eq!(got["flash"], hex(&sha256(&want)));
+}
+
+#[test]
+fn a_file_of_my_own_that_the_pedal_could_not_start_changes_nothing() {
+    let own = vec![
+        ("BlackBox_951-v23.bin", app_area("BlackBox_951", 51, 0x10000)),
+        ("notes.bin", noise(5, 0x1000)),
+    ];
+    let got = walk(
+        "own-refused",
+        Flow {
+            own,
+            ..flow(on_v23(), &[], &["install", "own", "1", "again", "back", "back", "quit"])
+        },
+    );
+    assert_eq!(
+        titles(&got),
+        [
+            "how can undertone help?",
+            "put gamut on your pedal",
+            "which file?",
+            "undertone cannot use this file",
+            "which file?",
+            "put gamut on your pedal",
+            "how can undertone help?",
+        ]
+    );
+    let refused = screen(&got, "undertone cannot use this file");
+    assert_eq!(refused["problem"], true);
+    assert!(
+        refused["aside"][0]
+            .as_str()
+            .unwrap()
+            .starts_with("notes.bin: its first 32 bytes are not an app area head"),
+        "{refused}"
+    );
+    assert_eq!((got["code"].clone(), got["lines"].clone()), (json!(0), json!([])));
+    assert_eq!(got["flash"], hex(&sha256(&on_v23())));
+}
+
+#[test]
+fn a_kit_without_gamut_still_takes_a_file_of_my_own() {
+    let many: Vec<(&'static str, Vec<u8>)> = ["a.bin", "b.bin", "c.bin", "d.bin", "e.bin", "f.bin"]
+        .into_iter()
+        .map(|f| (f, vec![0xFF; 0x1000]))
+        .collect();
+    let got = walk(
+        "own-folder",
+        Flow {
+            no_gamut: true,
+            ..flow(
+                on_v23(),
+                &[],
+                &["install", "own", "back", "own", "back", "back", "quit"],
+            )
+        },
+    );
+    assert_eq!(
+        titles(&got),
+        [
+            "how can undertone help?",
+            "gamut is not here",
+            "a file of your own",
+            "gamut is not here",
+            "a file of your own",
+            "gamut is not here",
+            "how can undertone help?",
+        ]
+    );
+    assert_eq!(
+        screen(&got, "gamut is not here")["choices"][0],
+        json!(["own", "a file of my own"])
+    );
+    assert_eq!(screen(&got, "a file of your own")["aside"][0], "firmware folder:");
+    let got = walk(
+        "own-many",
+        Flow {
+            own: many,
+            ..flow(on_v23(), &[], &["install", "own", "quit"])
+        },
+    );
+    let which = screen(&got, "which file?");
+    assert_eq!(which["lines"][1], "Only the first five files in the folder are shown.");
+    assert_eq!(which["choices"].as_array().unwrap().len(), 6);
 }
