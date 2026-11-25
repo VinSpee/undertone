@@ -5,6 +5,7 @@
 
 import { app, $, h, icon, on, emit, say, busy } from "./edcore.js";
 import { Editor } from "./pxedit.js";
+import { CAPTURE_CREDITS } from "./pxnam.js";
 import { initPresets, loadBank, refreshSlots, refreshBank, stepPreset, save, comparing, compareSlotChanged, compareBeforeUnload } from "./edpresets.js";
 import { initSound } from "./edsound.js";
 import { initModels, loadAssets } from "./edmodels.js";
@@ -226,6 +227,9 @@ function renderConnPop() {
     h("h3", { text: "Keys" }),
     h("dl", { class: "keys" }, h("dt", { text: "/" }), h("dd", { text: "search the presets" }), h("dt", { text: "[  ]" }), h("dd", { text: "previous, next preset" }),
       h("dt", { text: "Ctrl or ⌘ + S" }), h("dd", { text: "save" }), h("dt", { text: "F2" }), h("dd", { text: "rename the preset chosen in the list" })),
+    h("h3", { text: "Amp captures" }),
+    h("dl", { class: "keys" }, CAPTURE_CREDITS.flatMap((c) => [h("dt", { text: c.author }), h("dd", {}, c.packs.flatMap(([pack, url], k) =>
+      [k ? "; " : null, `${pack}, captured with permission, available on `, h("a", { href: url, target: "_blank", rel: "noopener", text: "TONE3000" })]))])),
     h("a", { class: "btn small", href: "install.html", text: "Installer and updates" }));
 }
 

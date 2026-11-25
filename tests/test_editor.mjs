@@ -8,7 +8,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { Editor, presetToJSON, presetFromJSON, filePresets, parsePresetFile, clonePreset } from "../docs/pxedit.js";
-import { parseNam, levelTrim, packModel, readDi, a2Run, KERNELS, DILATIONS, NW } from "../docs/pxnam.js";
+import { parseNam, levelTrim, packModel, readDi, a2Run, a2Net, fitRange, namEntry, RANGE, KERNELS, DILATIONS, NW } from "../docs/pxnam.js";
 import { parseWav, prepareIr, packIr, irName, resample, IR_LEN } from "../docs/pxir.js";
 
 const ROOT = fileURLToPath(new URL("..", import.meta.url));
@@ -232,6 +232,18 @@ list = await ed.list();
   const bad = packModel(m.name, m.weights, lv); bad[64 + 100] ^= 0x55;           // a weight changed: the CRC no longer matches
   ok(await ed.namUpload(5, bad) === 1 && !(await ed.namList()).models[12 + 5].used, "NAM: a damaged model is refused, the slot stays empty");
   ok(await ed.namErase(4) === 0 && !(await ed.namList()).models[12 + 4].used, "NAM: the slot is cleared again");
+  // A capture past the pedal's fixed-point range (CavLabs #4 - Gain 7 Boosted, its A2-Lite part: tests/fixtures):
+  // its internal values reach 11,180 at GAIN +12 dB, and the pedal's engine gives -9 dB SNR against float
+  const bigText = readFileSync(join(ROOT, "tests", "fixtures", "nam_cavlabs4_gain7_boosted.nam"), "utf8"), big = parseNam(bigText);
+  const fit = fitRange(big.weights, di), at12 = di.slice(0, 44100).map((v) => v * 0.5 / 0.15 * 10 ** 0.6);
+  const p0 = a2Net(big.weights, at12).peak, p1 = a2Net(fit.weights, at12).peak;
+  ok(p0 > RANGE && fit.halvings === 4 && p1 < RANGE / 2 && Math.abs(p1 * 16 - p0) < 1e-3 * p0,
+     `NAM: an overflowing capture is scaled inside (peak ${p0.toFixed(0)} -> ${p1.toFixed(0)}, ${fit.halvings} halvings)`);
+  const y0 = a2Run(big.weights, di), y1 = a2Run(fit.weights, di);
+  ok(y0.every((v, i) => v === y1[i]) && levelTrim(fit.weights, di) === levelTrim(big.weights, di), "NAM: its output and level are unchanged");
+  const packed = new Float32Array(namEntry(bigText, "big.nam", di).bytes.slice(64).buffer), again = fitRange(fit.weights, di);
+  ok(packed.every((v, i) => v === fit.weights[i]) && again.halvings === 0 && again.weights === fit.weights,
+     "NAM: the import stores the scaled weights; a capture in range is left as it is");
 }
 // ---- 8. v38: cabinet IRs (a WAV file -> an IR slot -> the CAB block's USER IR type) ----
 {

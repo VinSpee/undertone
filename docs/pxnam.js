@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // OpenPocket — NAM A2 models for the pedal (v37): read a .nam file, check it is an A2 network, take its A2-Lite part,
-// measure its level and pack it for a user slot (firmware/apps/gamut/px_models.h). The network itself runs here only to measure
-// the level, in float, with the same maths as tools/nam_a2.py and firmware/apps/gamut/engine/px_nam.c.
+// scale it into the pedal's fixed-point range, measure its level and pack it for a user slot (firmware/apps/gamut/px_models.h).
+// The network itself runs here only to measure its range and level, in float, with the same maths as tools/nam_a2.py and
+// firmware/apps/gamut/engine/px_nam.c.
 
 export const KERNELS = [6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 15, 15, 6, 6, 6, 6, 6, 6, 6];
 export const DILATIONS = [1, 3, 7, 17, 41, 101, 239, 1, 3, 7, 17, 41, 101, 239, 1, 13, 1, 3, 7, 17, 41, 101, 239];
@@ -10,6 +11,17 @@ export const NW = 1871;                 // A2-Lite weights (head_scale included)
 export const REF_LUFS = -20;            // tools/nam_level.py REF: every model at this loudness after its trim
 export const SLOT_BYTES = 64 + NW * 4;  // header + weights
 const SLOPE = 0.01;
+// The authors of the TONE3000 captures cleared to ship as the factory amps, by their written permission, and each pack's
+// tone page. The editor's pedal panel lists them; docs/NAM.md holds the same list and must be edited with it.
+const T3K = "https://www.tone3000.com/tones/";
+export const CAPTURE_CREDITS = [
+  { author: "subterraneans", packs: [["Soldano SLO-100", T3K + "soldano-slo-100-106781"]] },
+  { author: "chuggernautxanner", packs: [["Orange Dual Terror full rig", T3K + "orange-dual-terror-full-rig-boostedunboosted-81959"]] },
+  { author: "torcuato", packs: [["Bogner TM 26", T3K + "bogner-tm-26-no-cab-109210"]] },
+  { author: "amalgamaudio", packs: [["Fender Super Reverb 1965 edge of breakup A2", T3K + "fender-super-reverb-1965-edge-of-breakup-a2-88775"],
+    ["Vox AC30 1964 edge of breakup A2", T3K + "1964-vox-ac30-top-boost-super-twin-edge-of-breakup-a2-82521"]] },
+  { author: "caveraolabs", packs: [["CavLabs #4 Orange Jim Root Terror", T3K + "cavlabs-4-orange-jim-root-terror-24650"]] },
+];
 const FILMS = ["conv_pre_film", "conv_post_film", "input_mixin_pre_film", "input_mixin_post_film", "activation_pre_film",
   "activation_post_film", "layer1x1_post_film", "head1x1_post_film"];
 
@@ -56,13 +68,16 @@ export function parseNam(text, fileName = "") {
   return { name: base.slice(0, 11).trim(), weights, sampleRate: sr, note };
 }
 
-// the network on x (Float32Array), float: y = A2-Lite(x)
-export function a2Run(weights, x) {
+// the network on x (Float32Array), float: { y = A2-Lite(x), peak: its largest internal value (the residual x, z, the
+// head's sum and output), which the pedal's fixed point holds only up to RANGE }
+export function a2Net(weights, x) {
   const C = 3, T = x.length;
-  let i = 0;
+  let i = 0, peak = 0;
+  const top = (a) => { for (const v of a) { const m = Math.abs(v); if (m > peak) peak = m; } };
   const take = (n) => { const r = weights.subarray(i, i + n); i += n; return r; };
   const rech = take(C);
   let X = [0, 1, 2].map((c) => { const a = new Float32Array(T); for (let t = 0; t < T; t++) a[t] = rech[c] * x[t]; return a; });
+  X.forEach(top);
   const hs = [0, 1, 2].map(() => new Float32Array(T));
   const z = [0, 1, 2].map(() => new Float32Array(T));
   for (let l = 0; l < KERNELS.length; l++) {
@@ -79,6 +94,7 @@ export function a2Run(weights, x) {
         }
       }
     }
+    z.forEach(top);
     const Xn = [0, 1, 2].map(() => new Float32Array(T));
     for (let t = 0; t < T; t++) {
       const a0 = z[0][t] >= 0 ? z[0][t] : z[0][t] * SLOPE, a1 = z[1][t] >= 0 ? z[1][t] : z[1][t] * SLOPE,
@@ -87,15 +103,46 @@ export function a2Run(weights, x) {
       for (let o = 0; o < C; o++) Xn[o][t] = X[o][t] + one[o * C] * a0 + one[o * C + 1] * a1 + one[o * C + 2] * a2 + ob[o];
     }
     X = Xn;
+    X.forEach(top); hs.forEach(top);
   }
   const head = take(C * HEAD_K), hb = take(1)[0], scale = take(1)[0];
   const y = new Float32Array(T);
   for (let t = 0; t < T; t++) {
     let v = hb;
     for (let c = 0; c < C; c++) for (let k = 0; k < HEAD_K; k++) { const s = HEAD_K - 1 - k; if (t >= s) v += head[c * HEAD_K + k] * hs[c][t - s]; }
+    if (Math.abs(v) > peak) peak = Math.abs(v);
     y[t] = scale * v;
   }
-  return y;
+  return { y, peak };
+}
+export const a2Run = (weights, x) => a2Net(weights, x).y;
+
+// The pedal's fixed point (px_nam.h: activations Q20) holds internal values up to +-RANGE; some captures go past it, and
+// come out of the pedal as noise. LeakyReLU passes a scale through, so the network with the input rechannel, every bias,
+// mixin and the head bias times s, and head_scale divided by s, gives the same output with every internal value times s
+// (exactly, s a power of two). fitRange halves until the peak on the DI clip, at about the level the pedal feeds the
+// network (x 0.5 / 0.15, as test_nam.py: rc_amp) at GAIN +12 dB, is below half the range: { weights, halvings }.
+export const RANGE = 2048;
+export function fitRange(weights, di) {
+  const g = 0.5 / 0.15 * 10 ** (12 / 20), x = new Float32Array(Math.min(di.length, 44100));
+  for (let t = 0; t < x.length; t++) x[t] = di[t] * g;
+  const peak = a2Net(weights, x).peak;
+  let halvings = 0;
+  while (peak / 2 ** halvings >= RANGE / 2) halvings++;
+  return { weights: halvings ? rescale(weights, 2 ** -halvings) : weights, halvings };
+}
+function rescale(weights, s) {
+  const C = 3, w = Float32Array.from(weights);
+  let i = 0;
+  const mul = (n) => { for (const e = i + n; i < e; i++) w[i] *= s; };
+  mul(C);                                                     // rechannel
+  for (const K of KERNELS) {
+    i += C * C * K; mul(C); mul(C);                           // conv, its bias, mixin
+    i += C * C; mul(C);                                       // layer1x1, its bias
+  }
+  i += C * HEAD_K; mul(1);                                    // head, its bias
+  w[i] /= s;                                                  // head_scale
+  return w;
 }
 
 // ITU BS.1770 loudness at 44.1 kHz (K-weighting, 400 ms blocks, gates): tools/nam_level.py's lufs()
@@ -168,8 +215,8 @@ export function packModel(name, weights, levelDb) {
 // a .nam file's text -> what the pedal stores, at the same loudness as every other model: { name, bytes, detail }.
 // `di`: readDi(nam_di.wav). The editor's Models section and t3k.html (TONE3000 in the same tab) both make their entries here.
 export function namEntry(text, fileName, di) {
-  const m = parseNam(text, fileName), lv = levelTrim(m.weights, di);
-  return { name: m.name, bytes: packModel(m.name, m.weights, lv), detail: [`level ${lv >= 0 ? "+" : ""}${lv.toFixed(1)} dB`, m.note].filter(Boolean).join("; ") };
+  const m = parseNam(text, fileName), { weights } = fitRange(m.weights, di), lv = levelTrim(weights, di);
+  return { name: m.name, bytes: packModel(m.name, weights, lv), detail: [`level ${lv >= 0 ? "+" : ""}${lv.toFixed(1)} dB`, m.note].filter(Boolean).join("; ") };
 }
 
 // 8-bit bytes -> 7-bit groups (a byte of high bits, then 7 bytes): px_models.h nm_unpack7
