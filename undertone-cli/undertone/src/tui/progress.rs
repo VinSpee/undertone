@@ -34,12 +34,12 @@ impl Phase {
     pub fn words(self) -> &'static str {
         match self {
             Phase::Looking => "looking for your pedal",
-            Phase::Again => "your pedal restarted. waiting for it",
+            Phase::Again => "waiting for your pedal to come back",
             Phase::Found => "found it",
             Phase::Reading => "reading your pedal",
             Phase::Saving => "saving a copy of your pedal",
             Phase::Checking => "checking",
-            Phase::Writing => "writing",
+            Phase::Writing => "updating your pedal",
             Phase::Restarting => "restarting your pedal",
         }
     }

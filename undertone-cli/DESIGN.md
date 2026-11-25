@@ -67,7 +67,9 @@ that could be forgotten. The protocol crate has `#![forbid(unsafe_code)]`.
 **The screens are a state machine over the protocol.** The guided flow is `undertone_screens.Guide`, state for state:
 each state shows one screen and names the next. The screen is drawn from a plain description (title, lines, choices,
 status, warning), which a full-screen view renders with ratatui and a plain view prints as numbered questions, as
-`AnsiView` and `PlainView` do. The copy, the states and the order are the Python screens', word for word.
+`AnsiView` and `PlainView` do. The states and the order are the Python screens'. The copy began as theirs and was then
+edited for people who have never used a terminal; `tui/tests.rs` lists each edited text beside the Python text it
+stands for.
 
 ## The Python tools are the specification
 
@@ -122,8 +124,8 @@ kept, each with a test:
     waits 75 s after the leave, so that the run the owner saw succeed also succeeds here; it sends nothing while it
     waits. After the leave it still tells a pedal that stayed in the recovery mode (exit 5) from one that left and did
     not come back (exit 3).
-12. **The hints.** After 30 s of looking: "Still looking. Plug straight into this computer, no hub.", then "A pedal
-    that will not start shows up between restarts." for a rescue or "Hold all three until its screen says RECOVERY."
+12. **The hints.** After 30 s of looking: "Still looking. Plug straight into this computer, no hub.", then "Leave it
+    plugged in: undertone catches it as it restarts." for a rescue or "Hold all three until its screen says RECOVERY."
     for an install. On Windows the wait adds "If Windows offers to format a drive, click Cancel". A problem is told in
     the plain words of `Guide.failed`, and the tool's own line goes to the log and to the screen at the end.
 13. **Rights.** On macOS and Linux the program starts itself again under `sudo` with the chosen task, after the
@@ -243,7 +245,8 @@ unit and the symbols stripped.
   terminal view's colours must be those codes. Each guided flow (the rescue, a rescue answered "not now", one that
   cannot be fixed, a failed write that needs a new yes, the install, the check, the password, back and quit), driven by
   the same choices against the same simulated pedal, must walk through the same screens, progress and outcomes to the
-  same end (`guided.json`).
+  same end (`guided.json`), each edited text read as the Python text it stands for. Every screen of those flows must
+  also fit an 80 x 24 terminal with no wrapped line.
 - **The real program in a pseudo-terminal.** Built with the `sim` feature and started with `UNDERTONE_SIM=rescue`,
   `install` or `check`, the program runs its guided screens against the simulated pedal, slowed a little. Keys sent
   through a pseudo-terminal drive it by hand, and the terminal's own answer to the theme question decides dark or light;

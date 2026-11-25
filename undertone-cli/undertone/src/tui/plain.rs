@@ -85,8 +85,10 @@ impl View for PlainView {
         }
         let (n, default) = (screen.choices.len(), screen.selected);
         loop {
-            let Some(answer) = (self.read_line)(&format!("choose 1-{n} (enter: {}, b back, q quit): ", default + 1))
-            else {
+            let Some(answer) = (self.read_line)(&format!(
+                "type a number, then press enter (enter alone: {}, b: back, q: quit): ",
+                default + 1
+            )) else {
                 return "quit".into();
             };
             let answer = answer.trim().to_lowercase();
@@ -126,7 +128,10 @@ impl View for PlainView {
                 let tenth = (progress.fraction() * 10.0) as usize;
                 if step != Some(tenth) {
                     step = Some(tenth);
-                    self.line(&format!("writing: {}%", (progress.fraction() * 100.0) as usize));
+                    self.line(&format!(
+                        "updating your pedal: {}%",
+                        (progress.fraction() * 100.0) as usize
+                    ));
                 }
             } else if said.as_deref() != Some(sentence.as_str()) {
                 self.line(&sentence);

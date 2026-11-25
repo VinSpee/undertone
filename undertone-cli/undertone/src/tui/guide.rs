@@ -146,8 +146,8 @@ pub struct Guide<'v> {
 
 fn nothing_changes() -> [&'static str; 2] {
     [
-        "First a safe check: undertone saves a copy of your pedal.",
-        "Nothing changes until you say so.",
+        "First undertone checks your pedal and saves a copy of it.",
+        "Nothing changes until you say yes.",
     ]
 }
 
@@ -184,7 +184,9 @@ impl<'v> Guide<'v> {
             self.state = self.step(state);
         }
         if let Some(path) = &self.log.path {
-            self.result.lines.push(format!("details: {}", path.display()));
+            self.result
+                .lines
+                .push(format!("details, if you ask for help: {}", path.display()));
         }
         self.result
     }
@@ -297,7 +299,7 @@ impl<'v> Guide<'v> {
         vec![
             "Still looking. Plug straight into this computer, no hub.".into(),
             if self.kind == Some("rescue") {
-                "A pedal that will not start shows up between restarts.".into()
+                "Leave it plugged in: undertone catches it as it restarts.".into()
             } else {
                 "Hold all three until its screen says RECOVERY.".into()
             },
@@ -306,11 +308,7 @@ impl<'v> Guide<'v> {
 
     // -- the states
     fn menu(&mut self) -> Option<State> {
-        let screen = Screen::new(
-            "what would you like to do?",
-            &["Undertone works on your pedal over its USB cable."],
-        )
-        .choices(&[
+        let screen = Screen::new("how can undertone help?", &["Have your pedal and its USB cable ready."]).choices(&[
             ("rescue", "fix a pedal that will not start"),
             ("install", "put gamut on my pedal"),
             ("check", "check my pedal"),
@@ -335,15 +333,15 @@ impl<'v> Guide<'v> {
                     "choose Run as administrator, and start undertone there.",
                 ],
             )
-            .choices(&[("done", "done")])
+            .choices(&[("done", "close undertone")])
             .problem();
             return self.choose(screen, &[("done", None), ("back", Some(State::Menu))]);
         }
         let screen = Screen::new(
             "undertone needs your password",
             &[
-                "Your computer asks for it once, to reach the pedal.",
-                "Nothing shows while you type.",
+                "Next, your computer asks for the password you log in with.",
+                "Type it and press Enter. Nothing shows while you type.",
             ],
         )
         .choices(&[("go", "continue"), ("back", "back")]);
@@ -357,8 +355,8 @@ impl<'v> Guide<'v> {
 
     fn rescue(&mut self) -> Option<State> {
         self.kind = Some("rescue");
-        let screen = Screen::new("fix a pedal that will not start", &nothing_changes())
-            .choices(&[("go", "start the check"), ("back", "back")]);
+        let screen =
+            Screen::new("fix your pedal", &nothing_changes()).choices(&[("go", "start the check"), ("back", "back")]);
         let go = self.permission().unwrap_or(State::RescueCheck);
         self.choose(screen, &[("go", Some(go)), ("back", Some(State::Menu))])
     }
@@ -403,8 +401,11 @@ impl<'v> Guide<'v> {
 
     fn ask_path(&mut self) -> Option<State> {
         let screen = Screen::new(
-            "did your pedal ever run m-vave v22 or v23?",
-            &["Undertone could not tell from your pedal."],
+            "one question first",
+            &[
+                "Did your pedal ever run M-VAVE's V22 or V23 software?",
+                "Undertone could not tell from your pedal.",
+            ],
         )
         .choices(&[("B", "yes, or not sure"), ("A", "no, never")]);
         let key = self.view.ask(&screen);
@@ -427,29 +428,29 @@ impl<'v> Guide<'v> {
         let firmware = self.w.root.join("firmware");
         self.result.lines = vec![
             format!(
-                "Put M-VAVE's {file} in {}, then run undertone again.",
+                "Put M-VAVE's {file} in {}, then start undertone again.",
                 firmware.display()
             ),
-            "firmware/README.txt in that folder says where to get it.".into(),
+            "README.txt in that folder says where to get it.".into(),
         ];
-        let line = format!("Your pedal needs {name} software from M-VAVE.");
+        let line = format!("Undertone needs the {name} file to fix your pedal.");
         self.end(Screen::new(
             "one more file needed",
-            &[&line, "The guide shows where to get it."],
+            &[&line, "The check changed nothing. Open the guide to get the file."],
         ))
     }
 
     fn cannot(&mut self) -> Option<State> {
         self.result.lines = vec![format!(
-            "No official file fits this pedal. Keep the copy and ask for help: {GUIDE}#if-it-does-not-work"
+            "No M-VAVE file fits your pedal. Keep the copy and ask for help: {GUIDE}#if-it-does-not-work"
         )];
         self.result.code = 2;
         self.end(
             Screen::new(
-                "this pedal needs a closer look",
+                "this needs a closer look",
                 &[
                     "Nothing was changed, and a copy of your pedal is saved.",
-                    "The guide says how to ask for help.",
+                    "Open the guide to see how to ask for help.",
                 ],
             )
             .problem(),
@@ -462,8 +463,8 @@ impl<'v> Guide<'v> {
             .as_ref()
             .and_then(|o| o.report.as_ref())
             .and_then(|r| r.file.clone());
-        let ends = file.as_deref().map_or("its official firmware", ends_on);
-        let line = format!("Undertone puts M-VAVE {ends} back on it.");
+        let ends = file.as_deref().map_or("own", ends_on);
+        let line = format!("Undertone will put M-VAVE's {ends} software back on it.");
         let screen =
             Screen::new("your pedal can be fixed", &[&line]).choices(&[("go", "fix it now"), ("later", "not now")]);
         self.choose(
@@ -481,10 +482,10 @@ impl<'v> Guide<'v> {
             "replace the software?",
             &[
                 "This replaces the software on your pedal.",
-                "A copy is saved first. Continue?",
+                "A copy of what is on it now is saved first. Continue?",
             ],
         )
-        .choices(&[("no", "no"), ("yes", "yes")]);
+        .choices(&[("no", "no, stop here"), ("yes", "yes, replace it")]);
         let key = self.view.ask(&screen);
         if key == "yes" {
             let report = self.outcome.as_ref().and_then(|o| o.report.as_ref());
@@ -511,13 +512,13 @@ impl<'v> Guide<'v> {
                     "your pedal may not start",
                     &[
                         "It may be partly updated.",
-                        "Run undertone again: it continues where it stopped.",
+                        "Start undertone again: it continues where it stopped.",
                     ],
                 )
                 .problem(),
             );
         }
-        self.result.lines = vec!["Nothing was written to your pedal.".into()];
+        self.result.lines = vec!["Nothing was changed on your pedal.".into()];
         self.end(Screen::new(
             "nothing was changed",
             &["Your pedal is as it was. The copy stays saved."],
@@ -536,7 +537,7 @@ impl<'v> Guide<'v> {
             "fixing your pedal",
             &[
                 "Unplug your pedal, then plug it back in.",
-                "Leave the cable alone while undertone works.",
+                "Then leave the cable alone until undertone finishes.",
             ],
         );
         let yes = self.confirmed.take();
@@ -549,15 +550,16 @@ impl<'v> Guide<'v> {
             return self.failed(o, State::Confirm);
         }
         self.result.lines = vec![
-            o.text.clone(),
-            "Next: unplug the cable, switch the pedal off, wait 5 seconds and switch it on.".into(),
+            "Your pedal is fixed. Everything put on it was checked.".into(),
+            "Next: unplug the cable, switch your pedal off, wait 5 seconds, then switch it on.".into(),
         ];
-        let mut lines = vec!["Unplug it, then switch it off and on again."];
+        let mut lines = vec!["Unplug the cable, then switch your pedal off and on again."];
         if Some(file.as_str()) != path_file('A') {
-            lines.push("To add Gamut later, use undertone, not the installer page.");
+            lines.push("To add Gamut later, use undertone, not an installer page.");
+            lines.push("An installer page can stop this pedal starting again.");
             self.result
                 .lines
-                .push("Do not install Gamut on it from an installer page: use undertone install.".into());
+                .push("Do not put Gamut on it from an installer page: use undertone instead.".into());
         }
         self.end(Screen::new("your pedal is fixed", &lines))
     }
@@ -568,10 +570,10 @@ impl<'v> Guide<'v> {
         let routes = [("guide", Some(State::GuideThenMenu)), ("back", Some(State::Menu))];
         if self.w.windows {
             let screen = Screen::new(
-                "this needs a mac for now",
+                "use a mac for now",
                 &[
-                    "Putting Gamut on over USB is not ready on Windows.",
-                    "For a pedal that starts, use the installer page.",
+                    "Undertone cannot put Gamut on a pedal from Windows yet.",
+                    "If your pedal starts, use the installer page instead.",
                 ],
             )
             .choices(&guide);
@@ -582,10 +584,10 @@ impl<'v> Guide<'v> {
             Err(e @ Error::Refused(_)) => return self.failed(Outcome::failed(&e), State::Install),
             Err(_) => {
                 let screen = Screen::new(
-                    "gamut is not in this folder",
+                    "gamut is not here",
                     &[
-                        "This works from the Undertone folder with Gamut built.",
-                        "For a pedal that starts, use the installer page.",
+                        "This copy of undertone does not come with Gamut.",
+                        "If your pedal starts, use the installer page instead.",
                     ],
                 )
                 .choices(&guide);
@@ -602,8 +604,8 @@ impl<'v> Guide<'v> {
         Screen::new(
             title,
             &[
-                "Switch your pedal off. Hold these three, switch it on,",
-                "and keep holding until its screen says RECOVERY.",
+                "Switch your pedal off. Hold HOME, PUSH and the right",
+                "footswitch, switch it on, and hold until it says RECOVERY.",
             ],
         )
         .pedal()
@@ -635,7 +637,7 @@ impl<'v> Guide<'v> {
 
     fn install_write(&mut self) -> Option<State> {
         let yes = self.confirmed.take();
-        let o = self.work(Self::hold("once more: hold the three"), Kind::Install, yes);
+        let o = self.work(Self::hold("hold the three buttons again"), Kind::Install, yes);
         if o.code == 130 {
             return stopped(&o, State::Install);
         }
@@ -649,12 +651,12 @@ impl<'v> Guide<'v> {
             .and_then(|r| r.layout.as_ref())
             .map_or("", |l| l.levels.as_str());
         self.result.lines = vec![
-            o.text.clone(),
+            "Gamut is on your pedal. Everything put on it was checked.".into(),
             undertone_protocol::install::FIRST_RUN.replace("{levels}", levels),
         ];
         self.end(Screen::new(
             "gamut is on your pedal",
-            &["Switch it off and on again to start Gamut."],
+            &["Switch your pedal off and on again to start Gamut."],
         ))
     }
 
@@ -679,8 +681,8 @@ impl<'v> Guide<'v> {
             Screen::new(
                 "connect your pedal",
                 &[
-                    "Plug it straight into this computer, with no hub.",
-                    "If it starts, hold these three as you switch it on.",
+                    "Plug your pedal straight into this computer. If it starts,",
+                    "switch it on holding HOME, PUSH and the right footswitch.",
                 ],
             )
             .pedal()
@@ -694,22 +696,25 @@ impl<'v> Guide<'v> {
         }
         let flash = o.flash.clone().unwrap_or_default();
         let r = read_pedal(&flash, &self.w.layouts);
-        let title = match r.path {
-            'A' => "your pedal ran m-vave v20 or older",
-            'B' => "your pedal ran m-vave v22 or v23",
-            _ => "undertone does not know this pedal",
+        let ran = match r.path {
+            'A' => "Your pedal ran M-VAVE V20 or older.",
+            'B' => "Your pedal ran M-VAVE V22 or V23.",
+            _ => "Undertone does not know this pedal.",
         };
         let now = match r.app.as_deref() {
             Some(app) if app.starts_with("an Undertone") => "It now runs Gamut.",
             Some("M-VAVE's own firmware") => "It now runs M-VAVE's own software.",
-            _ => "Its software does not start: choose fix a pedal.",
+            _ => "It does not start. Start undertone again to fix it.",
         };
         self.result.lines = vec![
             format!("head: {}", r.family),
             format!("layout: {}", r.layout.as_deref().unwrap_or("not one undertone knows")),
             format!("app area: {}", r.app.as_deref().unwrap_or("unknown")),
         ];
-        self.end(Screen::new(title, &[now, "A copy of your pedal is saved."]))
+        self.end(Screen::new(
+            "your pedal is checked",
+            &[ran, now, "A copy of your pedal is saved."],
+        ))
     }
 
     /// A problem, in plain words; the tool's own line goes to the log and to the normal screen at the end.
@@ -723,7 +728,10 @@ impl<'v> Guide<'v> {
                 "The guide shows how to add it.",
             ]
         } else if o.code == 2 {
-            ["Undertone stopped before changing anything.", "Your pedal is safe."]
+            [
+                "A safety check stopped undertone before it changed anything.",
+                "Your pedal is safe. Open the guide to see what to do.",
+            ]
         } else if text.contains("gave up") {
             [
                 "Your pedal kept restarting before undertone finished.",
@@ -731,13 +739,13 @@ impl<'v> Guide<'v> {
             ]
         } else if o.code == 3 || o.code == 5 {
             [
-                "Your pedal did not switch over. Nothing was written.",
-                "Try again, holding the three buttons.",
+                "Your pedal did not get ready. Nothing was changed.",
+                "Try again, holding HOME, PUSH and the right footswitch.",
             ]
         } else if text.contains("not found") || text.contains("CRC") || text.contains("not a") {
             [
-                "A firmware file in the kit is missing or damaged.",
-                "The guide shows where to get it again.",
+                "An M-VAVE file in the kit is missing or damaged.",
+                "Open the guide to see where to get it again.",
             ]
         } else {
             ["Nothing more was sent to your pedal.", "Try again, or open the guide."]
@@ -786,7 +794,7 @@ fn stopped(o: &Outcome, back: State) -> Option<State> {
 pub fn resume_note(kind: &str, backup: &Path) -> Vec<String> {
     vec![
         "Your pedal was being updated and may not start yet.".into(),
-        format!("Plug it in and run: undertone {kind}  (it continues where it stopped)"),
+        format!("Plug it in and start undertone again (or run: undertone {kind}). It continues where it stopped."),
         format!("copy of your pedal: {}", backup.display()),
     ]
 }
