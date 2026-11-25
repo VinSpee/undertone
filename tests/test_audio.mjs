@@ -106,7 +106,7 @@ const TOLERANCE = 0;
 const GAIN = Math.fround(0.15);
 check("every factory preset, on a tone and every loop: WebAssembly sounds as the native build", () => {
   const exe = join(TMP, "preset"), input = join(TMP, "in.wav"), output = join(TMP, "out.f32");
-  const cc = spawnSync(process.env.CC || "cc", ["-O2", "-fno-builtin", "-ffp-contract=off", "-Ifirmware/apps/gamut/engine", "firmware/apps/gamut/tests/engine/preset.c", "firmware/apps/gamut/engine/px_dsp.c", "firmware/px_math.c", "-lm", "-o", exe], { cwd: ROOT, stdio: "inherit" });
+  const cc = spawnSync(process.env.CC || "cc", ["-O2", "-fno-builtin", "-ffp-contract=off", `-DPX_FS=${ENGINE_RATE}`, "-Ifirmware/apps/gamut/engine", "firmware/apps/gamut/tests/engine/preset.c", "firmware/apps/gamut/engine/px_dsp.c", "firmware/px_math.c", "-lm", "-o", exe], { cwd: ROOT, stdio: "inherit" });
   assert.equal(cc.status, 0);
   const signals = [{ name: "tone 220 Hz", wav: wavBytes(IN), gain: 1 }];
   for (const l of JSON.parse(read("assets/loops/manifest.json")).loops) signals.push({ name: l.file, wav: read(join("assets/loops", l.file)), gain: GAIN });
@@ -170,7 +170,6 @@ for (const l of manifest.loops) {
     assert.ok(["dry", "amped"].includes(l.signal));
     assert.equal(l.sha256, sha256(bytes));
     assert.equal(rate, l.sample_rate);
-    assert.equal(rate, ENGINE_RATE);
     assert.equal(channels, 1);
     assert.ok(Math.abs(samples.length / rate - l.seconds) < 0.01);
     const p = peak(samples);

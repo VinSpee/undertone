@@ -1,5 +1,6 @@
 /* SPDX-License-Identifier: GPL-3.0-only
- * OpenPocket — render one factory preset on a DI (tools/level_presets.py): preset N in.wav out.f32 [in gain] */
+ * OpenPocket — render one factory preset on a DI (tools/level_presets.py): preset N in.wav out.f32 [in gain]
+ * (at the rate the engine is built for, px_dsp.h PX_FS: tests/test_audio.mjs builds it at the simulator's) */
 #include <stdio.h>
 #include <stdlib.h>
 #include "px_dsp.h"
@@ -19,7 +20,7 @@ int main(int c, char **v)
     px_preset_t p;
     px_preset_factory(&p, atoi(v[1]));
     if (getenv("LEVEL")) p.p[PX_B_GATE][PX_PATCH_LEVEL] = (uint8_t)atoi(getenv("LEVEL"));
-    px_engine_init(&e, 44100.0f); px_engine_set(&e, &p);
+    px_engine_init(&e, PX_SR); px_engine_set(&e, &p);
     n = n / 64 * 64;
     for (int i = 0; i < n; i += 64) px_engine_process(&e, x + i, y + i, 64);
     f = fopen(v[3], "wb"); fwrite(y, 4, (size_t)n, f); fclose(f);

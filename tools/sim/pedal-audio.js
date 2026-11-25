@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // The pedal's sound on the page: a source (a bundled loop, a dropped file, an input of the computer) -> the input level ->
 // the engine in an AudioWorklet -> the device mute -> the output volume -> the speakers. The context runs at the engine's
-// 44.1 kHz, so the browser does every sample-rate conversion. docs/SIMULATOR.md.
+// 48 kHz, so the browser does every sample-rate conversion. docs/SIMULATOR.md.
 import { ENGINE_RATE, GUITAR_LEVEL, presetBytes } from "/sim/px-engine.js";
 
 export const dbfs = (peak) => (peak > 0 ? 20 * Math.log10(peak) : -Infinity);
