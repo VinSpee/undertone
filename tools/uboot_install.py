@@ -12,6 +12,8 @@ that app area that differ. docs/RESCUE.md, "Gamut on a BlackBox with V22 or V23"
   sudo tools/uboot_install.py --write                      install Gamut
   sudo tools/uboot_install.py --official FILE.fwsc [--write]     put M-VAVE's app area back from its official package
   sudo tools/uboot_install.py --restore DUMP.bin [--write]       put back the app area of a backup of this pedal
+  sudo tools/uboot_install.py --image FILE [--write]             any app image, such as a test build's *-v23.bin; its
+                                                                 SHA-256 is printed, and --write asks for a typed yes
   options: --gamut FILE (default: the file the release pin names, build/apps/gamut/BlackBox_950-v23.bin)
            --loader FILE  --backup-dir DIR (default ~/OpenPocket-rescue)  --attempts N (default 10)
 
@@ -43,15 +45,17 @@ Steps of a run (a rerun, or the next try of the same run, resumes: only the sect
 Guards that cannot be switched off: no write below the app area's start or from the layout's limit up, so never a boot
 loader, the radio records, the user area or key_mac, nor the stock settings of V20, V22 and V23 (those of V16 start at
 0xA3000, inside the old head's range: a V20 package or a backup puts its own bytes there); Gamut's area must be the
-release pin's, an official package must pass every CRC and be a BlackBox one; a backup must be a whole 1 MiB dump whose
-app area the boot loader would start; and uboot_rescue's own: the loader's command whitelist, the chip key, the flash
-size.
+release pin's; an image of --image must be whole 4 KiB sectors that fit the pedal's app area and must not begin with
+a flash head (a boot area), and is written only after a typed yes unless it is the release's (one the boot loader would
+not start only warns: the boot area stays, and so does the way back); an official package must pass every CRC and be a
+BlackBox one; a backup must be a whole 1 MiB dump whose app area the boot loader would start; and uboot_rescue's own:
+the loader's command whitelist, the chip key, the flash size.
 
 One-time install (macOS): `brew install libusb`. macOS keeps its mass-storage driver on the USB boot state, so the tool
 needs sudo. Linux has not been tried; Windows is not supported (RESCUE.bat restores the official firmware there).
 Exit codes: 0 done, 1 setup problem or a failed transfer, 2 refused by a check (nothing more is sent), 3 the pedal left
-after the leave but the USB boot state did not appear, 5 the pedal stayed in the recovery mode after the leave,
-130 stopped by Ctrl-C.
+after the leave but the USB boot state did not appear, 4 the write of an image was not confirmed (nothing was sent),
+5 the pedal stayed in the recovery mode after the leave, 130 stopped by Ctrl-C.
 """
 import argparse, hashlib, re, struct, sys, time, zlib
 from dataclasses import dataclass
@@ -85,10 +89,14 @@ LAYOUTS = (Layout("the old head (M-VAVE V16, V17 and V20)", 0x4000, 0xA5000, 0x5
 @dataclass(frozen=True)
 class Source:
     """The app area to write. boot: the boot area the pedal must hold, byte for byte, when the area belongs to one
-    (an official package's, a backup's); None for Gamut's area, which is the same on every known layout."""
+    (an official package's, a backup's); None for an app area alone, which is the same on every known layout.
+    unpinned: an area that is not the release's (--image), written only after a typed yes. warning: why the boot
+    loader would not start it, when it would not."""
     what: str
     area: bytes
     boot: bytes = None
+    unpinned: bool = False
+    warning: str = None
 
 
 class Stopped(RescueError):
@@ -135,10 +143,45 @@ def gamut_area(path=None):
     area = read(path)
     if hashlib.sha256(area).hexdigest() != digest:
         raise GuardError(f"{path.name} is not the Gamut app area of the release pin (SHA-256 {digest}, in "
-                         f"{GAMUT_PIN}): only the pinned release is installed this way")
+                         f"{GAMUT_PIN}): only the pinned release is installed this way; any other with --image")
     room = min(l.limit - l.base for l in LAYOUTS)
     identity = pi.check_area(area, 0, room)
     return Source(f"Gamut's app area {path.name}, identity {identity}", area)
+
+
+def starts_with_boot_area(area):
+    """Whether these bytes begin with a flash head, as a whole flash image or a boot area does."""
+    if any(zlib.crc32(area[:l.base]) == l.boot_crc for l in LAYOUTS):
+        return True
+    try:
+        fw.app_base(area)
+        return True
+    except ValueError:
+        return False
+
+
+def image_area(path):
+    """Any other app area (--image): a test build's *-v23.bin, another app, or one made by hand. Refused only for what
+    could reach past the app area or put a boot area there; the boot loader's own checks of it only warn, since the
+    boot area is never written and the way back stays open. Its SHA-256 is printed for the record, not looked up."""
+    name = Path(path).name
+    area = read(path)
+    room = max(l.limit - l.base for l in LAYOUTS)
+    if not area or len(area) % ur.SECTOR:
+        raise GuardError(f"{name} is {len(area)} bytes, not a whole number of 4 KiB sectors")
+    if len(area) > room:
+        raise GuardError(f"{name} is {len(area):#x} bytes, more than the largest app area of a known layout "
+                         f"({room:#x})")
+    if starts_with_boot_area(area):
+        raise GuardError(f"{name} starts with a flash head: it is a whole flash image or carries a boot area, not an "
+                         "app area. M-VAVE's firmware goes back with --official, a backup with --restore")
+    try:
+        identity, warning = pi.check_area(area, 0, room), None
+    except GuardError as e:
+        identity, warning = None, str(e)
+    digest = hashlib.sha256(area).hexdigest()
+    return Source(f"the app area {path}, " + (f"identity {identity}, " if identity else "") + f"SHA-256 {digest}",
+                  area, unpinned=digest != gamut_pin()[1], warning=warning)
 
 
 def flash_source(image, what, whose):
@@ -199,8 +242,23 @@ def plan_for(source, log, seen):
         if end > layout.limit:
             raise GuardError(f"{source.what} would end at {end:#x}, past {layout.limit:#x}; nothing was written")
         log(f"image: the pedal's own boot area, then {source.what} in [{layout.base:#x}, {end:#x})")
-        return flash[:layout.base] + source.area, Window(layout.base, end)
+        image = flash[:layout.base] + source.area
+        log("the sectors that differ, the only ones --write erases and writes: "
+            + (" ".join(f"[{lo:#x}, {hi:#x})" for lo, hi in runs(flash, image, layout.base, end)) or "none"))
+        return image, Window(layout.base, end)
     return plan
+
+
+def runs(flash, image, lo, hi):
+    """The [start, end) runs of 4 KiB sectors in [lo, hi) where flash and image differ."""
+    out = []
+    for a in range(lo, hi, ur.SECTOR):
+        if flash[a:a + ur.SECTOR] != image[a:a + ur.SECTOR]:
+            if out and out[-1][1] == a:
+                out[-1][1] = a + ur.SECTOR
+            else:
+                out.append([a, a + ur.SECTOR])
+    return out
 
 
 WAITING = """\
@@ -299,6 +357,35 @@ loader left; on this pedal it should read `PWR {levels} (BOOT LEVELS)`. Then, wi
 It plays every saved preset for 6 s and reads the load, the peak, the late blocks and the bypass; exit 0 means no
 preset was late or bypassed. Play through each preset and listen for crackles."""
 
+WAY_BACK = """\
+The way back, the same way (start the command, then the key hold), each with its dry run first (without --write):
+  the release, Gamut 1.0b1:          sudo python3 tools/uboot_install.py --write
+  M-VAVE's firmware:                 sudo python3 tools/uboot_install.py --official {official} --write
+  this pedal's flash as it was:      sudo python3 tools/uboot_install.py --restore {backup} --write"""
+
+
+def way_back(layout, backup):
+    official = "BlackBox_023.fwsc" if layout.base == LAYOUTS[1].base else "BlackBox_020.fwsc"
+    return WAY_BACK.format(official=official, backup=backup)
+
+
+def warn(source):
+    if source.warning:
+        print(f"WARNING: the boot loader would not start this image ({source.warning}). Written, the pedal would not "
+              "start its firmware; the boot area is never written, so the key hold and the way back that the dry run "
+              "prints still work.", flush=True)
+
+
+def confirmed(source):
+    """A typed yes before an image that is not the release's is written; nothing has been sent yet."""
+    warn(source)
+    print(f"--write with {source.what}: it is not the release's app area. Type yes to write it once the pedal is "
+          "found (anything else stops here): ", end="", flush=True)
+    try:
+        return input().strip() == "yes"
+    except EOFError:
+        return False
+
 
 def main(argv=None):
     ap = argparse.ArgumentParser(description="Install Gamut on a BlackBox, or put M-VAVE's firmware or a backup back, "
@@ -309,6 +396,8 @@ def main(argv=None):
     src.add_argument("--gamut", metavar="FILE", help="Gamut's app area (default: the file the release pin names)")
     src.add_argument("--official", metavar="FILE.fwsc", help="M-VAVE's official BlackBox package: its app area, the way back")
     src.add_argument("--restore", metavar="DUMP.bin", help="a whole-flash backup of this pedal: its app area")
+    src.add_argument("--image", metavar="FILE", help="any app image, such as a test build's *-v23.bin: its SHA-256 is "
+                                                     "printed, and --write asks for a typed yes")
     ap.add_argument("--loader", help="wl82loader.bin (default: download once into build/cache/)")
     ap.add_argument("--backup-dir", default=str(ur.DEFAULT_BACKUPS), help="where the flash backup goes (default ~/OpenPocket-rescue)")
     ap.add_argument("--attempts", type=int, default=10, help="tries at the USB boot state before giving up (default 10)")
@@ -319,9 +408,15 @@ def main(argv=None):
     seen = []
     try:
         source = (official_area(a.official) if a.official else backup_area(a.restore) if a.restore
-                  else gamut_area(a.gamut))
+                  else image_area(a.image) if a.image else gamut_area(a.gamut))
+        if a.write and source.unpinned and not confirmed(source):
+            print("\nnot confirmed: nothing was sent to the pedal", file=sys.stderr)
+            return 4
+        if not a.write:
+            warn(source)
         loader = ur.get_loader(a.loader)
-        log(f"{source.what}: {len(source.area):#x} bytes, CRC-32 {zlib.crc32(source.area):#010x}, every check passed; "
+        checks = "the write guards' checks passed (see the WARNING)" if source.warning else "every check passed"
+        log(f"{source.what}: {len(source.area):#x} bytes, CRC-32 {zlib.crc32(source.area):#010x}, {checks}; "
             + ("WRITE mode" if a.write else "dry run: nothing will be written"))
         bus = transport()
 
@@ -351,9 +446,15 @@ def main(argv=None):
     if not a.write:
         print(f"\nDry run finished, nothing was written. {n} sectors differ from {source.what}. The pedal restarts into "
               f"its firmware. Backup: {saved[0]}\nTo write: the same command with --write.")
+        if source.unpinned:
+            warn(source)
+            print(way_back(seen[-1], saved[0]))
         return 0
     print(f"\nDone: {n} sectors written and verified, on {seen[-1].name}. Backup: {saved[0]}")
-    if source.boot is None:
+    if source.unpinned:
+        print("Power-cycle the pedal.")
+        print(way_back(seen[-1], saved[0]))
+    elif source.boot is None:
         print(FIRST_RUN.format(levels=seen[-1].levels))
     else:
         print("Power-cycle the pedal.")

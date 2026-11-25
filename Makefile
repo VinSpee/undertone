@@ -8,6 +8,7 @@
 #   make test       the host tests (tests/run_tests.sh)
 #   make package    build + build/apps/gamut/SHA256SUMS of the outputs, then the release pin
 #   make package-test   the MIDI test channel package (build/apps/gamut/midi-test/, never the installer default)
+#   make package-test ARGS=rate-diag   (or rate48) the I2S clock's test builds (docs/RATE48-TEST.md)
 #   make clean      remove every build output (needs no Docker)
 #   make shell      a shell in the build container
 #   make image      (re)build the container image
@@ -30,7 +31,7 @@
 #   make kit [ARGS=..]   the rescue kit a user downloads: docs/rescue/OpenPocket-rescue-kit-N.zip (rescue/README.md); needs only Python 3
 # `make NATIVE=1 build` skips Docker (toolchain installed with firmware/setup.sh).
 .PHONY: doctor build ble app all test package package-test clean shell image serve serve-ble serve-app wasm render appimage flash flash-rescue log rescue rescue-write rescue-check usb-install sim kit
-doctor build ble all test package package-test clean shell image serve wasm rescue-check:
+doctor build ble all test package clean shell image serve wasm rescue-check:
 	@node tools/op.mjs $@
 app:
 	@node tools/op.mjs app "$(APP)"
@@ -42,7 +43,7 @@ render:
 	@node tools/op.mjs render "$(IN)" "$(OUT)" "$(PRESET)"
 appimage:
 	@node tools/op.mjs appimage "$(DUMP)"
-flash log kit usb-install:
+flash log kit usb-install package-test:
 	@node tools/op.mjs $@ $(ARGS)
 rescue:
 	@node tools/op.mjs rescue $(ARGS)

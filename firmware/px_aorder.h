@@ -36,6 +36,9 @@ static void a_enc(void *priv, uint8_t *data, int len, uint8_t ch)     /* guitar 
 #if OP_UADEV
     uad_enc(fm1_ticks());
 #endif
+#if OP_RATE_DIAG
+    a_rate_block((uint32_t)len / 8u);           /* (base/rate.h: the clock's test builds time the blocks) */
+#endif
     int32_t *const d = a_dq && fm1_ticks() - a_dqt < A_ORDER_TICKS ? a_dq : 0;
     a_dq = 0;
     a_block(data, len);

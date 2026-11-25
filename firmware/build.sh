@@ -61,13 +61,18 @@ if [ -n "$CHAN" ]; then
   case "$CHAN" in *[!a-z0-9-]*|"") echo "ERROR: OP_CHANNEL must be lowercase letters, digits and -"; exit 1;; esac
   TESTVER="${OP_TEST_VERSION:-42}"
   printf '#define OP_VERSION_NUM "%s"\n#define OP_VERSION_TEXT "v%s"\n#define OP_TAG " %s"\n' "$TESTVER" "$TESTVER" "$(echo "$CHAN" | tr a-z- A-Z' ')" > "$O/channel.h"
+  # the I2S clock's two test builds (firmware/base/rate.h, docs/RATE48-TEST.md): the report at 44.1 kHz, then 48 kHz guarded
+  case "$CHAN" in
+    rate-diag) echo '#define OP_RATE_DIAG 1' >> "$O/channel.h";;
+    rate48) echo '#define OP_RATE48 1' >> "$O/channel.h";;
+  esac
   APP="$HERE/../build/apps/gamut/openpocket-$CHAN.bin"; PKG="$HERE/../build/apps/gamut/$CHAN"
   rm -f "$APP"
   echo "Test channel: $CHAN, version $TESTVER -> $APP, $PKG"
 fi
-# AC791N hardware FPU (same options as the JieLi SDK for the WL82) + DSP engine at 44.1 kHz
+# AC791N hardware FPU (same options as the JieLi SDK for the WL82); the engine's rate is the I2S's (base/audio.h A_SR)
 FP="-mcpu=r3 -mfprev1"
-DSPDEF="-DPX_SR=44100.0f -DPX_OVERSAMPLE=4"
+DSPDEF="-DPX_OVERSAMPLE=4"
 [ -n "$OP_BLE" ] && DSPDEF="$DSPDEF -DPXN_LEAN=1 -DPXN_HOT_RAM=1 -DPX_RUNS=0"   # v40.2: the test image's flash is full (firmware/apps/gamut/engine/px_nam.c; v40.4: px_dsp.c PX_RUNS)
 [ -n "$OP_APP" ] && DSPDEF="$APP_DEFS"
 INC="-I$HERE -I$HERE/inc -I$HERE/apps/gamut/engine"

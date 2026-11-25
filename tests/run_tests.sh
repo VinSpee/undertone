@@ -9,6 +9,9 @@
 #  - base audio (firmware/base/audio.h, audio_plain.h): the audio stages every app shares, for a mono and for a stereo
 #    app: the guitar through an app's sound to the output channels, MASTER, the mutes, the fades, the soft knee, the
 #    load's bypass
+#  - the I2S clock's test builds (firmware/base/rate.h): the 44.1 kHz report writes no clock register; the 48 kHz build
+#    leaves the registers the driver's own 48 kHz case leaves without writing PLL0, and stays at 44.1 kHz when PLL0's bit
+#    25 is clear or the start is a safe-mode one; both measure the rate of the guitar's blocks across TIMER4's wrap
 #  - base controls (firmware/base/input.h): each button's pins and the keypad's voltages to its event, the debounce, a
 #    hold and its release, two buttons together, the encoder's detents, the MASTER knob
 #  - base store (firmware/base/store.h): save / reload, a power cut at every step of a save, nothing written outside its
@@ -43,10 +46,11 @@
 #    the control endpoint when bulk IN sends zeros; --write refused with nothing sent) against the same simulated
 #    recovery mode on a simulated V23 flash (tests/test_pd40_install.py)
 #  - install through the USB boot state: tools/uboot_install.py (the dry run, Gamut's app area installed and M-VAVE's
-#    or a backup's put back, on the old head at 0x4000 and on the V22/V23 head at 0x6000; the leave from the recovery
-#    mode; an unknown head, an app area for the other layout, another chip or flash refused before any erase; the
-#    resume) against one simulated pedal that is in the recovery mode, in the USB boot state, or off the bus
-#    (tests/test_uboot_install.py)
+#    or a backup's put back, on the old head at 0x4000 and on the V22/V23 head at 0x6000; another app area of this
+#    project, such as a test build's, after a typed yes; the leave from the recovery mode; an unknown head, an app area
+#    for the other layout, an image that is not one of this project's app areas, another chip or flash refused before
+#    any erase; the resume) against one simulated pedal that is in the recovery mode, in the USB boot state, or off the
+#    bus (tests/test_uboot_install.py)
 #  - undertone: tools/undertone.py's rescue, install and check on the simulated pedals, each write only after a typed yes;
 #    its guided screens (tools/undertone_screens.py) as a state machine, their keys and frames, and the guided rescue
 #    driven by key presses (tests/test_undertone.py)
@@ -75,6 +79,9 @@ echo "== base audio (the stages every app shares, under the plain schedule: firm
 BAF="-O1 -Wall -Wno-unused-function -Wno-unused-variable -Wno-int-to-pointer-cast -Ifirmware"
 base_test test_base_audio $CC $BAF tests/test_base_audio.c firmware/px_math.c -lm
 base_test test_base_audio2 $CC $BAF -DA_CH=2 tests/test_base_audio.c firmware/px_math.c -lm   # an app with a stereo sound
+echo "== the I2S clock's test builds (firmware/base/rate.h: the report writes no clock register; 48 kHz never writes PLL0)"
+base_test test_rate_diag $CC $BAF -DOP_RATE_DIAG=1 tests/test_rate.c
+base_test test_rate48 $CC $BAF -DOP_RATE48=1 tests/test_rate.c
 echo "== base controls (firmware/base/input.h over base/controls.h: the pins and the ADC to an app's events)"
 base_test test_base_input $CC -O1 -Wall -Wno-unused-function -Wno-unused-variable -Itests/host -Ifirmware tests/test_base_input.c
 echo "== base store (firmware/base/store.h: an app's own data in flash, kept by every update loader)"

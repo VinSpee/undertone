@@ -845,6 +845,7 @@
    "backup saved: BACKUP",
    "boot area [0, 0x4000) CRC-32 0xcf6901d1: the old head (M-VAVE V16, V17 and V20); its app area is in [0x4000, 0xa5000)",
    "image: the pedal's own boot area, then the test image, for the old head (M-VAVE V16, V17 and V20) in [0x4000, 0x9f000)",
+   "the sectors that differ, the only ones --write erases and writes: [0x4000, 0xd000)",
    "head [0, 0x4000) matches the image",
    "9 of 155 sectors in [0x4000, 0x9f000) differ",
    "run-app sent: the pedal restarts"
@@ -1108,6 +1109,7 @@
    "backup saved: BACKUP",
    "boot area [0, 0x4000) CRC-32 0xcf6901d1: the old head (M-VAVE V16, V17 and V20); its app area is in [0x4000, 0xa5000)",
    "image: the pedal's own boot area, then the test image, for the old head (M-VAVE V16, V17 and V20) in [0x4000, 0x9f000)",
+   "the sectors that differ, the only ones --write erases and writes: [0x4000, 0xd000)",
    "head [0, 0x4000) matches the image",
    "9 of 155 sectors in [0x4000, 0x9f000) differ",
    "  written 9/9",
@@ -1249,6 +1251,7 @@
    "backup saved: BACKUP",
    "boot area [0, 0x6000) CRC-32 0xadd9abea: M-VAVE's V22/V23 head; its app area is in [0x6000, 0x9f000)",
    "image: the pedal's own boot area, then the test image, for M-VAVE's V22/V23 head in [0x6000, 0x9f000)",
+   "the sectors that differ, the only ones --write erases and writes: [0x6000, 0xf000)",
    "head [0, 0x6000) matches the image",
    "9 of 153 sectors in [0x6000, 0x9f000) differ",
    "run-app sent: the pedal restarts"
@@ -1542,6 +1545,7 @@
    "backup saved: BACKUP",
    "boot area [0, 0x6000) CRC-32 0xadd9abea: M-VAVE's V22/V23 head; its app area is in [0x6000, 0x9f000)",
    "image: the pedal's own boot area, then the test image, for M-VAVE's V22/V23 head in [0x6000, 0x9f000)",
+   "the sectors that differ, the only ones --write erases and writes: [0x6000, 0xf000)",
    "head [0, 0x6000) matches the image",
    "9 of 153 sectors in [0x6000, 0x9f000) differ",
    "  written 9/9",

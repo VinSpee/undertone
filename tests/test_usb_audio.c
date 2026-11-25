@@ -98,6 +98,7 @@ static void fm1_delay_ms(uint32_t ms) { (void)ms; }
 
 /* ---- usb.c, as firmware/px_usb.h builds it (T_REF: as it was built before USB audio) ---- */
 #define A_FR 128u
+#define A_SR 44100u                             /* (base/audio.h's: the streams' rate, px_uaconf.h) */
 #define RING_PUBLISH() ((void)0)
 #define FELUCCA_OTA 1
 #define FELUCCA_CDC 0

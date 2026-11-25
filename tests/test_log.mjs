@@ -3,11 +3,11 @@
 // (tests/edsim.c built with -DOP_BLE_TEST=1), the same against firmware without it, and the states where less can be read.
 //   cc -O1 -DOP_BLE_TEST=1 -o build/edsim_diag tests/edsim.c firmware/apps/gamut/engine/px_dsp.c firmware/px_math.c -lm && node tests/test_log.mjs
 import { spawn } from "node:child_process";
-import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { BOOT_STAGES, RESET_CAUSES, judge, main, parseBle, parseBoot, parseLast } from "../tools/log.mjs";
+import { BOOT_STAGES, RESET_CAUSES, judge, judgeRate, main, parseBle, parseBoot, parseLast, parseRate } from "../tools/log.mjs";
 import { simAccess } from "./simpedal.mjs";
 
 const ROOT = fileURLToPath(new URL("..", import.meta.url));
@@ -58,6 +58,24 @@ ok(b.state === "failed" && b.step === 5 && b.code === 3 && b.stage === "radio-in
 ok(parseBle("FAILED 2 -7  step btctrler_task_init stage init").code === -7, "failure line, negative code");
 ok(parseBle("STARTING 4").stage === 4 && parseBle("OFF").state === "off", "starting and off");
 ok(parseBle("ADVERTISING?").state === "unknown", "a line this tool does not know stays unknown");
+
+// ---- the clock's test builds' line (firmware/base/rate.h): the lines tests/test_rate.c printed from the firmware's code ----
+const rateLines = (f) => existsSync(join(ROOT, "build", f)) ? readFileSync(join(ROOT, "build", f), "utf8").trim().split("\n") : [];
+const [diag44] = rateLines("rate_diag.txt").map(parseRate), r48 = rateLines("rate48.txt").map(parseRate);
+ok(diag44?.ok && diag44.ask === 44100 && diag44.guard === "NONE" && Math.abs(diag44.hz - 6e6 / 136) < 0.01 && diag44.pll0[1] === 0x3F503026
+  && diag44.before.sys === 0x306 && diag44.div === 0x80, "clock line of the diagnostic build, every field (tests/test_rate.c)");
+ok(judgeRate(diag44).result === "pass" && /44117\.65 Hz/.test(judgeRate(diag44).reason) && /will try 48 kHz/.test(judgeRate(diag44).reason), "diagnostic build: the rate, and what the 48 kHz build will do");
+ok(r48.length === 4 && r48.every((r) => r.ok), "the 48 kHz build's four lines parse (tests/test_rate.c)");
+if (r48.length === 4) {
+  ok(judgeRate(r48[0]).result === "pass" && r48[0].sys & 0x100 && /48000\.00 Hz/.test(judgeRate(r48[0]).reason), "48 kHz build at 48 kHz: pass");
+  ok(judgeRate(r48[1]).result === "fail" && /47000\.00 Hz/.test(judgeRate(r48[1]).reason), "48 kHz build, a clock 2 % off: fail, with the rate");
+  ok(judgeRate(r48[2]).result === "fail" && /bit 25 of PLL0 CON1 \(0x119A4\) is clear/.test(judgeRate(r48[2]).reason), "48 kHz build refused, bit 25 clear: fail, says why");
+  ok(judgeRate(r48[3]).result === "fail" && /safe mode/.test(judgeRate(r48[3]).reason), "48 kHz build refused, safe mode: fail, says why");
+}
+const line = "RATE ASK 44100 SR 44100 GUARD NONE W 0 F 0 T 0 PLL0 45400203 3F503026 PLL1 0940022B 0750310C HSB 00010200 MUX 000001C1 SYS 00000006 DIV 00000080 BEFORE 3F503026 00000306 00000000";
+ok(judgeRate(parseRate(line)).result === "pending", "clock line before the first 10 s window: pending");
+ok(judgeRate(parseRate(line.replace("W 0 F 0 T 0", "W 1 F 441216 T 240021504").replace("PLL0 45400203 3F503026", "PLL0 45400203 3D503026"))).result === "fail", "PLL0 CON1 changed since the start: fail");
+ok(!parseRate("RATE ASK 44100").ok && judgeRate(parseRate("RATE ASK 44100")).result === "unknown", "a clock line this tool does not know: unknown");
 b = parseBoot("UP 12345 SAFE 1 STAGE 7 RST 44 GUARD 1");
 ok(b.clockMs === 12345 && b.safe && b.stageName === "FIRST 6 S" && b.resetBy.join() === "WATCHDOG,SOFT" && b.failedBoots === 1, "boot line");
 b = parseLast("LAST FAILED STAGE 7 BLOCKS 9 LOAD 42 PEAK 61 NAN 0 CPU1 1 LOOPS 0 CRASH VEC 3F PC 2000DC8 RETS 2001234 DBG 0 EMU 8 UP 4100");

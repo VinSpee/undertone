@@ -84,7 +84,23 @@ int gpio_set_pull_down(uint32_t g, int on)   { jl_rmw(g, 0x14, on); return 0; }
 
 /* ===================== the block: its buffers, its figures, its stages ===================== */
 #define A_FR     128u                                  /* frames per I2S block */
-#define A_BUDGET (A_FR * 1000000u / 44100u * FM1_TICKS_PER_US)   /* ticks available per block (~2.9 ms) */
+/* the sample rate the I2S is set to (Hz), the one place it is said: the block's budget, the app's engine (Gamut: PX_SR),
+ * USB audio's rate (px_uaconf.h). The 44.1 kHz family's clock runs at 44,117.6 Hz (docs/USB-AUDIO.md). The 48 kHz test
+ * build (base/rate.h, OP_RATE48) picks it at the start: then a variable */
+#ifndef OP_RATE48
+#define OP_RATE48 0
+#endif
+#ifndef OP_RATE_DIAG
+#define OP_RATE_DIAG OP_RATE48
+#endif
+#if OP_RATE48
+static uint32_t a_sr = 44100u;
+#define A_SR a_sr
+#endif
+#ifndef A_SR
+#define A_SR     44100u
+#endif
+#define A_BUDGET (A_FR * 1000000u / A_SR * FM1_TICKS_PER_US)   /* ticks available per block (~2.9 ms) */
 #define G_AMP_EN 9u                                    /* PA9: SGM8905 amp enable */
 #ifndef A_CH
 #define A_CH 1u                                        /* the channels of the app's sound: 1, or 2 (left, then right) */
@@ -255,8 +271,8 @@ static void a_testsig(void)
     static float ph[2], env;
     static uint32_t n, k;
     for (uint32_t i = 0; i < A_FR; i++, n++) {
-        if (n >= 17640u) { n = 0; k = (k + 1u) & 7u; env = 0.25f; }   /* a pluck every 0.4 s */
-        const float f = HZ[k] / 44100.0f;
+        if (n >= A_SR * 2u / 5u) { n = 0; k = (k + 1u) & 7u; env = 0.25f; }   /* a pluck every 0.4 s */
+        const float f = HZ[k] / (float)A_SR;
         ph[0] += f; if (ph[0] >= 1.0f) ph[0] -= 1.0f;
         ph[1] += f * 1.4983f; if (ph[1] >= 1.0f) ph[1] -= 1.0f;
         a_in[i] = env * ((2.0f * ph[0] - 1.0f) + 0.6f * (2.0f * ph[1] - 1.0f));
@@ -307,6 +323,9 @@ static void a_output(int32_t *d, uint32_t n)           /* a_res to an output blo
 #endif
 }
 #define A_ORDER_TICKS (A_BUDGET / 4u)                  /* an a_enc this soon after an a_dec is the same interrupt's (it comes within microseconds) */
+#if OP_RATE_DIAG
+#include "base/rate.h"                                /* the clock's test builds: its registers, its rate measured, the 48 kHz guard */
+#endif
 #include "px_aorder.h"                                /* v42: a_enc and a_dec, in whichever order the driver calls them */
 void fm1_alnk0_irq(void) { iis_irq_handler(0); }
 extern void isr_alnk0(void);
@@ -330,7 +349,11 @@ static void audio_io_start(void)                       /* the I2S on (its interr
     iis_set_enc_data_handler(0, a_enc, 0);
     iis_set_dec_data_handler(0, a_dec, 0);
     iis_open(&a_pd, 0);
-    iis_set_sample_rate(44100, 0);
+#if OP_RATE_DIAG
+    a_rate_set();                                      /* base/rate.h: the registers read first; 48 kHz only through its guard */
+#else
+    iis_set_sample_rate(A_SR, 0);
+#endif
     iis_channel_on((uint8_t)(a_pd.channel_in | a_pd.channel_out), 0);
     fm1_irq_attach(FM1_IRQ_ALNK0, isr_alnk0, 3);
     a_running = 1;

@@ -5,6 +5,7 @@
 //   node tools/op.mjs doctor | build | ble | test [--built] | package | clean | shell | image | serve [editor|build|ble]
 //   node tools/op.mjs all        every product of this tree and the tests: OpenPocket (package, with the release pin), each
 //                                app of firmware/apps, then the host tests with the packages just built (test --built)
+//   node tools/op.mjs package-test [midi-test | rate-diag | rate48]   a test channel's packages -> build/apps/gamut/CHANNEL/
 //   node tools/op.mjs app NAME   another app on the base firmware (firmware/apps/NAME, docs/BASE-FIRMWARE.md) -> build/apps/NAME/
 //   node tools/op.mjs serve app NAME   the installer with that app offered too (install.html?app=NAME), when it is not on the
 //                                      catalog of firmware/catalog.json, whose firmwares the page offers by itself
@@ -31,7 +32,9 @@ const native = Boolean(process.env.NATIVE || process.env.OP_IN_CONTAINER);
 const python = process.platform === "win32" ? ["py", "-3"] : ["python3"];
 const OUT = "build/apps/gamut";   // OpenPocket's outputs, as each app's are in build/apps/<name>
 const OUTS = `${OUT}/openpocket.bin ${OUT}/*.fwsc ${OUT}/*-v23.bin ${OUT}/manifest.json`;   // (*-v23.bin: tools/pxpkg.py)
-const TEST = `${OUT}/openpocket-midi-test.bin ${OUT}/midi-test/*.fwsc ${OUT}/midi-test/manifest.json`;
+// the test channels (firmware/build.sh OP_CHANNEL), never a release: the MIDI test, the I2S clock's report and its 48 kHz build
+const CHANNELS = ["midi-test", "rate-diag", "rate48"];
+const TEST = (c) => `${OUT}/openpocket-${c}.bin ${OUT}/${c}/*.fwsc ${OUT}/${c}/*-v23.bin ${OUT}/${c}/manifest.json`;
 
 function fail(message) {
   console.error(`\nERROR: ${message}`);
@@ -119,7 +122,10 @@ const commands = {
   },
   // (the release pin, tests/release_pin.sh: OpenPocket's outputs must be the pinned release's bytes, or this fails)
   package: () => inContainer(["sh", "-c", `sh firmware/build.sh && sha256sum ${OUTS} > ${OUT}/SHA256SUMS && sh tests/release_pin.sh gamut`]),
-  "package-test": () => inContainer(["sh", "-c", `OP_CHANNEL=midi-test sh firmware/build.sh && sha256sum ${TEST} > ${OUT}/SHA256SUMS-midi-test && cat ${OUT}/SHA256SUMS-midi-test`]),
+  "package-test"([c = "midi-test"] = []) {
+    if (!CHANNELS.includes(c)) fail(`usage: package-test [${CHANNELS.join(" | ")}]   (docs/MIDI-TEST.md, docs/RATE48-TEST.md)`);
+    return inContainer(["sh", "-c", `OP_CHANNEL=${c} sh firmware/build.sh && sha256sum ${TEST(c)} > ${OUT}/SHA256SUMS-${c} && cat ${OUT}/SHA256SUMS-${c}`]);
+  },
   clean() {                                    // (build holds every output; the other paths are where older trees built OpenPocket)
     for (const p of ["build", "firmware/build", "firmware/build-ble", "firmware/openpocket.bin", "firmware/openpocket-ble.bin", "firmware/openpocket-midi-test.bin", "docs/firmware/midi-test", "docs/firmware/manifest.json", "docs/firmware/release.json", "docs/rescue", "firmware/apps/gamut/engine/px_render"]) {
       rmSync(resolve(root, p), { recursive: true, force: true });
