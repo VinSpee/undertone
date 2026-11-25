@@ -6,8 +6,9 @@ launchers `undertone` and `undertone.cmd`), and it needs Python 3 and, on a Mac,
 the same command as one Rust program that needs nothing installed. The Python command is the specification and stays
 the fallback until the owner has proven the program on a real pedal.
 
-So far the folder holds the workspace, this design, the CI and the protocol library with its tests. The program
-answers only `undertone version` and sends nothing to a pedal. [Stages](#stages) lists what follows.
+So far the folder holds the workspace, this design, the CI, the protocol library and the program's commands
+`rescue`, `install` and `check`, each tested against the Python command's own runs on simulated pedals. Nothing in it
+has run on a real pedal yet. The guided screens and the release follow; [Stages](#stages) lists them.
 
 ## Layout
 
@@ -164,16 +165,16 @@ needs root to detach it, through `sudo` as on macOS.
 
 ### Windows
 
-`tools/uboot_rescue.py` needs no driver on Windows, and neither does this program.
-Windows keeps its own mass-storage driver on the pedal, and an administrator may send any SCSI command through it
-(`IOCTL_SCSI_PASS_THROUGH_DIRECT`). The tool finds the pedal by asking each disk and drive letter for INQUIRY, which
-only reads. So there is no Zadig, no WinUSB and no libusb on Windows; libusb could not even reach the pedal there
-without replacing Windows' driver, which is why the program does not use it on Windows. What a Windows user must do:
-run the program as an administrator, and click Cancel if Windows offers to format a drive. The program can guide the
-first itself: started without the right, it asks Windows to start it again as administrator (`ShellExecuteW` with
-`runas`, the standard Windows prompt), instead of the Python tool's instructions for an administrator's Command
-Prompt. Opened by a double-click, it waits for Enter at the end so that its window does not vanish. An install stays
-macOS and Linux only, as in the Python tool, because M-VAVE's recovery mode has not been tried on Windows; it is a
+`tools/uboot_rescue.py` needs no driver on Windows, and neither does this program. Windows keeps its own mass-storage
+driver on the pedal, and an administrator may send any SCSI command through it (`IOCTL_SCSI_PASS_THROUGH_DIRECT`). The
+tool finds the pedal by asking each disk and drive letter for INQUIRY, which only reads. So there is no Zadig, no WinUSB
+and no libusb on Windows; libusb could not even reach the pedal there without replacing Windows' driver, which is why
+the program does not use it on Windows. What a Windows user must do: run the program as an administrator, and click
+Cancel if Windows offers to format a drive. The program can guide the first itself: started without the right, it asks
+Windows to start it again as administrator (`ShellExecuteW` with `runas`, the standard Windows prompt), instead of the
+Python tool's instructions for an administrator's Command Prompt. Opened by a double-click, it waits for Enter at the
+end so that its window does not vanish. An install stays macOS and Linux only, as in the Python tool (`undertone
+install` on Windows says so and sends nothing), because M-VAVE's recovery mode has not been tried on Windows; it is a
 WinUSB device, so libusb might reach it there without Zadig, but that needs a Windows test with a real pedal first.
 
 ## Signing, Gatekeeper and SmartScreen
@@ -229,6 +230,12 @@ unit and the symbols stripped.
   watchdog on a fake clock, a pedal that drops off the bus after N commands), of `tests/recovery_sim.py`'s hello and
   leave packet by packet, of the bus that `tests/test_uboot_install.py` puts the pedal on, and of the image and package
   builders `tests/fw_layouts.py` and `tools/pxpkg.py`.
+- **The commands as a person runs them.** `undertone/src/tests.rs` runs `rescue` (check, yes, restore), a rescue
+  answered no, a refused rescue with its advice, the way back to M-VAVE's firmware through the recovery mode, and a
+  check, and must show the same window as `tools/undertone.py` (times and paths aside), end with the same exit code,
+  send the same transfers and leave the same flash (`commands.json`, from the same script). The Python goldens
+  describe the macOS and Linux route, so the tests set `Ctx.windows` to false and every runner takes that route; the
+  Windows route (no install, the "click Cancel" hint, a wait on the boot state only) has no test yet.
 - **The screens** (stage 4). Each state's screen as plain text compared with the Python screens' text; pictures of the
   full-screen view at 80 x 24 and 100 x 30, dark and light, rendered through a pseudo-terminal and set beside the
   Python gallery; the guided rescue and install driven by key presses against the simulated pedal.

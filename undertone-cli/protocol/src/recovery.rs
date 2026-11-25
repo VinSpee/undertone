@@ -22,6 +22,12 @@ const FIRST_READ_MS: u32 = 1000;
 const SECOND_READ_MS: u32 = 300;
 pub const RECOVERY: (u16, u16) = (VID, PID);
 pub const UBOOT: (u16, u16) = (crate::uboot::VID, crate::uboot::PID);
+/// The normal pedal: the stock V23 app's USB device.
+pub const APP: (u16, u16) = (VID, 0x7756);
+/// The devices a bus listing looks for: the boot state, the recovery mode, the stock app.
+pub const WATCHED: [(u16, u16); 3] = [UBOOT, RECOVERY, APP];
+/// The vendor IN requests the recovery mode is ever sent, with their lengths.
+pub const REQUESTS: [(u8, usize); 3] = [(0x42, 4), (REPLY_BUFFER, REPLY), (FRAME_BUFFER, 24)];
 
 fn status_name(status: u32) -> &'static str {
     match status {
