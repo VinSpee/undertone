@@ -1493,7 +1493,7 @@ static void rv_layout(px_rev *e, int16_t *m, int t, float srs)
         int tot = 0;
         for (int u = 0; u < 13; u++) tot += n[u] + 1;
         if (tot <= PX_RV_M) break;
-        f = (float)PX_RV_M / (float)tot * 0.98f;           /* (above 44.1 kHz only) shorter lines */
+        f = (float)PX_RV_M / (float)tot * 0.98f;           /* shorter lines (the plate's: 0.96 of its size) */
     }
     int b = 0;
     for (int u = 0; u < 13; u++) { e->rv_b[u] = b; e->rv_n[u] = n[u]; b += n[u] + 1; }   /* a unit lives n + 1 slots */
@@ -2299,8 +2299,14 @@ static inline float mod_tap(const px_engine *e, float d)
  * One 16-bit ring for every line: the write pointer turns once per tick, unit u writes at (ptr + base u) and what it
  * wrote k ticks ago is at (ptr + base u + k). The tank works in the ring's units (x RV_Q): no scaling per access. */
 #define RV_Q 16384.0f                                  /* reverb memory: 16 bits, +-2.0 */
-#define RV_MASK (PX_RV_M - 1)
-#define RV_RD(u, k) ((float)m[(p + b[u] + (k)) & RV_MASK])
+#if PX_RV_M & (PX_RV_M - 1)                            /* (not a power of two: above 44.1 kHz, px_dsp.h) */
+#define RV_AT(i) ((i) >= PX_RV_M ? (i) - PX_RV_M : (i))  /* the ring's slot of i, 0 <= i < 2 PX_RV_M */
+#define RV_BACK(p) ((p) ? (p) - 1 : PX_RV_M - 1)        /* the write pointer's turn */
+#else
+#define RV_AT(i) ((i) & (PX_RV_M - 1))
+#define RV_BACK(p) (((p) - 1) & (PX_RV_M - 1))
+#endif
+#define RV_RD(u, k) ((float)m[RV_AT(p + b[u] + (k))])
 static inline int16_t rv_q(float v, float rq)          /* rq: 0.5 = rounded, 0 = cut towards zero */
 {
     union { float f; uint32_t u; } a, r;
@@ -2310,12 +2316,12 @@ static inline int16_t rv_q(float v, float rq)          /* rq: 0.5 = rounded, 0 =
     v = v < -32767.0f ? -32767.0f : v;
     return (int16_t)v;
 }
-#define RV_WR(u, v) (m[(p + b[u]) & RV_MASK] = rv_q((v), rq))
+#define RV_WR(u, v) (m[RV_AT(p + b[u])] = rv_q((v), rq))
 static inline float rv_lin(const int16_t *m, int at, float k)      /* fractional read, k ticks back from `at` */
 {
     int ki = (int)k; float f = k - (float)ki;
-    float a = (float)m[(at + ki) & RV_MASK];
-    return a + ((float)m[(at + ki + 1) & RV_MASK] - a) * f;
+    float a = (float)m[RV_AT(at + ki)];
+    return a + ((float)m[RV_AT(at + ki + 1)] - a) * f;
 }
 /* pre-delay, early reflections, Dattorro's 4 input diffusers */
 PX_AINL static inline float rv_front(px_rev *e, int16_t *m, int p, const int *b, float rq, float in, float *er)
@@ -3098,7 +3104,7 @@ PX_AINL static inline void rv_loop(px_rev *e, int16_t *m, float *shb, const floa
             else {                                     /* one tick of the tank every 2 samples */
                 float in2 = 0.5f * (e->rv_xa + inr);
                 float y = ALG ? rv_plate(e, m, in2) : rv_fdn(e, m, in2), aa = px_abs(y) + px_abs(in2);
-                e->rv_ptr = (e->rv_ptr - 1) & RV_MASK;
+                e->rv_ptr = RV_BACK(e->rv_ptr);
                 e->rv_env = aa > e->rv_env ? aa : e->rv_env * PX_DK(0.9999f);
                 /* the last bits of a tail: fade it out over ~0.5 s, then let the ring empty itself (cut towards zero) */
                 if (e->rv_env < 5e-4f) e->rv_fade *= PX_DK(0.9997f); else e->rv_fade = 1.0f;

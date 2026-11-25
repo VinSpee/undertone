@@ -145,8 +145,12 @@ typedef struct { float x[6], y[6]; } px_hb;           /* v38: a half-band filter
                                                    (px_dsp.c PS_RUN) */
 #define PX_SH_N 2048                   /* the shimmer's shifter ring */
 #define PX_SYN_CB 1024                 /* SYN: ensemble / doubler / body reflections (23 ms) */
-#define PX_DLY_N 45056                 /* v40: 2.04 s of delay at half rate (22.05 kHz, 16-bit: 88 KB), as the stock */
-#define PX_RV_M 16384                  /* reverb memory: one 16-bit ring (32 KB) at half rate, laid out per type */
+/* v40: 2.04 s of delay at half rate (22.05 kHz, 16-bit: 88 KB), as the stock: 2 s (PX_FS ticks) and the 600 ticks the
+ * line keeps beyond its longest time (px_dsp.c rc_delay), in 512s */
+#define PX_DLY_N ((PX_FS + 600 + 511) / 512 * 512)
+/* reverb memory: one 16-bit ring at half rate (32 KB at 44.1 kHz), laid out per type; as much more at a higher rate, so
+ * that the plate keeps its size (px_dsp.c rv_layout) */
+#define PX_RV_M (16384 * PX_FS / 44100)
 #define PX_GL_MAX 64                   /* v38: the most settings that glide (px_dsp.c: GL_F) */
 
 /* trails: the delay's and the reverb's state, each in a struct of its own, so that a second one of each can run: the
