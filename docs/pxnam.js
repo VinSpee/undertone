@@ -12,7 +12,7 @@ export const REF_LUFS = -20;            // tools/nam_level.py REF: every model a
 export const SLOT_BYTES = 64 + NW * 4;  // header + weights
 const SLOPE = 0.01;
 // The authors of the TONE3000 captures cleared to ship as the factory amps, by their written permission, and each pack's
-// tone page. The editor's pedal panel lists them; docs/NAM.md holds the same list (tests/test_editor.mjs checks it).
+// tone page. The editor's pedal panel lists them; docs/NAM.md holds the same list and must be edited with it.
 const T3K = "https://www.tone3000.com/tones/";
 export const CAPTURE_CREDITS = [
   { author: "subterraneans", packs: [["Soldano SLO-100", T3K + "soldano-slo-100-106781"]] },

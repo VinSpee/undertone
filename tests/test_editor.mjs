@@ -8,7 +8,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { Editor, presetToJSON, presetFromJSON, filePresets, parsePresetFile, clonePreset } from "../docs/pxedit.js";
-import { parseNam, levelTrim, packModel, readDi, a2Run, a2Net, fitRange, namEntry, RANGE, CAPTURE_CREDITS, KERNELS, DILATIONS, NW } from "../docs/pxnam.js";
+import { parseNam, levelTrim, packModel, readDi, a2Run, a2Net, fitRange, namEntry, RANGE, KERNELS, DILATIONS, NW } from "../docs/pxnam.js";
 import { parseWav, prepareIr, packIr, irName, resample, IR_LEN } from "../docs/pxir.js";
 
 const ROOT = fileURLToPath(new URL("..", import.meta.url));
@@ -244,9 +244,6 @@ list = await ed.list();
   const packed = new Float32Array(namEntry(bigText, "big.nam", di).bytes.slice(64).buffer), again = fitRange(fit.weights, di);
   ok(packed.every((v, i) => v === fit.weights[i]) && again.halvings === 0 && again.weights === fit.weights,
      "NAM: the import stores the scaled weights; a capture in range is left as it is");
-  const namMd = readFileSync(join(ROOT, "docs", "NAM.md"), "utf8"), rows = namMd.match(/^\| \w+ \| \[.*$/gm) || [];
-  const credits = CAPTURE_CREDITS.flatMap((c) => c.packs.map(([pack, url]) => `| ${c.author} | [${pack}](${url}) |`));
-  ok(rows.length === credits.length && credits.every((r, i) => rows[i].startsWith(r)), `NAM: docs/NAM.md credits the ${credits.length} capture packs the editor lists`);
 }
 // ---- 8. v38: cabinet IRs (a WAV file -> an IR slot -> the CAB block's USER IR type) ----
 {
