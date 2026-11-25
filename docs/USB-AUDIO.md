@@ -73,7 +73,9 @@ So the feature is felucca-bsp's streams switched on, a setting, and the pedal's 
 
 - **The streams** are felucca-bsp's as they are: endpoint 4 IN, isochronous asynchronous, for the record stream;
   endpoint 4 OUT, isochronous adaptive, for playback; 16 bit, 2 channels, 44.1 kHz, one packet a millisecond. No 48 kHz:
-  it needs a resampler in the audio interrupt, and the stock firmware offers 44.1 kHz only too.
+  it needs a resampler in the audio interrupt, and the stock firmware offers 44.1 kHz only too. A build whose I2S runs
+  at 48 kHz offers 48 kHz only instead, with no resampler: `firmware/px_uaconf.h` sets the packet pattern and the
+  playback step from that clock's rate, which is nominal (48,000 Hz) until it is measured on a pedal.
 - **The interfaces** are in the order audio control, record stream, playback stream, MIDI
   (`FELUCCA_UAC_MIDI_LAST 1`). felucca-bsp found that macOS 13 to 15 show no audio device when the MIDI interface comes
   before the streams.
