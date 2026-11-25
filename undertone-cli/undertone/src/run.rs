@@ -103,6 +103,7 @@ pub fn run(job: Job, env: &mut Env, log: &mut dyn FnMut(&str), say: &mut dyn FnM
         let (mut l1, mut l2, l3, mut s1) = (logged, logged, logged, said);
         let mut inner = match (job.kind, job.source) {
             (Kind::Install, Some(source)) => install::plan_for(source, &env.layouts, &mut l1),
+            (Kind::Install, None) => return Err(Error::Setup("no app area to install".into())),
             _ if identifies => {
                 logged("check: the pedal is compared with its own flash, so nothing differs and nothing is written");
                 uboot::own_flash()

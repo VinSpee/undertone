@@ -11,7 +11,7 @@ use undertone_protocol::{Bus, Error};
 pub use windows::is_admin;
 
 /// The bus, opened. On macOS the boot state's interface needs root; undertone asks for it before any run.
-pub fn bus() -> Result<Box<dyn Bus>, Error> {
+pub fn bus() -> Result<Box<dyn Bus + Send>, Error> {
     #[cfg(not(windows))]
     return Ok(Box::new(libusb::LibusbBus::new()?));
     #[cfg(windows)]

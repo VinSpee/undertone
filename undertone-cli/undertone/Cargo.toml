@@ -11,6 +11,8 @@ publish.workspace = true
 [dependencies]
 undertone-protocol = { path = "../protocol" }
 clap = { version = "=4.6.9", default-features = false, features = ["std", "derive", "help", "usage", "error-context"] }
+# the guided screens
+ratatui = { version = "=0.30.2", default-features = false, features = ["crossterm"] }
 # the local time in a backup's name, as tools/uboot_rescue.py names it
 chrono = { version = "=0.4.45", default-features = false, features = ["clock"] }
 
@@ -18,6 +20,11 @@ chrono = { version = "=0.4.45", default-features = false, features = ["clock"] }
 # Windows does not: it sends the same SCSI commands through Windows' own mass-storage driver (DESIGN.md, "Windows").
 [target.'cfg(not(windows))'.dependencies]
 rusb = { version = "=0.9.4", features = ["vendored"] }
+
+[features]
+# UNDERTONE_SIM=rescue|install|check runs the guided screens against a simulated pedal (src/tui/sim.rs), for the
+# pseudo-terminal run of the screens; never in a release
+sim = ["undertone-protocol/sim"]
 
 [target.'cfg(windows)'.dependencies]
 windows-sys = { version = "=0.61.2", features = [

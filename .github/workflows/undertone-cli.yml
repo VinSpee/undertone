@@ -15,6 +15,7 @@ on:
       - tools/pocketx_fw.py
       - tools/pxpkg.py
       - tools/undertone.py
+      - tools/undertone_screens.py
       - tests/uboot_sim.py
       - tests/recovery_sim.py
       - tests/fw_layouts.py
@@ -47,6 +48,8 @@ jobs:
         run: rustup toolchain install
       - run: cargo fmt --check
       - run: cargo clippy --locked --all-targets -- -D warnings
+      - name: Clippy with the simulated pedal of the pseudo-terminal runs (never in a release)
+        run: cargo clippy --locked --all-targets --features sim -- -D warnings
       - name: The golden transcripts are still what the Python tools send (protocol/tests/fixtures/record.py)
         run: python3 protocol/tests/fixtures/record.py && git diff --exit-code -- protocol/tests/fixtures
 

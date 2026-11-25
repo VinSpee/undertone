@@ -2,7 +2,7 @@
 //! undertone as one program: rescue a pedal that will not start, put Gamut on a pedal, or check what a pedal holds, over
 //! its USB cable (tools/undertone.py). Nothing is written before the person types yes, and every run saves a backup of
 //! the whole flash first. On macOS and Linux the pedal is reached as root: in a terminal undertone asks for the password
-//! itself, through sudo. On Windows it runs as an administrator. The guided screens follow in a later build.
+//! itself, through sudo. On Windows it runs as an administrator. With no command it shows its guided screens.
 //! Exit codes: 0 done, 1 a setup problem or a failed transfer, 2 refused by a check, 3 and 5 after the recovery mode's
 //! leave, 4 the write was not confirmed (nothing was written), 130 stopped.
 use std::io::{BufRead, Write};
@@ -17,6 +17,7 @@ mod kit;
 mod run;
 #[cfg(test)]
 mod tests;
+mod tui;
 mod usb;
 
 use commands::{Ctx, InstallFrom, Out};
@@ -28,6 +29,9 @@ struct Cli {
     /// print the version and exit
     #[arg(long)]
     version: bool,
+    /// the task to go on with after a restart under sudo
+    #[arg(long, hide = true, value_parser = ["rescue", "install", "check"])]
+    start: Option<String>,
     #[command(subcommand)]
     command: Option<Command>,
 }
@@ -90,7 +94,7 @@ const ADMIN: &str = "Windows lets only an administrator send these commands to t
                      there; nothing was sent to the pedal";
 
 /// None when this process may reach the pedal, else what to do, in words.
-fn permission_problem() -> Option<&'static str> {
+pub(crate) fn permission_problem() -> Option<&'static str> {
     #[cfg(not(windows))]
     return (!kit::as_root()).then_some(SUDO);
     #[cfg(windows)]
@@ -105,20 +109,29 @@ fn allowed(out: &mut Out) -> bool {
     };
     #[cfg(not(windows))]
     if std::io::IsTerminal::is_terminal(&std::io::stdin()) && std::io::IsTerminal::is_terminal(&std::io::stdout()) {
-        use std::os::unix::process::CommandExt;
         out.line(
             "This needs your computer password: the system keeps the pedal's USB disk for itself, and only an \
              administrator may take it. Nothing shows while you type.",
         );
-        let exe = std::env::current_exe().unwrap_or_else(|_| PathBuf::from("undertone"));
-        let err = std::process::Command::new("sudo")
-            .arg(exe)
-            .args(std::env::args_os().skip(1))
-            .exec();
-        out.line(&format!("ERROR: could not start sudo ({err})"));
+        let args: Vec<String> = std::env::args().skip(1).collect();
+        restart_as_root(&args.iter().map(String::as_str).collect::<Vec<_>>());
     }
     out.line(&format!("ERROR: {problem}"));
     false
+}
+
+/// Starts this program again under sudo with `args` (macOS, Linux); sudo asks for the password. Returns only when sudo
+/// could not be started.
+pub(crate) fn restart_as_root(args: &[&str]) {
+    #[cfg(not(windows))]
+    {
+        use std::os::unix::process::CommandExt;
+        let exe = std::env::current_exe().unwrap_or_else(|_| PathBuf::from("undertone"));
+        let err = std::process::Command::new("sudo").arg(exe).args(args).exec();
+        eprintln!("ERROR: could not start sudo ({err})");
+    }
+    #[cfg(windows)]
+    let _ = args;
 }
 
 fn read_line(prompt: &str) -> Option<String> {
@@ -142,11 +155,7 @@ fn main() -> ExitCode {
         return code(exit::DONE);
     }
     let Some(command) = cli.command else {
-        eprintln!(
-            "This build has no guided screens yet: run `undertone rescue`, `undertone install` or `undertone check`, \
-             or the undertone of the rescue kit. Nothing was sent to the pedal."
-        );
-        return code(exit::FAILED);
+        return code(tui::main(cli.start.as_deref().unwrap_or("menu")));
     };
     let mut out = Out::stdout();
     if !allowed(&mut out) {
