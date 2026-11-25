@@ -70,7 +70,8 @@ static int fails;
 static uint32_t in[2 * A_FR];                   /* the I2S's blocks: 2 words a frame, 24 bits right-aligned */
 static int32_t out[2 * A_FR];
 static uint32_t ph;
-/* one interrupt: a guitar block (a sine of `amp` 24-bit steps, 441 Hz, on the left; noise on the right), its output */
+/* one interrupt: a guitar block (a sine of `amp` 24-bit steps, A_SR / 100: 441 Hz, on the left; noise on the right), its
+ * output */
 static void irq(int32_t amp)
 {
     for (uint32_t i = 0; i < A_FR; i++, ph++) {
@@ -225,16 +226,16 @@ int main(void)
     CHECK(a_xrun == 1u, "110 %: a late block, counted");
     t_cost = 0;
 
-    /* the input levels and the tuner's capture: a 441 Hz sine at a tenth of full scale */
+    /* the input levels and the tuner's capture: a 441 Hz sine (at 44.1 kHz) at a tenth of full scale */
     a_bypass = 0; a_over = 0;
     for (n = 0; n < 200u; n++) irq(838861);
     snprintf(msg, sizeof msg, "the left input level reads -23 dB (a sine at -20 dB of full scale: it reads %d)", a_level_db(0));
     CHECK(a_level_db(0) >= -24 && a_level_db(0) <= -22, msg);
     CHECK(a_level_db(1) < -80, "the right input (noise) reads far below");
     {
-        const float hz = tuner_estimate();
-        snprintf(msg, sizeof msg, "the tuner's estimate of a 441 Hz guitar: %d.%d Hz", (int)hz, (int)(hz * 10.0f) % 10);
-        CHECK(hz > 440.5f && hz < 441.5f, msg);
+        const float hz = tuner_estimate(), want = (float)A_SR / 100.0f;
+        snprintf(msg, sizeof msg, "the tuner's estimate of a %d Hz guitar: %d.%d Hz", (int)want, (int)hz, (int)(hz * 10.0f) % 10);
+        CHECK(hz > want - 0.5f && hz < want + 0.5f, msg);
     }
     fprintf(stdout, fails ? "base audio, %u channel(s): %d FAILURES\n" : "base audio, %u channel(s): ok (0 failures)\n", (unsigned)A_CH, fails);
     return fails ? 1 : 0;

@@ -5,8 +5,8 @@
  * (harmonics falling with their number and dying faster the higher they are), the plucked one also with a weak
  * fundamental (a bridge pickup), in tune and 5 to 30 cents off.
  * Every estimate from 0.2 s to 2 s after the pluck must name the note and its octave, within 2 cents up to the high E
- * string. Above it the estimate's lag is a few samples long and it reads sharp (as it always has): within 4 cents at
- * 650 Hz, 12 at 990 Hz.
+ * string. Above it the estimate's lag is a few samples long and it reads sharp (as it always has), by an amount that
+ * depends on where the lag's fraction falls: within 6 cents at 650 Hz (2 at 44.1 kHz, 5 at 48 kHz), 12 at 990 Hz.
  *   cc -O1 -Wall -Ifirmware [-DA_SR=48000u] tests/test_tuner.c -lm -o build/test_tuner && build/test_tuner [all]
  * (`all` prints every note's reading.)
  */
@@ -97,7 +97,7 @@ int main(int argc, char **argv)
         {"guitar G", 195.998, 2},
         {"guitar B", 246.942, 2},
         {"guitar E (high)", 329.628, 2},
-        {"guitar E (12th fret)", 659.255, 4},
+        {"guitar E (12th fret)", 659.255, 6},
         {"guitar B (19th fret)", 987.767, 12},
     };
     static const double OFF[] = {0.0, -30.0, +17.0, -5.0};   /* cents: in tune and off it */
