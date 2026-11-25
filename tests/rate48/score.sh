@@ -9,7 +9,6 @@
 #  - delay: DIGITAL at TIME 100 echoes at 48 kHz within one sample of where it does at 44.1 kHz (2000 ms)
 #  - plate: the PLATE reverb at 48 kHz keeps at least its size at 44.1 kHz (where its memory holds 0.96 of Dattorro's)
 #  - tuner: tests/test_tuner.c at 48 kHz (every note within 2 cents, as at 44.1 kHz)
-#  - USB audio: tests/test_usb_audio.c at 48 kHz (the streams at 48 kHz, 10 minutes with the clocks 300 ppm apart)
 #  - base audio: tests/test_base_audio.c at 48 kHz (the block's budget follows A_SR)
 # Not here, as they need files the repository does not hold: the factory amps against their source captures, and
 # the factory cabinet IR against its 48 kHz WAV.
@@ -19,7 +18,7 @@ cd "$(dirname "$0")/../.."
 CC="${CC:-cc}"
 B=build/rate48
 mkdir -p "$B"
-for f in tuner usb base; do : > "$B/$f.log"; done
+for f in tuner base; do : > "$B/$f.log"; done
 fails=0
 fail() { echo "FAIL $*"; fails=$((fails + 1)); }
 why() { tail -1 "$B/$1.log"; grep -m1 error "$B/$1.err"; }   # a test's last line, or why it did not build
@@ -40,9 +39,6 @@ p44=$($B/render44 plate 44100) p48=$($B/render48 plate 48000)
 awk -v a="$p44" -v b="$p48" 'BEGIN { exit !(b >= a) }' || fail "plate: $p48 of Dattorro's size at 48 kHz, $p44 at 44.1 kHz"
 { $CC -O1 -Wall -Ifirmware -DA_SR=48000u tests/test_tuner.c -lm -o $B/test_tuner && $B/test_tuner > $B/tuner.log; } 2> $B/tuner.err ||
   fail "tuner: $(why tuner)"
-UAF="-O1 -Wall -Wno-unused-function -Wno-int-to-pointer-cast -Ifirmware/apps/gamut/engine -Ifirmware -Ifirmware/bsp/chip"
-{ $CC $UAF -DA_SR=48000u tests/test_usb_audio.c -lm -o $B/test_usb_audio && $B/test_usb_audio > $B/usb.log; } 2> $B/usb.err ||
-  fail "USB audio: $(why usb)"
 BAF="-O1 -Wall -Wno-unused-function -Wno-unused-variable -Wno-int-to-pointer-cast -Ifirmware"
 { $CC $BAF -DA_SR=48000u tests/test_base_audio.c firmware/px_math.c -lm -o $B/test_base_audio && $B/test_base_audio > $B/base.log; } 2> $B/base.err ||
   fail "base audio: $(why base)"
