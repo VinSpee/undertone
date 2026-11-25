@@ -16,7 +16,7 @@ use ratatui::text::{Line, Span};
 
 use super::guide::{Log, View, WorkFn};
 use super::look::{self, Caps, Depth, Foot, Row, Screen, Status, Theme, cube};
-use super::progress::{Phase, Progress, REFUSED};
+use super::progress::{Phase, Progress, REFUSED, say_stopped};
 use crate::run::Outcome;
 
 pub const HINT_AFTER: f64 = 30.0;
@@ -259,12 +259,7 @@ impl View for TermView {
                             // a second Ctrl-C during the write: the program ends, as Python's does, and says how
                             // the next run resumes
                             Self::restore();
-                            println!(
-                                "\nStopped. Start undertone again to start over; a fix that was under way continues where it stopped."
-                            );
-                            for l in &self.note {
-                                println!("{l}");
-                            }
+                            say_stopped(&mut std::io::stdout(), &self.note);
                             std::process::exit(undertone_protocol::exit::STOPPED);
                         }
                     }

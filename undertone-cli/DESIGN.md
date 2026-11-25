@@ -34,6 +34,8 @@ Few dependencies, each pinned with `=` in `Cargo.toml` and locked in `Cargo.lock
   `IOCTL_SCSI_PASS_THROUGH_DIRECT`, as `tools/uboot_rescue.py` calls them through ctypes.
 - **Screens: `ratatui` with `crossterm`** (stage 4). crossterm reads keys and sets the terminal mode on macOS, Linux
   and Windows, which the Python screens do by hand with termios and msvcrt.
+- **Ctrl-C in the plain view: `ctrlc`**, which sets the handler on macOS, Linux and Windows with no `unsafe` of ours. The
+  full-screen view reads Ctrl-C as a key, so it needs none.
 - **Arguments: `clap`** with only the derive, help, usage and error-context features. The commands and options are
   those of `tools/undertone.py`.
 - **SHA-256: `sha2`** (stage 2), for the loader pin, the Gamut release pin and the source digest of a confirmation.
@@ -88,7 +90,7 @@ kept, each with a test:
    "Stopped. Nothing was written." In the guided screens a separate "replace the software?" screen asks, with "no"
    chosen at first.
 4. **No back or quit during a write.** Esc and q stop the wait for the pedal (nothing was sent), but once a write is
-   under way they only show, in amber, "do not unplug: your pedal is being updated". In the screens a first Ctrl-C
+   under way they only show, in amber, "do not unplug: your pedal is being updated". In both views a first Ctrl-C
    during a write does the same; a second one ends the program, as Python's Ctrl-C does, with the resume note: the
    pedal may not start yet, run the same command again and it continues where it stopped, and where the backup is.
 5. **A new answer after a failed write.** "Try again" after a failed write goes back to the confirmation screen, and

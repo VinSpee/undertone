@@ -13,6 +13,8 @@ undertone-protocol = { path = "../protocol" }
 clap = { version = "=4.6.9", default-features = false, features = ["std", "derive", "help", "usage", "error-context"] }
 # the guided screens
 ratatui = { version = "=0.30.2", default-features = false, features = ["crossterm"] }
+# Ctrl-C during a write in the plain view (src/tui/plain.rs), on macOS, Linux and Windows alike
+ctrlc = "=3.5.3"
 # the local time in a backup's name, as tools/uboot_rescue.py names it
 chrono = { version = "=0.4.45", default-features = false, features = ["clock"] }
 

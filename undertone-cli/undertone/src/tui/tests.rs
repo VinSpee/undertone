@@ -5,8 +5,8 @@
 //! walking through the same screens, progress and outcomes to the same end.
 use std::cell::RefCell;
 use std::rc::Rc;
-use std::sync::atomic::AtomicBool;
-use std::sync::{Arc, Mutex};
+use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
+use std::sync::{Arc, Mutex, mpsc};
 
 use ratatui::style::{Color, Modifier};
 use serde_json::{Value, json};
@@ -18,7 +18,8 @@ use undertone_protocol::{Bus, Error};
 
 use super::guide::{Guide, Log, View, WorkFn, World};
 use super::look::{self, Caps, Depth, Foot, Palette, Screen, Status, Theme};
-use super::progress::{Phase, Progress};
+use super::plain::{PlainView, press};
+use super::progress::{Phase, Progress, REFUSED, STOPPED};
 use super::term;
 use crate::run::Outcome;
 
@@ -622,4 +623,174 @@ fn progress_reads_the_tools_lines_as_python_does() {
     assert_eq!((p.done, p.fraction()), (3, 0.25));
     p.feed("the pedal went away or stopped answering (gone); waiting for it again (1/10)");
     assert_eq!(p.phase, Phase::Again);
+}
+
+/// What the plain view printed.
+#[derive(Clone, Default)]
+struct Printed(Arc<Mutex<Vec<u8>>>);
+
+impl std::io::Write for Printed {
+    fn write(&mut self, b: &[u8]) -> std::io::Result<usize> {
+        self.0.lock().unwrap().extend_from_slice(b);
+        Ok(b.len())
+    }
+
+    fn flush(&mut self) -> std::io::Result<()> {
+        Ok(())
+    }
+}
+
+/// Waits up to five seconds for `done`, which the plain view's own thread makes true within a quarter of a second of
+/// what it was told.
+fn soon(what: &str, done: impl Fn() -> bool) {
+    for _ in 0..200 {
+        if done() {
+            return;
+        }
+        std::thread::sleep(std::time::Duration::from_millis(25));
+    }
+    panic!("never: {what}");
+}
+
+/// How the program ends in these tests: the view's thread, with the code.
+struct Ended(i32);
+
+fn ended(code: i32) -> ! {
+    std::panic::resume_unwind(Box::new(Ended(code)))
+}
+
+/// A plain view running a write of twelve sectors in its own thread. The simulated pedal writes one sector for each
+/// permit the test sends, so the test knows which sector the write is at when it presses Ctrl-C.
+struct Writing {
+    printed: Printed,
+    permits: mpsc::Sender<()>,
+    written: Arc<AtomicUsize>,
+    writing: Arc<AtomicBool>,
+    presses: Arc<AtomicUsize>,
+    view: std::thread::JoinHandle<Outcome>,
+}
+
+impl Writing {
+    fn start() -> Writing {
+        let printed = Printed::default();
+        let (permits, permitted) = mpsc::channel::<()>();
+        let written = Arc::new(AtomicUsize::new(0));
+        let (shared, handles) = mpsc::channel();
+        let (out, done) = (printed.clone(), written.clone());
+        // the view is made in its thread: its reader of lines is not Send
+        let view = std::thread::spawn(move || {
+            let mut view = PlainView::new(Box::new(out), Box::new(|_| None), "test");
+            (view.caught, view.end) = (true, ended); // the test presses Ctrl-C itself, and does not end the program
+            view.resume_note(vec![
+                "Your pedal was being updated.".into(),
+                "Run undertone again.".into(),
+            ]);
+            shared.send((view.writing.clone(), view.presses.clone())).unwrap();
+            let job: WorkFn = Box::new(move |say, _stop| {
+                for line in [
+                    "waiting for the pedal",
+                    "pedal found",
+                    "INQUIRY: WL82",
+                    "12 of 155 sectors in [0x4000, 0x9f000) differ",
+                ] {
+                    say(line);
+                }
+                while done.load(Ordering::SeqCst) < 12 {
+                    // the test lets go of the pedal when the program has ended
+                    if permitted.recv().is_err() {
+                        return Outcome::failed(&Error::Stopped("the program ended".into()));
+                    }
+                    let n = done.fetch_add(1, Ordering::SeqCst) + 1;
+                    say(&format!("  written {n}/12"));
+                }
+                Outcome::failed(&Error::Setup("done".into()))
+            });
+            let screen = Screen::new("replacing the software", &["Do not unplug."]);
+            view.work(&screen, job, &mut Log::new(None), true, &[])
+        });
+        let (writing, presses) = handles.recv().unwrap();
+        Writing {
+            printed,
+            permits,
+            written,
+            writing,
+            presses,
+            view,
+        }
+    }
+
+    /// Lets the pedal write up to sector `upto`, and waits until the view has shown it: it prints each tenth.
+    fn write(&self, upto: usize, shown: &str) {
+        for _ in self.written.load(Ordering::SeqCst)..upto {
+            self.permits.send(()).unwrap();
+        }
+        soon("the sectors are written", || {
+            self.written.load(Ordering::SeqCst) == upto
+        });
+        self.printed_has(shown);
+    }
+
+    fn printed(&self) -> String {
+        String::from_utf8_lossy(&self.printed.0.lock().unwrap()).into_owned()
+    }
+
+    fn printed_has(&self, line: &str) {
+        soon(line, || self.printed().lines().any(|l| l == line));
+    }
+
+    fn ctrl_c(&self) {
+        press(&self.writing, &self.presses, ended);
+    }
+}
+
+#[test]
+fn a_first_ctrl_c_in_the_plain_view_only_warns_and_the_write_goes_on() {
+    let w = Writing::start();
+    w.write(3, "updating your pedal: 25%");
+    w.ctrl_c();
+    w.printed_has(REFUSED);
+    w.write(12, "updating your pedal: 100%");
+    let o = w.view.join().unwrap();
+    assert_eq!(o.text, "ERROR: done");
+}
+
+#[test]
+fn a_second_ctrl_c_in_the_plain_view_ends_the_write_with_the_resume_note() {
+    let w = Writing::start();
+    w.write(3, "updating your pedal: 25%");
+    w.ctrl_c();
+    w.printed_has(REFUSED);
+    w.ctrl_c();
+    // the program ends in the view's thread, with the Python tool's code for Ctrl-C
+    let Writing {
+        printed,
+        permits,
+        written,
+        view,
+        ..
+    } = w;
+    let Err(payload) = view.join() else {
+        panic!("the write went on")
+    };
+    let payload = payload.downcast::<Ended>().unwrap();
+    assert_eq!(payload.0, 130);
+    drop(permits);
+    let text = String::from_utf8_lossy(&printed.0.lock().unwrap()).into_owned();
+    assert!(
+        text.ends_with(&format!(
+            "\n{STOPPED}\nYour pedal was being updated.\nRun undertone again.\n"
+        )),
+        "{text}"
+    );
+    // the pedal was held at the third sector, and no later one was written
+    std::thread::sleep(std::time::Duration::from_millis(100));
+    assert_eq!(written.load(Ordering::SeqCst), 3);
+}
+
+#[test]
+fn ctrl_c_outside_a_write_ends_the_program_as_the_default_does() {
+    let (writing, presses) = (AtomicBool::new(false), AtomicUsize::new(0));
+    let payload = std::panic::catch_unwind(|| press(&writing, &presses, ended)).expect_err("the program ended");
+    assert_eq!(payload.downcast::<Ended>().unwrap().0, 130);
+    assert_eq!(presses.load(Ordering::SeqCst), 0);
 }
