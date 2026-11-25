@@ -1,4 +1,4 @@
-/* sweeps every block x type x setting (0/50/100) with the pedal's libm; changes settings while playing
+/* sweeps every block x type x setting (0/50/100) with the pedal's libm, at PX_SR (px_dsp.h); changes settings while playing
  * (like the UI); detects NaN/Inf/blow-up */
 #include <stdio.h>
 #include <string.h>
@@ -16,7 +16,7 @@ static int run(int blocks, float amp){
   return nan;
 }
 int main(void){
-  px_engine_init(&e, 44100.0f);
+  px_engine_init(&e, PX_SR);
   static const int V[3] = {0, 50, 100}; long n = 0;
   for (int blk = 0; blk < PX_NBLK; blk++)
    for (int t = 0; t < px_ntypes(blk); t++)
@@ -29,7 +29,7 @@ int main(void){
       px_engine_set(&e, &p); n++;
       if (run(30, 1.0f) | run(10, 0.0f) | run(10, 3.0f)) {   /* signal, silence, very loud */
         bad++; if (bad < 15) printf("PROBLEM: %s / %s  p=%d %d %d\n", px_block_name(blk), px_type_name(blk,t), V[a],V[b],V[c]);
-        px_engine_init(&e, 44100.0f);
+        px_engine_init(&e, PX_SR);
       }
     }
   /* all blocks together, every preset, extreme settings */
@@ -37,7 +37,7 @@ int main(void){
       px_preset_t p; px_preset_factory(&p, pr);
       for (int z = 0; z < PX_NBLK; z++) { p.on[z] = 1; for (int k = 0; k < 5; k++) p.p[z][k] = V[(x+k+z)%3]; }
       px_engine_set(&e, &p); n++;
-      if (run(40, 1.0f) | run(20, 0.0f)) { bad++; printf("PROBLEM all ON preset %d x%d\n", pr, x); px_engine_init(&e,44100.0f); }
+      if (run(40, 1.0f) | run(20, 0.0f)) { bad++; printf("PROBLEM all ON preset %d x%d\n", pr, x); px_engine_init(&e, PX_SR); }
   }
   /* block order (v29): random orders, all blocks on, every preset; invalid orders fall back to the default */
   { unsigned r = 12345u;
@@ -48,7 +48,7 @@ int main(void){
         uint8_t t = p.order[i]; p.order[i] = p.order[j]; p.order[j] = t; }
       if (x == 3) p.order[0] = p.order[1];        /* not a permutation */
       px_engine_set(&e, &p); n++;
-      if (run(40, 1.0f) | run(20, 0.0f) | run(10, 3.0f)) { bad++; printf("PROBLEM order preset %d x%d\n", pr, x); px_engine_init(&e,44100.0f); }
+      if (run(40, 1.0f) | run(20, 0.0f) | run(10, 3.0f)) { bad++; printf("PROBLEM order preset %d x%d\n", pr, x); px_engine_init(&e, PX_SR); }
     }
   }
   printf("%ld configurations tested, %ld problems\n", n, bad);

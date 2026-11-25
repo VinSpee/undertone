@@ -8,8 +8,25 @@
 import sys
 
 LIMIT, RANGE, SILENT = 0.5, 40.0, -90.0
+SOLA = ("its shifters' alignment picks among near-equal offsets, and other picks at another rate move a band by a dB "
+        "or two: with the alignment off, both rates match; with the input one sample later, 44.1 kHz moves as much")
 # (block, type, setting, or None for every setting): (limit in dB, or None for none; why it differs at 48 kHz)
-ALLOW = {}
+ALLOW = {
+    ("SFX", "BITCRUSHER", None): (None, "SR DIV divides the rate the pedal runs at, as its name and its screen say: at "
+                                        "48 kHz it holds each sample as many times, so its reduced rate is 48000 / SR DIV"),
+    ("SFX", "RING MOD", None): (2.0, "its wobble adds 1.3 Hz / rate to a float phase each sample, and the rounding of that "
+                                     "sum, not the same at each rate, moves the carrier's sweep: with the phase computed "
+                                     "exactly, both rates match"),
+    ("SYN", "SITAR", None): (2.5, "its sympathetic strings are combs of whole samples, a few cents off their notes, and "
+                                  "not by the same cents at each rate: a sample longer at 44.1 kHz moves it as much"),
+    ("REV", "SHIMMER", "100"): (2.5, "the tank runs at half the rate, and its half-rate filters pass a little more above "
+                                     "5 kHz at 48 kHz (0.1 to 0.3 dB in every reverb at 100); at SHIMMER 100 the octave "
+                                     "it feeds back goes through them on every turn"),
+    ("SYN", "MONO SYNTH", "100"): (1.5, "at CUTOFF 100 its ladder opens to its limit, 18.5 kHz, where its one-pole stages "
+                                        "follow the rate"),
+    **{("PIT", t, None): (3.0, SOLA) for t in ("POLY OCTAVE", "WHAMMY", "HARMONIZER", "DETUNE")},
+    **{("SYN", t, None): (3.0, SOLA) for t in ("ORGAN", "CHURCH ORGAN", "STRINGS", "CHOIR", "12-STRING", "BARITONE")},
+}
 
 
 def read(path):

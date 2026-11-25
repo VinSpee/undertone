@@ -23,8 +23,15 @@
 extern "C" {
 #endif
 
+/* PX_FS: the rate the engine is built for (Hz). Its memory (the delay's 2 s, the reverb's ring, the shifters' rings)
+ * and its counts of samples (the shifters' windows, the per-sample decays: px_dsp.c PX_N44) are set for it, as
+ * constants; what is given in seconds or hertz follows the rate px_engine_init is given: PX_FS, or the clock's measure
+ * of it. At 44.1 kHz the engine is the one it has always been, byte for byte. */
+#ifndef PX_FS
+#define PX_FS 44100
+#endif
 #ifndef PX_SR
-#define PX_SR 44100.0f
+#define PX_SR ((float)PX_FS)
 #endif
 #ifndef PX_OVERSAMPLE
 #define PX_OVERSAMPLE 4
@@ -134,7 +141,9 @@ int         px_ir_name(int slot, char *buf12);          /* 1 = the slot holds an
 typedef struct { float b0, b1, b2, a1, a2, z1, z2; } px_bq;
 typedef struct { float x[6], y[6]; } px_hb;           /* v38: a half-band filter's all-pass sections (x2 up or down) */
 
-#define PX_PS_N 2048                   /* pitch shifter buffer (46 ms) */
+#define PX_PS_N (PX_FS > 44100 ? 4096 : 2048)   /* the pitch shifters' ring (46 ms at 44.1 kHz): what they reach back
+                                                   (px_dsp.c PS_RUN) */
+#define PX_SH_N 2048                   /* the shimmer's shifter ring */
 #define PX_SYN_CB 1024                 /* SYN: ensemble / doubler / body reflections (23 ms) */
 #define PX_DLY_N 45056                 /* v40: 2.04 s of delay at half rate (22.05 kHz, 16-bit: 88 KB), as the stock */
 #define PX_RV_M 16384                  /* reverb memory: one 16-bit ring (32 KB) at half rate, laid out per type */
@@ -241,7 +250,7 @@ typedef struct {
     int16_t dly_buf[PX_DLY_N]; px_dly dly;
     /* reverb (px_rev above): its ring, and the one that plays; the shimmer's shifter memory */
     int16_t rv_m[PX_RV_M]; px_rev rv;
-    float sh_buf[PX_PS_N];
+    float sh_buf[PX_SH_N];
     float cmp_la[128]; int cmp_lw;                     /* v36: swell look-ahead (128 samples) */
     float btr[PX_NBLK], patch_g;                        /* v36: per-block level trims, preset level */
     /* v38: changes without clicks. A knob's new values glide there over PX_GLIDE_TICKS blocks (gl_t: where to, gl_left:
