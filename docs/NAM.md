@@ -44,6 +44,21 @@ and crunch models are very close. A larger A2 would do better, but would not fit
 
 The factory presets use them.
 
+### TONE3000 captures cleared for the factory amps
+
+The authors of these A2 captures on [TONE3000](https://www.tone3000.com/) have given written permission for them to
+ship inside the firmware as factory amps. The editor lists the same credits in its pedal panel (the connection button,
+top right), from `CAPTURE_CREDITS` in `docs/pxnam.js`.
+
+| Author | Pack | Terms |
+| --- | --- | --- |
+| subterraneans | [Soldano SLO-100](https://www.tone3000.com/tones/soldano-slo-100-106781) | captured with permission, available on TONE3000 |
+| chuggernautxanner | [Orange Dual Terror full rig](https://www.tone3000.com/tones/orange-dual-terror-full-rig-boostedunboosted-81959) | captured with permission, available on TONE3000 |
+| torcuato | [Bogner TM 26](https://www.tone3000.com/tones/bogner-tm-26-no-cab-109210) | captured with permission, available on TONE3000 |
+| amalgamaudio | [Fender Super Reverb 1965 edge of breakup A2](https://www.tone3000.com/tones/fender-super-reverb-1965-edge-of-breakup-a2-88775) | captured with permission, available on TONE3000 |
+| amalgamaudio | [Vox AC30 1964 edge of breakup A2](https://www.tone3000.com/tones/1964-vox-ac30-top-boost-super-twin-edge-of-breakup-a2-82521) | captured with permission, available on TONE3000 |
+| caveraolabs | [CavLabs #4 Orange Jim Root Terror](https://www.tone3000.com/tones/cavlabs-4-orange-jim-root-terror-24650) | captured with permission, available on TONE3000 |
+
 ## Your own models (TONE3000 and others)
 
 1. Get a capture in the **A2** format: on [TONE3000](https://www.tone3000.com/) and in NAM's own trainer, A2 files
@@ -52,7 +67,8 @@ The factory presets use them.
 2. Open the web editor (`editor.html`), connect the pedal, and in **Models** press **Add .nam files** (several at once,
    or drop them on the panel). The editor checks each file, measures its level and sends it to the next free slot
    (about 2 seconds each; the sound mutes a moment while the flash is written). A file the pedal cannot play is listed
-   with the reason. An empty slot's own button loads a file into that slot.
+   with the reason. A capture whose values inside the network would pass the pedal's fixed-point range (±2,048) at
+   GAIN +12 dB is scaled inside on the way: its output stays exactly the same (`fitRange` in `docs/pxnam.js`). An empty slot's own button loads a file into that slot.
 3. In a preset, choose the capture in the AMP block's **MODEL** (your captures are listed by slot).
 
 Or press **Browse TONE3000** in the same section: TONE3000's own tone browser opens in a pop-up (sign in there; it shows
