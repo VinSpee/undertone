@@ -3,6 +3,16 @@
 use super::look::{Caps, glyph};
 
 pub const REFUSED: &str = "do not unplug: your pedal is being updated";
+pub const STOPPED: &str = "Stopped. Start undertone again to start over; a fix that was under way continues where it stopped.";
+
+/// What the program says when a second Ctrl-C ends it during a write, in either view: the stopped line, then the note.
+pub fn say_stopped(out: &mut dyn std::io::Write, note: &[String]) {
+    let _ = writeln!(out, "\n{STOPPED}");
+    for l in note {
+        let _ = writeln!(out, "{l}");
+    }
+    let _ = out.flush();
+}
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Phase {
