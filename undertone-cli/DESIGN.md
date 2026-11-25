@@ -233,7 +233,9 @@ unit and the symbols stripped.
 - **The commands as a person runs them.** `undertone/src/tests.rs` runs `rescue` (check, yes, restore), a rescue
   answered no, a refused rescue with its advice, the way back to M-VAVE's firmware through the recovery mode, and a
   check, and must show the same window as `tools/undertone.py` (times and paths aside), end with the same exit code,
-  send the same transfers and leave the same flash (`commands.json`, from the same script).
+  send the same transfers and leave the same flash (`commands.json`, from the same script). The Python goldens
+  describe the macOS and Linux route, so the tests set `Ctx.windows` to false and every runner takes that route; the
+  Windows route (no install, the "click Cancel" hint, a wait on the boot state only) has no test yet.
 - **The screens** (stage 4). Each state's screen as plain text compared with the Python screens' text; pictures of the
   full-screen view at 80 x 24 and 100 x 30, dark and light, rendered through a pseudo-terminal and set beside the
   Python gallery; the guided rescue and install driven by key presses against the simulated pedal.
