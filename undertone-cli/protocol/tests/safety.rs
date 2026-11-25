@@ -8,7 +8,7 @@ use std::path::PathBuf;
 use undertone_protocol::install::{self, LEAVE_WAIT, Layout};
 use undertone_protocol::recovery::{self, Recovery, parse_reply};
 use undertone_protocol::sim::{
-    After, Bench, FakeClock, Fault, RecoveryOptions, Shared, SimPedal, SimRecovery, Start, flash_image, noise,
+    After, Bench, FakeClock, Fault, RecoveryOptions, Shared, SimPedal, SimRecovery, Start, app_area, flash_image, noise,
 };
 use undertone_protocol::uboot::{self, FLASH_SIZE, LOADER_SIZE, Report, Uboot, hex};
 use undertone_protocol::{Bus, Confirmed, Error, Msc, exit};
@@ -235,15 +235,56 @@ fn a_backup_must_be_the_whole_flash() {
 }
 
 #[test]
-fn gamut_is_installed_only_from_the_release_pin() {
-    let area = noise(5, 0x10000);
-    let e = install::gamut_area(area, "BlackBox_950-v23.bin", &"0".repeat(64), &layouts()).unwrap_err();
-    assert!(matches!(e, Error::Refused(m) if m.contains("is not the Gamut app area of the release pin")));
+fn any_app_area_of_this_project_is_installed_and_one_not_the_release_is_called_custom() {
+    let area = app_area("BlackBox_951", 5, 0x10000);
+    let pinned = hex(&uboot::sha256(&area));
+    let custom = install::app_area(area.clone(), "BlackBox_951-v23.bin", &"0".repeat(64), &layouts()).unwrap();
+    assert!(custom.custom);
+    assert_eq!(
+        custom.what,
+        "the app area BlackBox_951-v23.bin, identity BlackBox_951 (custom image, not the release)"
+    );
+    assert_eq!(custom.boot, None);
+    let release = install::app_area(area, "BlackBox_951-v23.bin", &pinned, &layouts()).unwrap();
+    assert!(!release.custom);
+    assert_eq!(
+        release.what,
+        "Gamut's app area BlackBox_951-v23.bin, identity BlackBox_951"
+    );
     let pin = "aa  build/apps/gamut/openpocket.bin\nbb  build/apps/gamut/BlackBox_950-v23.bin\n";
     assert_eq!(
         install::gamut_pin(pin),
         Some(("build/apps/gamut/BlackBox_950-v23.bin", "bb"))
     );
+}
+
+#[test]
+fn an_app_area_the_pedal_could_not_start_or_that_would_not_fit_is_refused() {
+    let refused = |area: Vec<u8>| match install::app_area(area, "x.bin", &"0".repeat(64), &layouts()) {
+        Err(Error::Refused(m)) => m,
+        other => panic!("not refused: {:?}", other.map(|s| s.what)),
+    };
+    let mut ragged = app_area("BlackBox_951", 5, 0x10000);
+    ragged.extend([0xFF; 0x200]);
+    assert_eq!(
+        refused(ragged),
+        "x.bin: the image is 66048 bytes, not a whole number of 4 KiB blocks"
+    );
+    // the V22/V23 head's app area is [0x6000, 0x9F000): one sector more would reach its stock settings
+    assert_eq!(
+        refused(app_area("BlackBox_951", 5, 0x9A000)),
+        "x.bin: the image is 0x9a000 bytes, longer than the write range [0x0, 0x99000)"
+    );
+    assert!(refused(noise(5, 0x10000)).starts_with("x.bin: its first 32 bytes are not an app area head"));
+    let mut broken = app_area("BlackBox_951", 5, 0x10000);
+    broken[0x1000] ^= 1;
+    assert_eq!(refused(broken), "x.bin: its area head's data CRC fails");
+    for unnamed in [
+        flash_image(0x6000, &noise(5, 0x2000), 0x16000)[0x6000..].to_vec(),
+        app_area("PocketX_951", 5, 0x10000),
+    ] {
+        assert!(refused(unnamed).starts_with("x.bin holds no BlackBox identity"));
+    }
 }
 
 // ---------------------------------------------------------------- the recovery mode

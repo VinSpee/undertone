@@ -51,7 +51,7 @@ enum Command {
     },
     /// put Gamut, M-VAVE's firmware or a backup on a pedal: a dry run, then the write
     Install {
-        /// Gamut's app area (default: the file the release pin names)
+        /// an app area to install: Gamut's, a test build or custom firmware (default: the file the release pin names)
         #[arg(long, value_name = "FILE", conflicts_with_all = ["official", "restore"])]
         gamut: Option<PathBuf>,
         /// M-VAVE's official package: its app area, the way back

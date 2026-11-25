@@ -111,8 +111,11 @@ kept, each with a test:
    0 or 6, only the vendor requests `0x42`, `0x43` and `0x44` at their fixed lengths, every frame 4608 bytes in one
    transfer with no zero-length packet, and every reply is checked (`SBR2`, its CRC-32, the echoed command and tag,
    the protocol's constants).
-9. **Pinned files.** JieLi's `wl82loader.bin` must have SHA-256 `d41da612…5376` and 24064 bytes. Gamut's app area must
-   be the release pin's (`firmware/apps/gamut/release.sha256`, compiled into the program). An official package must
+9. **Pinned files.** JieLi's `wl82loader.bin` must have SHA-256 `d41da612…5376` and 24064 bytes. The app area to
+   install is the release pin's by default (`firmware/apps/gamut/release.sha256`, compiled into the program). Another
+   one given with `--gamut FILE` or "a file of my own" must pass `tools/pd40_install.py`'s `load_image` checks (whole
+   4 KiB sectors that fit every layout's app area, the area head, the entry, every file's CRC, a `BlackBox_`
+   identity), and is named a "custom image, not the release" wherever it is shown. An official package must
    pass every CRC of `pocketx_fw.package_checks` and be one of M-VAVE's BlackBox packages (identity below 900). A
    backup to restore must be exactly 1 MiB, and its app area one the boot loader would start.
 10. **Each sector verified, and runs that resume.** For each 4 KiB sector that differs: erase, write in 512-byte

@@ -7,7 +7,7 @@ use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 
-use undertone_protocol::install::{Layout, Source};
+use undertone_protocol::install::{CUSTOM, Layout, Source};
 use undertone_protocol::reading::read_pedal;
 use undertone_protocol::{Bus, Clock, Confirmed, Error, Msc, RecoveryDevice};
 
@@ -40,6 +40,8 @@ pub enum State {
     NotNow,
     RescueWrite,
     Install,
+    OwnFile,
+    OwnReady,
     InstallCheck,
     InstallWrite,
     Check,
@@ -50,6 +52,9 @@ pub enum State {
 /// A tool's run, handed to the view: it gets the line sink and returns the outcome. The view runs it on a thread of
 /// its own while it draws, and sets the stop flag when the person leaves the wait for the pedal.
 pub type WorkFn = Box<dyn FnOnce(&mut dyn FnMut(&str), Arc<AtomicBool>) -> Outcome + Send>;
+
+/// The app area to install from a file, or from Gamut's release with None, checked.
+pub type AppFn = Box<dyn Fn(Option<&Path>) -> std::result::Result<Source, Error>>;
 
 /// How a screen is shown and answered: the full-screen view, the plain one, or a test's.
 pub trait View {
@@ -122,7 +127,8 @@ pub struct World {
     pub root: PathBuf,
     /// What to do before reaching the pedal, in words, when this process may not; None when it may.
     pub permission: Box<dyn Fn() -> Option<&'static str>>,
-    pub gamut: Box<dyn Fn() -> std::result::Result<Source, Error>>,
+    /// The app area to install: the file given, else Gamut's, the one the release pin names.
+    pub gamut: AppFn,
     pub open_url: Box<dyn FnMut(&str)>,
     pub windows: bool,
 }
@@ -136,6 +142,8 @@ pub struct Guide<'v> {
     kind: Option<&'static str>,
     images: Vec<(String, Vec<u8>)>,
     source: Option<Source>,
+    /// The file of the person's own chosen for the install, when it is not Gamut's release.
+    own: Option<PathBuf>,
     outcome: Option<Outcome>,
     need_file: Option<&'static str>,
     confirmed: Option<Confirmed>,
@@ -150,6 +158,11 @@ fn nothing_changes() -> [&'static str; 2] {
         "Nothing changes until you say yes.",
     ]
 }
+
+/// The choice that installs an app image of the person's own from the firmware folder.
+const OWN: (&str, &str) = ("own", "a file of my own");
+/// The most files of the person's own one screen lists.
+const MAX_OWN: usize = 5;
 
 const SHORT_A: &str = "M-VAVE V20";
 const SHORT_B: &str = "M-VAVE V23";
@@ -170,6 +183,7 @@ impl<'v> Guide<'v> {
             kind,
             images: vec![],
             source: None,
+            own: None,
             outcome: None,
             need_file: None,
             confirmed: None,
@@ -205,6 +219,8 @@ impl<'v> Guide<'v> {
             State::NotNow => self.not_now(),
             State::RescueWrite => self.rescue_write(),
             State::Install => self.install(),
+            State::OwnFile => self.own_file(),
+            State::OwnReady => self.own_ready(),
             State::InstallCheck => self.install_check(),
             State::InstallWrite => self.install_write(),
             State::Check => self.check(),
@@ -289,10 +305,11 @@ impl<'v> Guide<'v> {
 
     /// What to tell the person when the screens end in the middle of a write.
     pub fn resume_note(&self) -> Vec<String> {
-        resume_note(
-            self.kind.unwrap_or("rescue"),
-            self.result.backup.as_deref().unwrap_or(&self.w.backups),
-        )
+        let kind = match &self.own {
+            Some(file) if self.kind == Some("install") => format!("install --gamut \"{}\"", file.display()),
+            _ => self.kind.unwrap_or("rescue").to_string(),
+        };
+        resume_note(&kind, self.result.backup.as_deref().unwrap_or(&self.w.backups))
     }
 
     fn hint(&self) -> Vec<String> {
@@ -566,6 +583,7 @@ impl<'v> Guide<'v> {
 
     fn install(&mut self) -> Option<State> {
         self.kind = Some("install");
+        self.own = None;
         let guide = [("guide", "open the guide"), ("back", "back")];
         let routes = [("guide", Some(State::GuideThenMenu)), ("back", Some(State::Menu))];
         if self.w.windows {
@@ -579,7 +597,7 @@ impl<'v> Guide<'v> {
             .choices(&guide);
             return self.choose(screen, &routes);
         }
-        match (self.w.gamut)() {
+        match (self.w.gamut)(None) {
             Ok(source) => self.source = Some(source),
             Err(e @ Error::Refused(_)) => return self.failed(Outcome::failed(&e), State::Install),
             Err(_) => {
@@ -590,14 +608,130 @@ impl<'v> Guide<'v> {
                         "If your pedal starts, use the installer page instead.",
                     ],
                 )
-                .choices(&guide);
-                return self.choose(screen, &routes);
+                .choices(&[OWN, guide[0], guide[1]]);
+                return self.choose(screen, &[(OWN.0, Some(State::OwnFile)), routes[0], routes[1]]);
             }
         }
-        let screen = Screen::new("put gamut on your pedal", &nothing_changes())
-            .choices(&[("go", "start the check"), ("back", "back")]);
+        let screen = Screen::new("put gamut on your pedal", &nothing_changes()).choices(&[
+            ("go", "start the check"),
+            OWN,
+            ("back", "back"),
+        ]);
         let go = self.permission().unwrap_or(State::InstallCheck);
-        self.choose(screen, &[("go", Some(go)), ("back", Some(State::Menu))])
+        self.choose(
+            screen,
+            &[
+                ("go", Some(go)),
+                (OWN.0, Some(State::OwnFile)),
+                ("back", Some(State::Menu)),
+            ],
+        )
+    }
+
+    /// The .bin files in the kit's firmware folder, by name: where the person puts an app image of their own.
+    fn own_files(&self) -> Vec<PathBuf> {
+        let mut files: Vec<PathBuf> = std::fs::read_dir(self.w.root.join("firmware"))
+            .map(|dir| {
+                dir.filter_map(|e| e.ok().map(|e| e.path()))
+                    .filter(|p| p.is_file() && p.extension().is_some_and(|x| x.eq_ignore_ascii_case("bin")))
+                    .collect()
+            })
+            .unwrap_or_default();
+        files.sort();
+        files
+    }
+
+    fn own_file(&mut self) -> Option<State> {
+        let firmware = self.w.root.join("firmware");
+        let files = self.own_files();
+        if files.is_empty() {
+            let mut screen = Screen::new(
+                "a file of your own",
+                &[
+                    "Put your .bin file in undertone's firmware folder,",
+                    "then choose look again.",
+                ],
+            )
+            .choices(&[("look", "look again"), ("back", "back")]);
+            screen.aside = vec!["firmware folder:".into(), home_short(&firmware)];
+            return self.choose(
+                screen,
+                &[("look", Some(State::OwnFile)), ("back", Some(State::Install))],
+            );
+        }
+        let mut lines = vec!["Choose the file to put on your pedal."];
+        if files.len() > MAX_OWN {
+            lines.push("Only the first five files in the folder are shown.");
+        }
+        let mut screen = Screen::new("which file?", &lines);
+        screen.choices = files
+            .iter()
+            .take(MAX_OWN)
+            .enumerate()
+            .map(|(i, f)| {
+                (
+                    i.to_string(),
+                    f.file_name().unwrap_or_default().to_string_lossy().into_owned(),
+                )
+            })
+            .collect();
+        screen.choices.push(("back".into(), "back".into()));
+        let key = self.view.ask(&screen);
+        let Some(file) = key.parse::<usize>().ok().and_then(|i| files.get(i)) else {
+            return if key == "back" { Some(State::Install) } else { None };
+        };
+        match (self.w.gamut)(Some(file)) {
+            Ok(source) => {
+                self.source = Some(source);
+                self.own = Some(file.clone());
+                Some(State::OwnReady)
+            }
+            Err(e) => {
+                let o = Outcome::failed(&e);
+                self.result.code = o.code;
+                self.result.lines = vec![o.text.clone()];
+                self.log.write(&o.text);
+                let mut screen = Screen::new(
+                    "undertone cannot use this file",
+                    &[
+                        "It is not an app image your pedal can start.",
+                        "Nothing was changed on your pedal.",
+                    ],
+                )
+                .choices(&[("again", "choose another file"), ("done", "done")])
+                .problem();
+                screen.aside = vec![e.message().to_string()];
+                let key = self.view.ask(&screen);
+                if key != "again" && key != "back" {
+                    return None;
+                }
+                self.result = Result {
+                    backup: self.result.backup.take(),
+                    ..Result::default()
+                };
+                Some(State::OwnFile)
+            }
+        }
+    }
+
+    fn own_ready(&mut self) -> Option<State> {
+        let custom = self.source.as_ref().is_some_and(|s| s.custom);
+        let name = self
+            .own
+            .as_deref()
+            .and_then(Path::file_name)
+            .unwrap_or_default()
+            .to_string_lossy();
+        let kind = if custom {
+            format!("This is a {CUSTOM}.")
+        } else {
+            "This file is the Gamut release.".into()
+        };
+        let mut screen = Screen::new("put your file on your pedal", &[kind.as_str(), nothing_changes()[1]])
+            .choices(&[("go", "start the check"), ("back", "back")]);
+        screen.aside = vec![name.into_owned()];
+        let go = self.permission().unwrap_or(State::InstallCheck);
+        self.choose(screen, &[("go", Some(go)), ("back", Some(State::OwnFile))])
     }
 
     fn hold(title: &str) -> Screen {
@@ -620,11 +754,17 @@ impl<'v> Guide<'v> {
             return self.failed(o, State::InstallCheck);
         }
         self.outcome = Some(o);
-        let screen = Screen::new(
-            "ready to put gamut on",
-            &["Your pedal is checked, and a copy is saved."],
-        )
-        .choices(&[("go", "put gamut on"), ("later", "not now")]);
+        let checked = "Your pedal is checked, and a copy is saved.";
+        let screen = if self.own.is_some() {
+            let custom = format!("Your file is a {CUSTOM}.");
+            let mut lines = vec![checked];
+            if self.source.as_ref().is_some_and(|s| s.custom) {
+                lines.push(&custom);
+            }
+            Screen::new("ready to put your file on", &lines).choices(&[("go", "put it on"), ("later", "not now")])
+        } else {
+            Screen::new("ready to put gamut on", &[checked]).choices(&[("go", "put gamut on"), ("later", "not now")])
+        };
         self.choose(
             screen,
             &[
@@ -650,9 +790,25 @@ impl<'v> Guide<'v> {
             .as_ref()
             .and_then(|r| r.layout.as_ref())
             .map_or("", |l| l.levels.as_str());
+        let first_run = undertone_protocol::install::FIRST_RUN.replace("{levels}", levels);
+        if let Some(file) = &self.own {
+            let custom = self.source.as_ref().is_some_and(|s| s.custom);
+            let name = file.file_name().unwrap_or_default().to_string_lossy();
+            self.result.lines = vec![
+                format!(
+                    "{name} is on your pedal{}. Everything put on it was checked.",
+                    if custom { format!(" ({CUSTOM})") } else { String::new() }
+                ),
+                first_run,
+            ];
+            return self.end(Screen::new(
+                "your file is on your pedal",
+                &["Switch your pedal off and on again to start it."],
+            ));
+        }
         self.result.lines = vec![
             "Gamut is on your pedal. Everything put on it was checked.".into(),
-            undertone_protocol::install::FIRST_RUN.replace("{levels}", levels),
+            first_run,
         ];
         self.end(Screen::new(
             "gamut is on your pedal",

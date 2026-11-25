@@ -8,7 +8,7 @@ use std::time::Duration;
 
 use undertone_protocol::crc::crc32;
 use undertone_protocol::install::{self, Source};
-use undertone_protocol::sim::{Bench, Start, flash_image, noise, package};
+use undertone_protocol::sim::{Bench, Start, app_area, flash_image, noise, package};
 use undertone_protocol::uboot::{FLASH_SIZE, LOADER_SIZE};
 use undertone_protocol::{Bus, Clock, Error, Msc, RecoveryDevice};
 
@@ -80,7 +80,15 @@ pub fn world() -> Option<World> {
         what: "Gamut's app area of the simulation".into(),
         area: v23[0x6000..0x9F000].to_vec(),
         boot: None,
+        custom: false,
     };
+    // a test build for "a file of my own"
+    std::fs::write(
+        firmware.join("BlackBox_951-v23.bin"),
+        app_area("BlackBox_951", 51, 0x10000),
+    )
+    .ok()?;
+    let (own_root, own_layouts) = (root.clone(), layouts.clone());
     Some(World {
         bus: Arc::new(Mutex::new(Some(bus))),
         open_bus: Arc::new(|| Err(Error::Setup("the simulation is the bus".into()))),
@@ -91,7 +99,10 @@ pub fn world() -> Option<World> {
         attempts: 10,
         root,
         permission: Box::new(|| None),
-        gamut: Box::new(move || Ok(gamut.clone())),
+        gamut: Box::new(move |file| match file {
+            None => Ok(gamut.clone()),
+            Some(file) => crate::commands::gamut_source(&own_root, Some(file), &own_layouts),
+        }),
         open_url: Box::new(|_| {}),
         windows: false,
     })
