@@ -1,7 +1,8 @@
 /* SPDX-License-Identifier: GPL-3.0-only
  * OpenPocket v38 — USER IR (CAB type): the partitioned FFT convolution against the plain one (direct FIR) on noise and
  * on a guitar-like signal, the FFT round trip, the engine's slots (empty slot, names, a new slot is a full change), slot
- * IR1's factory IR (played while the slot holds no IR of the user's, replaced by one, back when it is emptied). */
+ * IR1's factory IR (played while the slot holds no IR of the user's, replaced by one, back when it is emptied), and an IR
+ * made at the engine's other rate (44.1 or 48 kHz): resampled when it is loaded, the factory IR at the engine's own. */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -10,12 +11,43 @@
 #include "../../engine/px_dsp.c"
 static float IRS[2][PX_IR_LEN];
 static int user0 = 1;                                  /* slot 0 holds the user's IR (0: emptied) */
+static int rate[2] = {44100, 44100};                   /* the rate each was made at */
 int px_ir_user(int slot, char *name12, float *h)       /* slots 0 and 1 hold test IRs, the others are empty */
 {
     if (slot < 0 || slot > 1 || (slot == 0 && !user0)) return 0;
     strcpy(name12, slot ? "TEST B" : "TEST A");
     if (h) memcpy(h, IRS[slot], sizeof IRS[slot]);
-    return 1;
+    return rate[slot];
+}
+/* a cabinet-like response at rate fs: damped resonances from 120 Hz to 6 kHz, with a smooth 0.3 ms onset so that it has
+ * no content near either rate's Nyquist (what each rate's sampling folds back would differ) */
+static void cab(float *h, double fs)
+{
+    static const double F[] = {120, 450, 1800, 3500, 6000}, A[] = {1.0, 0.8, 0.6, 0.5, 0.3}, T[] = {0.003, 0.002, 0.0015, 0.001, 0.0007};
+    for (int i = 0; i < PX_IR_LEN; i++) {
+        const double t = i / fs, on = t < 0.0003 ? 0.5 - 0.5 * cos(M_PI * t / 0.0003) : 1.0;
+        double v = 0;
+        for (int k = 0; k < 5; k++) v += A[k] * exp(-t / T[k]) * sin(2 * M_PI * F[k] * t + k);
+        h[i] = (float)(v * on);
+    }
+}
+/* the largest difference (dB) between two IRs' responses at the third-octave centres 100 Hz .. 10 kHz, each response
+ * taken relative to its own mean level there (the engine sets the level) */
+static double resp_diff(const float *a, double fa, const float *b, double fb)
+{
+    double da[21], db[21], ma = 0, mb = 0, worst = 0;
+    for (int c = 0; c < 21; c++) {
+        const double f = 1000.0 * pow(2.0, (c - 10) / 3.0);
+        double ar = 0, ai = 0, br = 0, bi = 0;
+        for (int n = 0; n < PX_IR_LEN; n++) {
+            ar += a[n] * cos(2 * M_PI * f * n / fa); ai -= a[n] * sin(2 * M_PI * f * n / fa);
+            br += b[n] * cos(2 * M_PI * f * n / fb); bi -= b[n] * sin(2 * M_PI * f * n / fb);
+        }
+        da[c] = 10 * log10(ar * ar + ai * ai); db[c] = 10 * log10(br * br + bi * bi);
+        ma += da[c] / 21; mb += db[c] / 21;
+    }
+    for (int c = 0; c < 21; c++) { const double d = fabs((da[c] - ma) - (db[c] - mb)); if (d > worst) worst = d; }
+    return worst;
 }
 static int fails;
 #define CHECK(c, ...) do { if (!(c)) { fails++; printf("FAIL: " __VA_ARGS__); printf("\n"); } } while (0)
@@ -116,6 +148,38 @@ int main(void)
         CHECK(!px_ir_name(1 + 4, nm), "the other slots have no factory IR");
         user0 = 1;
         CHECK(px_ntypes(PX_B_CAB) == 1 && px_ntypes(PX_B_AMP) == 1, "the CAB block plays USER IR only, the AMP block NAM only");
+        /* the other rate: a slot made at 44.1 kHz on an engine at 48 kHz and the other way, against the same cabinet made at
+         * the engine's rate; the factory IR at 48 kHz is its own table, not resampled */
+        static float c44[PX_IR_LEN], c48[PX_IR_LEN], rs[PX_IR_LEN];
+        cab(c44, 44100.0); cab(c48, 48000.0);
+        ir_resample(c44, 44100.0f, rs, 48000.0f);
+        double d = resp_diff(rs, 48000.0, c48, 48000.0);
+        printf("44.1 kHz IR resampled to 48 kHz: within %.3f dB of it made at 48 kHz (100 Hz .. 10 kHz)\n", d);
+        CHECK(d < 0.1, "44.1 -> 48 kHz: %.3f dB", d);
+        ir_resample(c48, 48000.0f, rs, 44100.0f);
+        d = resp_diff(rs, 44100.0, c44, 44100.0);
+        printf("48 kHz IR resampled to 44.1 kHz: within %.3f dB of it made at 44.1 kHz (100 Hz .. 10 kHz)\n", d);
+        CHECK(d < 0.1, "48 -> 44.1 kHz: %.3f dB", d);
+        memcpy(IRS[1], c44, sizeof c44);
+        q = p; q.p[PX_B_CAB][0] = (uint8_t)px_ir_knob(1);
+        px_engine_init(&E, 48000.0f); px_engine_set(&E, &q);
+        ir_resample(c44, 44100.0f, rs, 48000.0f); ir_load_h(rs, &ir_X[IR_P / 2][0]); memcpy(want, ir_H, sizeof want);
+        px_engine_init(&E, 48000.0f); px_engine_set(&E, &q);
+        CHECK(ir_ok && !memcmp(ir_H, want, sizeof want), "at 48 kHz, a slot made at 44.1 kHz is resampled");
+        rate[1] = 48000; memcpy(IRS[1], c48, sizeof c48);
+        ir_load_h(c48, &ir_X[IR_P / 2][0]); memcpy(want, ir_H, sizeof want);
+        px_engine_init(&E, 48000.0f); px_engine_set(&E, &q);
+        CHECK(ir_ok && !memcmp(ir_H, want, sizeof want), "at 48 kHz, a slot made at 48 kHz is not");
+        ir_resample(c48, 48000.0f, rs, 44100.0f); ir_load_h(rs, &ir_X[IR_P / 2][0]); memcpy(want, ir_H, sizeof want);
+        px_engine_init(&E, 44100.0f); px_engine_set(&E, &q);
+        CHECK(ir_ok && !memcmp(ir_H, want, sizeof want), "at 44.1 kHz, a slot made at 48 kHz is resampled");
+        rate[1] = 44100;
+        for (int i = 0; i < PX_IR_LEN; i++) fh[i] = (float)PXI_FS48[i] * (PXI_FSCALE48 / 32767.0f);
+        ir_load_h(fh, &ir_X[IR_P / 2][0]); memcpy(want, ir_H, sizeof want);
+        q.p[PX_B_CAB][0] = (uint8_t)px_ir_knob(0); user0 = 0;
+        px_engine_init(&E, 48000.0f); px_engine_set(&E, &q);
+        CHECK(ir_ok && !memcmp(ir_H, want, sizeof want), "at 48 kHz, IR1 empty: the factory IR's 48 kHz table plays");
+        user0 = 1;
         printf("CAB types: %d, \"%s\" with %d settings: %s, %s, %s\n", px_ntypes(PX_B_CAB), px_type_name(PX_B_CAB, PX_CAB_IR),
                px_nparams(PX_B_CAB, PX_CAB_IR), px_param_name(PX_B_CAB, PX_CAB_IR, 0), px_param_name(PX_B_CAB, PX_CAB_IR, 1),
                px_param_name(PX_B_CAB, PX_CAB_IR, 2));

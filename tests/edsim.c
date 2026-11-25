@@ -33,7 +33,8 @@
  *   in   "#ble failed S C"       FAILED, step S, code C
  *   in   "#ble safe"             the boot after a watchdog reset in the first 6 s: safe mode, Bluetooth off
  *   in   "#ble c1fault"          a fault of the second core, with its registers
- *   edsim [FLASH.bin] [--persist FILE] [--dump OUT.bin]
+ *   edsim [FLASH.bin] [--persist FILE] [--dump OUT.bin] [--rate HZ]
+ * --rate HZ: the pedal's sample rate (44100, the default, or 48000), as INFO gives it;
  * --persist FILE: the flash lives in FILE (read at the start when it exists, written again after each change);
  * --dump OUT.bin: the flash is written to OUT.bin when stdin closes.
  * Built with -DOP_BLE_TEST=1 it also answers DIAG, as the Bluetooth test image does, from the real text code (ble_diag.h):
@@ -57,6 +58,8 @@
 static uint8_t nor[0x100000];
 #define FL_IN(off, n, lo, hi) ((uint32_t)(off) >= (lo) && (uint32_t)(off) <= (hi) && (uint32_t)(n) <= (hi) - (uint32_t)(off))
 #define OP_VERSION "1.0b1"                     /* as Gamut 1.0b1 (firmware/apps/gamut/openpocket.c) */
+static uint32_t a_sr = 44100u;                  /* the sound's rate (firmware/base/audio.h), which INFO gives: --rate */
+#define A_SR a_sr
 static const char *FELUCCA_ID_PTR = "PocketX_950";
 
 static uint32_t ms_now(void)
@@ -422,6 +425,7 @@ int main(int argc, char **argv)
     memset(nor, 0xFF, sizeof nor);
     for (int i = 1; i < argc; i++) {
         if (!strcmp(argv[i], "--dump") && i + 1 < argc) dump = argv[++i];
+        else if (!strcmp(argv[i], "--rate") && i + 1 < argc) a_sr = (uint32_t)atoi(argv[++i]);
         else if (!strcmp(argv[i], "--persist") && i + 1 < argc) persist = argv[++i];
         else { FILE *f = fopen(argv[i], "rb"); if (f) { if (fread(nor, 1, sizeof nor, f)) { } fclose(f); } }
     }

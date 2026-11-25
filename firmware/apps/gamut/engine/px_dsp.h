@@ -56,8 +56,8 @@ enum { PX_AMP_NAM, PX_AMP_COUNT };
 #define PX_NAM_N      (PX_NAM_NFACT + PX_NAM_NUSER)
 /* The CAB block's one type (v38; the only one since store format 6): USER IR, a cabinet impulse response loaded from the
  * editor. PX_IR_N slots (the firmware keeps them in flash: firmware/apps/gamut/px_irs.h); the engine plays the first
- * PX_IR_LEN taps (23 ms at 44.1 kHz) by uniform partitioned FFT convolution, 64-frame partitions. Its settings: IR (the
- * slot), LOW CUT, HIGH CUT. */
+ * PX_IR_LEN taps (23 ms at 44.1 kHz, 21 ms at 48 kHz) by uniform partitioned FFT convolution, 64-frame partitions; an IR
+ * made at the other rate is resampled when it is loaded. Its settings: IR (the slot), LOW CUT, HIGH CUT. */
 enum { PX_CAB_IR, PX_CAB_COUNT };
 #define PX_IR_N   8
 #define PX_IR_LEN 1024
@@ -130,8 +130,8 @@ int         px_nam_name(int model, char *buf12);         /* 1 = the model exists
  * 1 = slot holds a model; its name (11 chars max), its level trim (dB); w (1871 floats) only if w != 0 */
 int         px_nam_user(int slot, char *name12, float *level_db, float *w);
 void        px_preset_factory(px_preset_t *p, int idx);
-/* v38: the IR slots, provided by the firmware (px_dsp.c has a weak, empty stand-in): 1 = the slot holds an IR; its name
- * (11 chars max); h (PX_IR_LEN floats at 44.1 kHz) only if h != 0 */
+/* v38: the IR slots, provided by the firmware (px_dsp.c has a weak, empty stand-in): the rate the slot's IR was made at
+ * (Hz: 44100 or 48000), 0 = the slot is empty; its name (11 chars max); h (PX_IR_LEN floats at that rate) only if h != 0 */
 int         px_ir_user(int slot, char *name12, float *h);
 int         px_ir_slot(int v);                          /* the IR knob (0..100) -> slot 0..PX_IR_N-1 */
 int         px_ir_knob(int slot);

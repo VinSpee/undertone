@@ -25,7 +25,7 @@ const BANKS = {
     async prepare(text, name) {
       if (!namDi) namDi = readDi(await (await fetch("nam_di.wav")).arrayBuffer());
       await sleep(20);                            // (the level takes a moment of the processor: let the progress show first)
-      return namEntry(text, name, namDi);
+      return namEntry(text, name, namDi, app.ed.rate);
     },
     read: (f) => f.text(),
     upload: (slot, bytes, progress) => app.ed.namUpload(slot, bytes, progress),
@@ -35,11 +35,11 @@ const BANKS = {
   ir: {
     title: "Cabinet IRs", sub: "WAV", input: "irfile", accept: (f) => /\.wav$/i.test(f.name), files: ".wav files", one: ".wav file",
     named: (f) => /\.wav$/i.test(f.name),
-    lead: "The CAB block's USER IR type plays these impulse responses. The pedal keeps the first 23 ms of a WAV file, at 44.1 kHz, and sets its level like the other cabinets.",
+    lead: "The CAB block's USER IR type plays these impulse responses. The pedal keeps the first 1024 samples of a WAV file at its own sample rate (23 ms at 44.1 kHz, 21 ms at 48 kHz), and sets its level like the other cabinets.",
     slots: () => app.irs,
     async prepare(buf, name) {
-      const nm = irName(name), ir = prepareIr(parseWav(buf));
-      return { name: nm, bytes: packIr(nm, ir.h), detail: ir.note };
+      const nm = irName(name), ir = prepareIr(parseWav(buf), app.ed.rate);
+      return { name: nm, bytes: packIr(nm, ir.h, ir.rate), detail: ir.note };
     },
     read: (f) => f.arrayBuffer(),
     upload: (slot, bytes, progress) => app.ed.irUpload(slot, bytes, progress),

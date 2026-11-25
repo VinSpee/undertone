@@ -45,7 +45,7 @@ static int midi_saved;
 static void midi_persist(void) { midi_saved++; }
 /* user slots for the list settings (F7): NAM slot 3 and IR slots 2 and 5 hold something, the others are empty */
 int px_nam_user(int slot, char *name12, float *level_db, float *w) { (void)w; if (slot != 2) return 0; strcpy(name12, "MY AMP"); if (level_db) *level_db = 0; return 1; }
-int px_ir_user(int slot, char *name12, float *h) { (void)h; if (slot != 1 && slot != 4) return 0; strcpy(name12, slot == 1 ? "V30 4X12" : "GREENBACK"); return 1; }
+int px_ir_user(int slot, char *name12, float *h) { (void)h; if (slot != 1 && slot != 4) return 0; strcpy(name12, slot == 1 ? "V30 4X12" : "GREENBACK"); return 44100; }
 #include "ui_text.h"
 /* every text a page draws must fit its box and have its glyphs: ft_box cuts what does not fit and draws a space for a
  * character its font lacks, both without a word */

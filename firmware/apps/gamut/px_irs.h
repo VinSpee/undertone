@@ -2,13 +2,16 @@
  * OpenPocket — the user cabinet IRs in flash (v38).
  *
  * 8 slots of 4 KiB at 0xF4000..0xFC000 (above the preset store; the update loader leaves this range alone:
- * loader/ldr_core.c LDR_IR_LO/HI). A slot: a 64-byte header, then PX_IR_LEN (1024) 16-bit samples at 44.1 kHz:
- *   magic "OPIR", version 1, 1024, name (11 chars + 0), scale (float: the samples' full scale), CRC16 of the samples.
- * The web editor (docs/pxir.js) reads the user's WAV file, resamples it to 44.1 kHz, keeps its first 1024 samples (a
- * short fade at the end), and sends it in pieces (IR_WRITE) into the staging buffer, which is the NAM models' (one
- * upload at a time); IR_COMMIT checks it (header, CRC) and writes the slot with the audio held, as for a NAM model.
+ * loader/ldr_core.c LDR_IR_LO/HI). A slot: a 64-byte header, then PX_IR_LEN (1024) 16-bit samples:
+ *   magic "OPIR", version (1: the samples at 44.1 kHz, 2: at 48 kHz), 1024, name (11 chars + 0), scale (float: the
+ *   samples' full scale), CRC16 of the samples.
+ * The web editor (docs/pxir.js) reads the user's WAV file, resamples it to the pedal's rate (the version), keeps its
+ * first 1024 samples (a short fade at the end), and sends it in pieces (IR_WRITE) into the staging buffer, which is the
+ * NAM models' (one upload at a time); IR_COMMIT checks it (header, CRC) and writes the slot with the audio held, as for
+ * a NAM model.
  * The names are read once at boot into RAM; the samples are read from the flash only when a preset picks the IR (a full
- * change: px_engine_set with the audio held, as the NAM weights). The engine sets the level (px_dsp.c ir_load_h).
+ * change: px_engine_set with the audio held, as the NAM weights). The engine sets the level (px_dsp.c ir_load_h) and
+ * resamples an IR made at its other rate: a slot written at 44.1 kHz keeps its sound at 48 kHz, unwritten.
  */
 #pragma once
 
@@ -31,29 +34,31 @@ typedef char ir_hdr_check[sizeof(ir_hdr_t) == IR_HDR ? 1 : -1];
 typedef char ir_stage_check[sizeof nm_stage >= IR_BYTES ? 1 : -1];
 #define ir_stage nm_stage                        /* (the NAM models' staging buffer: one upload at a time) */
 
-static struct { uint8_t ok; char name[12]; } ir_cache[PX_IR_N];
+static struct { uint8_t ver; char name[12]; } ir_cache[PX_IR_N];   /* ver: the slot's version, 0 = empty */
 static uint32_t ir_gen;
 
 static int ir_hdr_ok(const ir_hdr_t *h)
 {
-    return h->magic == IR_MAGIC && h->ver == 1u && h->n == PX_IR_LEN && h->scale > 0.0f && h->scale < 1000.0f;
+    return h->magic == IR_MAGIC && (h->ver == 1u || h->ver == 2u) && h->n == PX_IR_LEN && h->scale > 0.0f && h->scale < 1000.0f;
 }
+#define IR_RATE(ver) ((ver) == 2u ? 48000 : 44100)   /* the rate a slot's samples are at, by its version */
 /* boot (and after each write, inside its audio hold, as nm_scan): the headers into ir_cache */
 static void ir_scan(void)
 {
     ir_hdr_t h;
     for (uint32_t s = 0; s < PX_IR_N; s++) {
-        ir_cache[s].ok = 0;
+        ir_cache[s].ver = 0;
         if (ota_fread(IR_BASE + s * IR_SLOT, &h, sizeof h) || !ir_hdr_ok(&h)) continue;
-        ir_cache[s].ok = 1;
+        ir_cache[s].ver = (uint8_t)h.ver;
         nm_name_clean(ir_cache[s].name, h.name);
     }
     ir_gen++;
 }
-/* the engine's hook (firmware/apps/gamut/engine/px_dsp.h): the name from the cache, the samples from the flash (checked) */
+/* the engine's hook (firmware/apps/gamut/engine/px_dsp.h): the name from the cache, the samples from the flash (checked);
+ * the rate they are at */
 int px_ir_user(int slot, char *name12, float *h)
 {
-    if (slot < 0 || slot >= PX_IR_N || !ir_cache[slot].ok) return 0;
+    if (slot < 0 || slot >= PX_IR_N || !ir_cache[slot].ver) return 0;
     memcpy(name12, ir_cache[slot].name, 12);
     if (h) {
         ir_hdr_t hd;
@@ -64,8 +69,9 @@ int px_ir_user(int slot, char *name12, float *h)
         if ((uint16_t)ota_crc16((const uint8_t *)s, PX_IR_LEN * 2u, 0) != hd.crc) return 0;
         const float k = hd.scale / 32767.0f;
         for (int i = 0; i < PX_IR_LEN; i++) h[i] = (float)s[i] * k;   /* (h[i] is past s[i / 2]: read before written) */
+        return IR_RATE(hd.ver);
     }
-    return 1;
+    return IR_RATE(ir_cache[slot].ver);
 }
 /* IR_WRITE: piece idx of the staging buffer; 0 = ok */
 static int ir_write_piece(uint32_t idx, const uint8_t *packed, uint32_t n)

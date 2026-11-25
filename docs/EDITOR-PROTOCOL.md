@@ -1,9 +1,10 @@
 # Gamut editor protocol (SysEx over USB-MIDI)
 
 The web editor (`docs/editor.html`, `docs/pxedit.js`) talks to the pedal with this protocol. The firmware side is
-`firmware/apps/gamut/px_editor.h`; `tests/edsim.c` runs the same code on a PC for the tests. Protocol version 5 (Gamut 1.0b1, formerly v43: slot IR1's factory IR, `IR_LIST` present 2; version 4: v42, `USB_AUDIO`, command 28; version 3: v38, the cabinet IR commands 24..27; version 2: v37, without them;
-version 1: v32 to v36, also without the NAM commands 19..22). A later version only adds commands: an editor written for
-an earlier one works unchanged.
+`firmware/apps/gamut/px_editor.h`; `tests/edsim.c` runs the same code on a PC for the tests. Protocol version 6 (`INFO`
+ends with the pedal's sample rate; IR slots also at 48 kHz, version 2; version 5: Gamut 1.0b1, formerly v43: slot IR1's factory IR, `IR_LIST` present 2; version 4: v42, `USB_AUDIO`, command 28; version 3: v38, the cabinet IR commands 24..27; version 2: v37, without them;
+version 1: v32 to v36, also without the NAM commands 19..22). A later version only adds commands, or fields at the end of
+a reply: an editor written for an earlier one works unchanged.
 
 ## Framing
 
@@ -26,7 +27,7 @@ The 12 blocks, by index: 0 GATE, 1 COMP, 2 PITCH, 3 SFX, 4 DRIVE, 5 AMP, 6 CAB, 
 
 | cmd | Request args | Reply args |
 | --- | --- | --- |
-| 1 INFO | — | protocol (1), firmware string ("1.0b1"), identity string ("PocketX_950"), blocks (12), parameters per block (5), slots (52), name length (13). An image that is not Gamut answers protocol 0 and other fields: see "Another product" below |
+| 1 INFO | — | protocol (1), firmware string ("1.0b1"), identity string ("PocketX_950"), blocks (12), parameters per block (5), slots (52), name length (13); since protocol 6 the sample rate the pedal's sound runs at, in Hz, as 3 bytes (bits 0-6, 7-13, 14-20: 44100 or 48000). An image that is not Gamut answers protocol 0 and other fields: see "Another product" below |
 | 2 CAT_BLOCK | block | block, label string ("AMP"), name string ("AMPLIFIER"), types, color |
 | 3 CAT_TYPE | block, type | block, type, name string, parameters n, text mask (bit k: parameter k has its own value texts, see `TEXTS`), then n parameter-name strings |
 | 4 TEXTS | block, type, k | block, type, k, then 101 strings: the text the pedal shows for values 0..100 ("" = the number itself) |
@@ -129,7 +130,7 @@ The Bluetooth test image has no USB audio: it answers `0, 1, 0, 0`.
 ### Cabinet IRs (protocol 3)
 
 The CAB block's type `USER IR` (type 7 up to store format 6, type 0 and the only one since) plays a cabinet impulse response (`firmware/apps/gamut/engine/px_dsp.c`: uniform partitioned FFT
-convolution, 1024 taps at 44.1 kHz). Its settings: IR (the slot, 0..7), LOW CUT (20..400 Hz), HIGH CUT (20 kHz..2 kHz).
+convolution, 1024 taps at the pedal's rate). Its settings: IR (the slot, 0..7), LOW CUT (20..400 Hz), HIGH CUT (20 kHz..2 kHz).
 The 8 slots are in the pedal's flash (`firmware/apps/gamut/px_irs.h`, 0xF4000..0xFC000, kept by firmware updates). `TEXTS` of the
 `USER IR` type, parameter 0 gives each value's IR name. Slot IR1 has a factory IR in the firmware image
 (`firmware/apps/gamut/engine/px_ir_factory.h`, "BEST IR IN THE WORLD" by ML Sound Lab, named `ML BEST IR`): the pedal plays it while the
@@ -141,7 +142,7 @@ An IR is 2112 bytes, little endian: a 64-byte header, then 1024 samples as int16
 | Offset | Size | Field |
 | --- | --- | --- |
 | 0 | 4 | magic `0x5249504F` ("OPIR") |
-| 4 | 2 | version, 1 |
+| 4 | 2 | version: 1, the samples at 44.1 kHz; 2 (protocol 6), at 48 kHz |
 | 6 | 2 | samples, 1024 |
 | 8 | 12 | name, ASCII, 0-ended (11 characters at most) |
 | 20 | 4 | scale, float32 (the samples' full scale; above 0) |
@@ -149,9 +150,11 @@ An IR is 2112 bytes, little endian: a 64-byte header, then 1024 samples as int16
 | 26 | 38 | 0 |
 
 The editor (`docs/pxir.js`) reads a WAV file (PCM 8 / 16 / 24 / 32-bit or float, any rate, mono or stereo: the first
-channel), drops the silence before its onset, resamples it to 44.1 kHz (windowed sinc), keeps 1024 samples (a 64-sample
-fade at the end when the response is longer), then sends 19 `IR_WRITE` and one `IR_COMMIT`. The pedal sets the level
-itself: every IR is scaled to the same energy.
+channel), drops the silence before its onset, resamples it to the pedal's rate (`INFO`; 44.1 kHz before protocol 6) with
+a windowed sinc, keeps 1024 samples (a 64-sample fade at the end when the response is longer), then sends 19 `IR_WRITE`
+and one `IR_COMMIT`. The pedal sets the level itself: every IR is scaled to the same energy. Since protocol 6 the pedal
+takes both versions and resamples an IR made at its other rate when a preset loads it, so a slot keeps its sound when the
+pedal's rate changes.
 
 Writing the flash (`SLOT_PUT` with bit 1, `COMMIT`, `SAVE`, `NAM_COMMIT`, `NAM_ERASE`, `IR_COMMIT`, `IR_ERASE`) mutes
 the sound for a moment, as

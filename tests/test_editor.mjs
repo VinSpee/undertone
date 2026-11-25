@@ -56,7 +56,8 @@ let s = sim(["--dump", flash1]);
 await s.ready;
 let ed = new Editor(s.access);
 const info = await ed.connect();
-ok(info && info.proto === 5 && info.version === "1.0b1" && info.identity === "PocketX_950", `INFO: ${info && `${info.version} ${info.identity}`}`);
+ok(info && info.proto === 6 && info.version === "1.0b1" && info.identity === "PocketX_950", `INFO: ${info && `${info.version} ${info.identity}`}`);
+ok(info && info.rate === 44100 && ed.rate === 44100, `INFO: the pedal's sample rate (${info && info.rate} Hz)`);
 ok(info && info.nblk === 12 && info.npar === 5 && info.nslot === 52 && info.nameMax === 13, "INFO: 12 blocks, 5 parameters, 52 slots, names of 13");
 const t0 = Date.now();
 const cat = await ed.catalog();
@@ -208,7 +209,10 @@ list = await ed.list();
   const file = JSON.stringify({ architecture: "SlimmableContainer", config: { submodels: [{ max_value: 0.5, model: a2 }] } });
   let m = null, why = "";
   try { m = parseNam(file, "My Test Amp.nam"); } catch (e) { why = e.message; }
-  ok(m && m.name === "MY TEST AMP" && m.weights.length === NW && /semitones/.test(m.note), `NAM: an A2 file's A2-Lite part is read (${m ? m.name : why})`);
+  ok(m && m.name === "MY TEST AMP" && m.weights.length === NW && /semitones lower/.test(m.note), `NAM: an A2 file's A2-Lite part is read (${m ? m.name : why})`);
+  ok(parseNam(file, "x.nam", 48000).note === "", "NAM: a 48 kHz capture on a pedal at 48 kHz: no note");
+  const at44 = parseNam(file.replace('"sample_rate":48000', '"sample_rate":44100'), "x.nam", 48000).note;
+  ok(/^made at 44\.1 kHz: the pedal plays it at 48 kHz \(its tone sits 1\.5 semitones higher\)$/.test(at44), `NAM: a 44.1 kHz capture on a pedal at 48 kHz (${at44})`);
   let a1why = "";
   try { parseNam(JSON.stringify({ architecture: "WaveNet", config: { layers: [{ channels: 16 }] }, weights: [1] }), "a1.nam"); } catch (e) { a1why = e.message; }
   ok(/not an A2 model/.test(a1why), "NAM: an A1 capture is refused, with the reason");
@@ -298,6 +302,21 @@ list = await ed.list();
   const dmg = packIr(name, ir.h); dmg[64 + 300] ^= 0x21;
   ok(await ed.irUpload(3, dmg) === 1 && !(await ed.irList())[3].used, "IR: a damaged IR is refused, the slot stays empty");
   ok(await ed.irErase(2) === 0 && !(await ed.irList())[2].used, "IR: the slot is cleared again");
+  let wrong = ""; try { packIr(name, ir.h, 96000); } catch (e) { wrong = e.message; }
+  ok(/44\.1 or 48 kHz/.test(wrong), "IR: no slot at another rate");
+  // a pedal at 48 kHz (protocol 6): the IR made at 48 kHz, in a version 2 slot
+  const s48 = sim(["--rate", "48000"]);
+  await s48.ready;
+  const e48 = new Editor(s48.access), i48 = await e48.connect();
+  ok(i48 && i48.proto === 6 && e48.rate === 48000, `INFO: a pedal at 48 kHz (${i48 && i48.rate} Hz)`);
+  const ir48 = prepareIr(w48, e48.rate), p48 = packIr(name, ir48.h, ir48.rate);
+  ok(ir48.rate === 48000 && !/resampled/.test(ir48.note) && /21 ms/.test(ir48.note) && p48[4] === 2,
+     `IR: a 48 kHz WAV for a pedal at 48 kHz is not resampled, version 2 (${ir48.note})`);
+  ok(await e48.irUpload(5, p48) === 0 && (await e48.irList())[5].name === name, "IR: a version 2 slot is written and listed");
+  const f48 = prepareIr(parseWav(wav(44100, 32, 1, resp(44100, 10).map((f) => [f[0]]))), e48.rate);
+  ok(/resampled from 44\.1 kHz/.test(f48.note), `IR: a 44.1 kHz WAV for a pedal at 48 kHz is resampled (${f48.note})`);
+  ok(await ed.irUpload(4, p48) === 0 && (await ed.irList())[4].used && await ed.irErase(4) === 0, "IR: a pedal at 44.1 kHz takes a version 2 slot too (it resamples it)");
+  await s48.end();
 }
 ok(list[20].name === "STAGED A" && list[21].name === "STAGED B" && list[20].saved && !list[4].saved, "power cycle: the saved slots are still there");
 st = await ed.state();

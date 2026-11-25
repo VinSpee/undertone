@@ -20,7 +20,7 @@
 #define ED_H0 0x7Du
 #define ED_H1 0x4Fu
 #define ED_H2 0x50u
-#define ED_PROTO 5u                             /* 5: v43, IR1's factory IR (IR_LIST 2); 4: v42, USB_AUDIO; 3: v38, cabinet IRs (IR_LIST .. IR_ERASE); 2: v37, NAM models */
+#define ED_PROTO 6u                             /* 6: INFO's sample rate, IR slots at 48 kHz (version 2); 5: v43, IR1's factory IR (IR_LIST 2); 4: v42, USB_AUDIO; 3: v38, cabinet IRs (IR_LIST .. IR_ERASE); 2: v37, NAM models */
 #define ED_NAME_MAX 13u
 #define ED_P_SIZE 110u
 #if OP_UADEV
@@ -122,6 +122,7 @@ static void ed_handle(const uint8_t *a, uint32_t n)   /* a: the args, after the 
     case ED_INFO:
         ed_b(ED_PROTO); ed_str(OP_VERSION, 15); ed_str(FELUCCA_ID_PTR, 27);
         ed_b(PX_NBLK); ed_b(PX_NPAR); ed_b(ST_NSLOT); ed_b(ED_NAME_MAX);
+        { uint32_t r = A_SR; ed_b(r); ed_b(r >> 7); ed_b(r >> 14); }   /* (protocol 6) the sound's rate, Hz */
         break;
     case ED_CAT_BLOCK:
         if (n < 1u || a[0] >= PX_NBLK) return;
@@ -279,7 +280,7 @@ static void ed_handle(const uint8_t *a, uint32_t n)   /* a: the args, after the 
     case ED_IR_LIST: {                                 /* v38: the cabinet IR slots: 1 the user's IR, 2 IR1's factory one */
         char nm[12];
         ed_b(PX_IR_N);
-        for (k = 0; k < PX_IR_N; k++) { rc = px_ir_name((int)k, nm); ed_b(ir_cache[k].ok ? 1u : rc ? 2u : 0u); ed_str(nm, 11); }
+        for (k = 0; k < PX_IR_N; k++) { rc = px_ir_name((int)k, nm); ed_b(ir_cache[k].ver ? 1u : rc ? 2u : 0u); ed_str(nm, 11); }
         break;
     }
     case ED_IR_WRITE:                                  /* piece (2 bytes, 7 bits each), then 128 packed bytes */
