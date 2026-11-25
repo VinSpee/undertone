@@ -7,6 +7,8 @@ name: release
 #     with the pins, assemble the release's files (.github/scripts/assets.mjs) and create a draft release with them and
 #     the tag version's changelog entries. It refuses a tag that has a release already.
 #   - Run by hand: the same build, its files kept as the workflow artifact release-files, and no release.
+# The `program` job builds undertone as one program (undertone-cli/) for each system; `files` adds what it built to the
+# release's files and to the site's list. A system whose build did not finish is left out, and the release goes on.
 # A tag created with the workflow's token starts no workflow, so the main branch's run builds the files itself.
 on:
   push:
@@ -44,9 +46,67 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
 
-  files:
+  program:
     needs: version
-    # after the version job created or found a tag without a release, for a pushed tag, and when run by hand
+    # whenever `files` runs
+    if: >-
+      !cancelled() && needs.version.result != 'failure' &&
+      (needs.version.outputs.tag != '' || startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch')
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # one program for both kinds of Mac (lipo), and one per other system; the names are the release's assets
+          - { os: macos-15, targets: "aarch64-apple-darwin x86_64-apple-darwin", asset: undertone-macos }
+          - { os: ubuntu-24.04, targets: x86_64-unknown-linux-musl, asset: undertone-linux-x86_64 }
+          - { os: ubuntu-24.04-arm, targets: aarch64-unknown-linux-musl, asset: undertone-linux-arm64 }
+          - { os: windows-2025, targets: x86_64-pc-windows-msvc, asset: undertone-windows-x86_64.exe }
+    name: program (${{ matrix.asset }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    defaults:
+      run:
+        shell: bash
+        working-directory: undertone-cli
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262   # v4.4.0
+        with:
+          ref: ${{ needs.version.outputs.tag || github.ref }}
+          persist-credentials: false
+      - name: The toolchain of rust-toolchain.toml and the targets
+        run: rustup toolchain install && for t in ${{ matrix.targets }}; do rustup target add "$t"; done
+      - name: Linux, a static program with musl (as in the undertone-cli workflow)
+        if: contains(matrix.targets, 'linux-musl')
+        run: |
+          sudo apt-get update -q && sudo apt-get install -y -q musl-tools
+          kh="$RUNNER_TEMP/kernel-headers" && mkdir -p "$kh"
+          ln -s /usr/include/linux /usr/include/asm-generic "/usr/include/$(uname -m)-linux-gnu/asm" "$kh/"
+          t=$(echo '${{ matrix.targets }}' | tr - _)
+          { echo "CC_$t=musl-gcc"; echo "CFLAGS_$t=-idirafter $kh"; echo "LIBUDEV_NO_PKG_CONFIG=1"; } >> "$GITHUB_ENV"
+      - name: The release program, tested where the runner can run it
+        run: |
+          for t in ${{ matrix.targets }}; do cargo build --locked --release --target "$t"; done
+          out="$RUNNER_TEMP/program/${{ matrix.asset }}" && mkdir -p "$RUNNER_TEMP/program" && bins=()
+          # one file per target: on Windows the shell also finds undertone.exe as undertone, so .exe is looked at first
+          for t in ${{ matrix.targets }}; do
+            for f in "target/$t/release/undertone.exe" "target/$t/release/undertone"; do
+              if [ -f "$f" ]; then bins+=("$f"); break; fi
+            done
+          done
+          if [ "${#bins[@]}" -gt 1 ]; then lipo -create -output "$out" "${bins[@]}"; else cp "${bins[0]}" "$out"; fi
+          "$out" version
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02   # v4.6.2
+        with:
+          name: program-${{ matrix.asset }}
+          path: ${{ runner.temp }}/program/
+          if-no-files-found: error
+
+  files:
+    needs: [version, program]
+    # after the version job created or found a tag without a release, for a pushed tag, and when run by hand; also when
+    # the program of a system could not be built
     if: >-
       !cancelled() && needs.version.result != 'failure' &&
       (needs.version.outputs.tag != '' || startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch')
@@ -67,8 +127,17 @@ jobs:
           (cd docs/rescue && sha256sum -c ../../rescue/kit.sha256)
       - name: Compare the image and packages of each pinned firmware on disk with its release pin (STARTER has none)
         run: for pin in firmware/apps/*/release.sha256; do sha256sum -c "$pin"; done
+      - name: The programs the `program` job built (none when it built none)
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093   # v4.3.0
+        continue-on-error: true
+        with:
+          pattern: program-*
+          merge-multiple: true
+          path: ${{ runner.temp }}/program
       - name: Assemble the release's files, with site.sha256 and SHA256SUMS
-        run: node .github/scripts/assets.mjs "$RUNNER_TEMP/release-files"
+        run: |
+          mkdir -p "$RUNNER_TEMP/program"
+          node .github/scripts/assets.mjs "$RUNNER_TEMP/release-files" --program "$RUNNER_TEMP/program"
       - name: Check the files against their own SHA256SUMS
         run: cd "$RUNNER_TEMP/release-files" && sha256sum -c SHA256SUMS
       - name: The release notes this commit's changelogs give
