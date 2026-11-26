@@ -47,13 +47,14 @@ Pocket X: PC0/PC1 = encoder, PC7 = screen, PA0–PA3 = buttons, PA10 = MASTER kn
 |---|---|---|
 | MCLK | PA4 | output (mclk_output = 1) |
 | SCLK / LRCK | PA5 / PA6 | JieLi is master |
-| **Guitar input** | **PA8 = DAT1** | I2S ALNK0, 24-bit stereo (16-bit up to v25), 44.1 kHz (external ADC); guitar on the **left** channel only |
+| **Guitar input** | **PA8 = DAT1** | I2S ALNK0, 24-bit stereo (16-bit up to v25), 44.1 kHz, Gamut 48 kHz since its 48 kHz release (external ADC); guitar on the **left** channel only |
 | **Output** | **PA7 = DAT0** | I2S ALNK0 → external DAC "344C" → SGM8905 amp → OUT + headphones |
 | **Amp enable** | **PA9 = 3.3 V** | GPIO output high (the click = the amp powering up) |
 
 The internal DAC (DACL) is NOT used by the Pocket X. Guitar → output passthrough: clean.
 Driver setup: `iis_open` IIS_PORTA, channel_in = BIT(1), channel_out = BIT(0), master, MCLK, then
-`iis_set_sample_rate(44100)`, `iis_channel_on`, ALNK0 IRQ = 11 → `iis_irq_handler(0)`.
+`iis_set_sample_rate(44100)`, `iis_channel_on`, ALNK0 IRQ = 11 → `iis_irq_handler(0)`. (Gamut at 48 kHz: the same call,
+then bit 8 of `0x10014`, `firmware/base/rate.h`.)
 
 ## v15: the DSP engine in the audio path
 - `firmware/base/audio.h` and `px_audio.h`: I2S (in PA8 / out PA7), amp PA9, engine `firmware/apps/gamut/engine/px_dsp.c` in the ALNK0 IRQ (blocks of 128

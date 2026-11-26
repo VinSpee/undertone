@@ -103,9 +103,10 @@ Each slot shows how many saved presets use it, and removing a capture names them
 The 16 user slots are in the pedal's flash at 0xC0000..0xE0000, outside the area a firmware update rewrites: your
 models stay through updates.
 
-Most captures are made at 48 kHz. The pedal runs at 44.1 kHz, so such a model plays with its tone about 1.5
-semitones lower (the amp's filters sit 8% lower). The editor says so when it loads one. The factory models are 48 kHz
-captures too.
+Most captures are made at 48 kHz, the rate the pedal runs at, so they play as they were captured; the factory models
+are 48 kHz captures too. A capture made at 44.1 kHz plays with its tone about 1.5 semitones higher (the amp's filters
+sit 9% higher), and the editor says so when it loads one. A pedal whose 48 kHz clock was refused runs at 44.1 kHz
+([RATE48-TEST.md](RATE48-TEST.md)): there the 48 kHz captures sit 1.5 semitones lower.
 
 ## How it runs
 
@@ -137,7 +138,7 @@ captures too.
   layer until CPU1 has posted the one before (one counter). With a NAM amp in two-core mode the audio block runs on
   CPU0 (in the audio interrupt) as a pipeline (`dsp_pipe` in `firmware/apps/gamut/px_audio.h`, `px_engine_part`): CPU1 first runs
   the effects after the amp on the previous block's network output while CPU0 runs the effects before the amp on this
-  block, then both run the network (one block, 2.9 ms, more latency; `firmware/apps/gamut/tests/engine/pipe_test.c` checks it gives the
+  block, then both run the network (one block, 2.7 ms, more latency; `firmware/apps/gamut/tests/engine/pipe_test.c` checks it gives the
   one-core output one block later). In the pipeline the roles are the other way round (`pxn_serve`): CPU1 comes to
   the network after its effects, so it takes the last frames of each 32-frame block and waits per layer for CPU0,
   which takes the first frames and never waits, and up to 12 more of them in the first blocks by how late CPU1 came

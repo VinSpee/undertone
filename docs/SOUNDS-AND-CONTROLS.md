@@ -27,7 +27,7 @@ other eight hold their cabinet: play them with the CAB block off. Details: [NAM.
 
 ### CAB — USER IR (v38; IR, LOW CUT, HIGH CUT)
 The CAB block plays a cabinet impulse response loaded from the web editor (8 slots, a `.wav` file each): its first
-1024 samples at the pedal's rate (23 ms at 44.1 kHz), convolved exactly (partitioned FFT), every IR at the same energy. IR picks the slot
+1024 samples at the pedal's rate (21 ms at 48 kHz), convolved exactly (partitioned FFT), every IR at the same energy. IR picks the slot
 (its name shows on the PLAY page), LOW CUT 20..400 Hz, HIGH CUT 20 kHz..2 kHz. An empty slot (any but IR1, which
 always plays something) passes the sound as it is: the amp alone, as a DI.
 

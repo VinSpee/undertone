@@ -230,6 +230,9 @@ window (`SFCENC_CON`, `fm1_flash.h`, `ble_vm.h`), not through `0x02xxxxxx`.
   trained at 44.1 kHz play at their pitch). **The stock firmware sets the same 44.1 kHz bits** (read: it clears bits 8..11
   of `0x10014` and writes [7:5] = 4, [4:2] = 0), and passes **fs = 44 118** to every effect and model set-up: it takes
   its real rate to be 44 118 Hz (0.04 % above 44 100; **guess**: the audio clock is not an exact 44.1 kHz multiple).
+  Gamut's release asks for 48 kHz: it calls the driver's 44.1 kHz case and then sets bit 8 of `0x10014` itself, so it
+  never writes `0x119A4`, and only when bit 25 there is already set (`firmware/base/rate.h`, docs/RATE48-TEST.md). The
+  48 kHz family's real rate on the pedal is **not measured yet**.
 - **Callback order (read in the driver):** `iis_irq_handler` walks the channels in order and calls the output
   callback for channel 0 (TX), then the input callback for channel 1 (RX), in the same interrupt.
 - **24-bit mode (read in the stock firmware, measured):** set each channel's 24-bit bit (`CON1 |= 1 << (4*ch + 2)`, the
@@ -239,8 +242,8 @@ window (`SFCENC_CON`, `fm1_flash.h`, `ble_vm.h`), not through `0x02xxxxxx`.
 - **[pedal]** I2S on IIS_PORTA: MCLK PA4, SCLK PA5, LRCK PA6, output DAT0 PA7 → external DAC → SGM8905 amp (enable PA9
   high), input DAT1 PA8 from an external ADC, guitar on the **left channel only** (the right one carries steady noise
   14 dB above the left floor; mixing L+R added it). The chip's internal DAC is not used on the pedal.
-- **Blocks:** Gamut uses 128 frames at 44.1 kHz (2.9 ms). The stock firmware uses **64-frame blocks** at the same
-  rate (its coefficient code also has a 48 kHz fast path, which misled an earlier reading).
+- **Blocks:** Gamut uses 128 frames at 48 kHz (2.7 ms; 2.9 ms at 44.1 kHz). The stock firmware uses **64-frame
+  blocks** at 44.1 kHz (its coefficient code also has a 48 kHz fast path, which misled an earlier reading).
 - **Real-time accounting:** time every block with TIMER4 against its budget (`frames / fs x 24 MHz`). Count blocks over
   100 % (`LATE`), blocks that reach the output clipper (`CLIP`), the peak load, and a per-effect time (v38 profiler). The
   stock firmware keeps the sum and the **maximum over 512 blocks** of its interrupt's time: the maximum is what predicts

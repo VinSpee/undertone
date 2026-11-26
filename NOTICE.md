@@ -37,7 +37,7 @@ The NAM A2 architecture is from Neural Amp Modeler (Steven Atkinson, MIT); `firm
 The factory cabinet IR (`firmware/apps/gamut/engine/px_ir_factory.h`, slot IR1's IR while the user has loaded none there) is
 ["BEST IR IN THE WORLD"](https://www.facebook.com/watch/?ref=embed_video&v=1053603041469100), a free cabinet impulse response by ML Sound Lab. It is redistributed
 with the creator's permission, as stated by the project's owner; no other licence is given for it, and the GPL of this
-repository does not cover it. The firmware holds it converted (44.1 kHz, its first 1024 samples, `tools/mk_ir_factory.mjs`);
+repository does not cover it. The firmware holds it converted (at 44.1 and at 48 kHz, its first 1024 samples, `tools/mk_ir_factory.mjs`);
 the original WAV file is not in this repository or in the firmware.
 
 Contributors: **Vince Speelman ([VinSpee](https://github.com/VinSpee))**: the simulator's WebAssembly engine and its sound, the
