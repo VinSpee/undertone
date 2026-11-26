@@ -23,7 +23,7 @@ fi
 # the stack guard: on, except in the Bluetooth test image (its task stacks are outside the guard window); app.ld refuses the
 # link if the guard is on and those stacks are outside. OP_GUARD_STACK=1 with OP_BLE=1 is how that check is shown to fire.
 GUARD_STACK=1; [ -n "$OP_BLE" ] && GUARD_STACK="${OP_GUARD_STACK:-0}"
-if [ -n "$OP_BLE" ]; then O="$HERE/build-ble"; APP="$HERE/openpocket-ble.bin"; PKG="$HERE/../build/ble"; BLEDEF="-DOP_BLE_TEST=1 -I$HERE/apps/gamut/ble"
+if [ -n "$OP_BLE" ]; then O="$HERE/build-ble"; APP="$HERE/openpocket-ble.bin"; PKG="$HERE/../build/ble"; BLEDEF="-DOP_BLE_TEST=1 -DOP_RATE48=0 -I$HERE/apps/gamut/ble"
 else O="$HERE/../build/apps/gamut/obj"; APP="$HERE/../build/apps/gamut/openpocket.bin"; PKG="$HERE/../build/apps/gamut"; BLEDEF=""; fi
 # An app on the base firmware (docs/BASE-FIRMWARE.md): OP_APP=<name> builds firmware/apps/<name>/ in place of OpenPocket,
 #   into build/apps/<name>/ (the image, its packages). Its app.sh names its C file (APP_MAIN), its engine's when that is
@@ -56,17 +56,16 @@ fi
 # A test channel build (OP_CHANNEL=midi-test): its own version number (OP_TEST_VERSION, default 37) and a boot-screen tag, its
 # own files (build/apps/gamut/openpocket-midi-test.bin, build/apps/gamut/midi-test/). The release files are not touched.
 CHAN="${OP_CHANNEL:-}"
-ENGINE48=0                                            # 1: the engine built for 48 kHz (px_dsp.h PX_FS) and its memory
+# 1: Gamut at 48 kHz (openpocket.c OP_RATE48, base/rate.h): the engine built for it (px_dsp.h PX_FS) and its memory
+# (memory.ld). The rate-diag test build and the Bluetooth test image stay at 44.1 kHz (the image's RAM is full)
+ENGINE48=1; [ -n "$OP_BLE$OP_APP" ] && ENGINE48=0
 : > "$O/channel.h"
 if [ -n "$CHAN" ]; then
   case "$CHAN" in *[!a-z0-9-]*|"") echo "ERROR: OP_CHANNEL must be lowercase letters, digits and -"; exit 1;; esac
   TESTVER="${OP_TEST_VERSION:-42}"
   printf '#define OP_VERSION_NUM "%s"\n#define OP_VERSION_TEXT "v%s"\n#define OP_TAG " %s"\n' "$TESTVER" "$TESTVER" "$(echo "$CHAN" | tr a-z- A-Z' ')" > "$O/channel.h"
-  # the I2S clock's two test builds (firmware/base/rate.h, docs/RATE48-TEST.md): the report at 44.1 kHz, then 48 kHz guarded
-  case "$CHAN" in
-    rate-diag) echo '#define OP_RATE_DIAG 1' >> "$O/channel.h";;
-    rate48) echo '#define OP_RATE48 1' >> "$O/channel.h"; ENGINE48=1;;
-  esac
+  # the I2S clock's report at 44.1 kHz (firmware/base/rate.h, docs/RATE48-TEST.md), writing no clock register
+  [ "$CHAN" = rate-diag ] && { printf '#define OP_RATE48 0\n#define OP_RATE_DIAG 1\n' >> "$O/channel.h"; ENGINE48=0; }
   APP="$HERE/../build/apps/gamut/openpocket-$CHAN.bin"; PKG="$HERE/../build/apps/gamut/$CHAN"
   rm -f "$APP"
   echo "Test channel: $CHAN, version $TESTVER -> $APP, $PKG"
@@ -74,7 +73,7 @@ fi
 # AC791N hardware FPU (same options as the JieLi SDK for the WL82); the engine's rate is the I2S's (base/audio.h A_SR)
 FP="-mcpu=r3 -mfprev1"
 DSPDEF="-DPX_OVERSAMPLE=4"
-[ "$ENGINE48" = 1 ] && DSPDEF="$DSPDEF -DPX_FS=48000"
+[ "$ENGINE48" = 1 ] || DSPDEF="$DSPDEF -DPX_FS=44100"
 [ -n "$OP_BLE" ] && DSPDEF="$DSPDEF -DPXN_LEAN=1 -DPXN_HOT_RAM=1 -DPX_RUNS=0"   # v40.2: the test image's flash is full (firmware/apps/gamut/engine/px_nam.c; v40.4: px_dsp.c PX_RUNS)
 [ -n "$OP_APP" ] && DSPDEF="$APP_DEFS"
 INC="-I$HERE -I$HERE/inc -I$HERE/apps/gamut/engine"

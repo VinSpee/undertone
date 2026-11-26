@@ -47,13 +47,14 @@ Pocket X: PC0/PC1 = encoder, PC7 = screen, PA0–PA3 = buttons, PA10 = MASTER kn
 |---|---|---|
 | MCLK | PA4 | output (mclk_output = 1) |
 | SCLK / LRCK | PA5 / PA6 | JieLi is master |
-| **Guitar input** | **PA8 = DAT1** | I2S ALNK0, 24-bit stereo (16-bit up to v25), 44.1 kHz (external ADC); guitar on the **left** channel only |
+| **Guitar input** | **PA8 = DAT1** | I2S ALNK0, 24-bit stereo (16-bit up to v25), 44.1 kHz, Gamut 48 kHz since its 48 kHz release (external ADC); guitar on the **left** channel only |
 | **Output** | **PA7 = DAT0** | I2S ALNK0 → external DAC "344C" → SGM8905 amp → OUT + headphones |
 | **Amp enable** | **PA9 = 3.3 V** | GPIO output high (the click = the amp powering up) |
 
 The internal DAC (DACL) is NOT used by the Pocket X. Guitar → output passthrough: clean.
 Driver setup: `iis_open` IIS_PORTA, channel_in = BIT(1), channel_out = BIT(0), master, MCLK, then
-`iis_set_sample_rate(44100)`, `iis_channel_on`, ALNK0 IRQ = 11 → `iis_irq_handler(0)`.
+`iis_set_sample_rate(44100)`, `iis_channel_on`, ALNK0 IRQ = 11 → `iis_irq_handler(0)`. (Gamut at 48 kHz: the same call,
+then bit 8 of `0x10014`, `firmware/base/rate.h`.)
 
 ## v15: the DSP engine in the audio path
 - `firmware/base/audio.h` and `px_audio.h`: I2S (in PA8 / out PA7), amp PA9, engine `firmware/apps/gamut/engine/px_dsp.c` in the ALNK0 IRQ (blocks of 128
@@ -356,9 +357,9 @@ Driver setup: `iis_open` IIS_PORTA, channel_in = BIT(1), channel_out = BIT(0), m
 - A chain of NAM, USER IR, drives and the other effects sounds as before, bit for bit: 240 runs of random presets
   (types, settings, order, blocks on or off, knob changes while playing, the two-core pipeline and the wet lanes)
   hash the same with this engine and the one before, the types renumbered (AMP NAM 8 -> 0, CAB USER IR 7 -> 0).
-- Saved presets (store format 1..5) are converted at boot by `px_preset_v34_set()`: a built-in amp becomes the
-  factory NAM model trained on the same amp's capture (TWIN, AC15, JCM900, JCM2000, MARK IV, SHIRLEY, PRO MOD, 5150),
-  its GAIN, BASS, MID and TREBLE kept; a built-in cabinet becomes USER IR in slot IR1 with its cuts off, on or off as
+- Saved presets (store format 1..5) are converted at boot by `px_preset_v34_set()`: a built-in amp becomes a
+  factory NAM model (then the one trained on the same amp's capture; since the TONE3000 captures, the nearest in
+  character without a cabinet of its own), its GAIN, BASS, MID and TREBLE kept; a built-in cabinet becomes USER IR in slot IR1 with its cuts off, on or off as
   it was; DI on becomes the CAB block off and the preset LEVEL +9 steps (2.7 dB, DI's +2.6 dB trim). The editor does
   the same with a preset file that names a removed type (`docs/pxedit.js`, `V34_AMPS`, `V34_CABS`).
 - The factory presets' CAB block is USER IR in IR1. While the slot is empty it passes the sound, which measured 0 to

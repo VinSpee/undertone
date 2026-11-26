@@ -5,7 +5,7 @@
 //   node tools/op.mjs doctor | build | ble | test [--built] | package | clean | shell | image | serve [editor|build|ble]
 //   node tools/op.mjs all        every product of this tree and the tests: OpenPocket (package, with the release pin), each
 //                                app of firmware/apps, then the host tests with the packages just built (test --built)
-//   node tools/op.mjs package-test [midi-test | rate-diag | rate48]   a test channel's packages -> build/apps/gamut/CHANNEL/
+//   node tools/op.mjs package-test [midi-test | rate-diag]   a test channel's packages -> build/apps/gamut/CHANNEL/
 //   node tools/op.mjs app NAME   another app on the base firmware (firmware/apps/NAME, docs/BASE-FIRMWARE.md) -> build/apps/NAME/
 //   node tools/op.mjs serve app NAME   the installer with that app offered too (install.html?app=NAME), when it is not on the
 //                                      catalog of firmware/catalog.json, whose firmwares the page offers by itself
@@ -33,7 +33,7 @@ const python = process.platform === "win32" ? ["py", "-3"] : ["python3"];
 const OUT = "build/apps/gamut";   // OpenPocket's outputs, as each app's are in build/apps/<name>
 const OUTS = `${OUT}/openpocket.bin ${OUT}/*.fwsc ${OUT}/*-v23.bin ${OUT}/manifest.json`;   // (*-v23.bin: tools/pxpkg.py)
 // the test channels (firmware/build.sh OP_CHANNEL), never a release: the MIDI test, the I2S clock's report and its 48 kHz build
-const CHANNELS = ["midi-test", "rate-diag", "rate48"];
+const CHANNELS = ["midi-test", "rate-diag"];
 const TEST = (c) => `${OUT}/openpocket-${c}.bin ${OUT}/${c}/*.fwsc ${OUT}/${c}/*-v23.bin ${OUT}/${c}/manifest.json`;
 
 function fail(message) {

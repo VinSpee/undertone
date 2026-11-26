@@ -175,8 +175,8 @@ In order of value for the sound, with what it would cost.
    with a different job word. This would let the pedal load user IRs (and the `CAB` files of the stock firmware).
 6. **Sample rate 48 kHz?** Most NAM captures, TONE3000 included, are made at 48 kHz; at 44.1 kHz they play about 1.5
    semitones low (`docs/NAM.md`). (Corrected in section 8.1: the stock firmware runs at 44.1 kHz too.) Moving Gamut to 48 kHz fixes the
-   user models without resampling, but costs 9% more CPU per second of audio and needs the factory models retrained
-   (`tools/train_a2.py`). Worth it only together with items 1 to 3, which free more than that.
+   user models without resampling, but costs 9% more CPU per second of audio. Done in Gamut 1.0b1: the release runs at
+   48 kHz and its factory amps are 48 kHz captures ([RATE48-TEST.md](RATE48-TEST.md)).
 7. **Smaller blocks later.** 64 frames at 48 kHz (1.33 ms) against our 128 at 44.1 (2.9 ms): lower latency, but the
    per-block overheads (the network's layer-by-layer pipeline, the two-core hand-off) count twice as often. Not before
    the NAM pipeline has been reworked for it.

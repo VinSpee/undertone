@@ -34,7 +34,7 @@ Apple silicon and other ARM machines Docker emulates it (Rosetta or QEMU); you c
 | `make serve-app APP=starter` | `make serve` with that alternative firmware offered too (`install.html?app=starter`); builds it first if missing. A firmware of `firmware/catalog.json` is offered without it |
 | `make serve-ble` | `make serve` with `build/ble/` as the installer's package folder, to flash the test image |
 | `make package` | `build`, then `build/apps/gamut/SHA256SUMS`, then the release pin: it fails when Gamut's image or packages are not the bytes of `firmware/apps/gamut/release.sha256` ([BASE-FIRMWARE.md](BASE-FIRMWARE.md), section 9) |
-| `make package-test` | the MIDI test channel (`OP_CHANNEL=midi-test`): `build/apps/gamut/openpocket-midi-test.bin` and `build/apps/gamut/midi-test/` (v37 MIDI TEST, its own `manifest.json`), with `build/apps/gamut/SHA256SUMS-midi-test`. The release files are not touched and the installer offers it only with `?channel=midi-test`. `ARGS=rate-diag` or `ARGS=rate48` builds the I2S clock's test builds the same way, into `build/apps/gamut/rate-diag/` and `rate48/` ([RATE48-TEST.md](RATE48-TEST.md)) |
+| `make package-test` | the MIDI test channel (`OP_CHANNEL=midi-test`): `build/apps/gamut/openpocket-midi-test.bin` and `build/apps/gamut/midi-test/` (v37 MIDI TEST, its own `manifest.json`), with `build/apps/gamut/SHA256SUMS-midi-test`. The release files are not touched and the installer offers it only with `?channel=midi-test`. `ARGS=rate-diag` builds the I2S clock's report at 44.1 kHz the same way, into `build/apps/gamut/rate-diag/` ([RATE48-TEST.md](RATE48-TEST.md)) |
 | `make test` | `tests/run_tests.sh` (engine, preset store, screen, simulated pedal, installer, editor; the browser page tests also run when Playwright is installed) |
 | `make clean` | remove every build output (on the host; needs neither Docker nor the image) |
 | `make shell` | a shell in the container (as your user) |
@@ -54,10 +54,10 @@ Apple silicon and other ARM machines Docker emulates it (Rosetta or QEMU); you c
 Python 3. Its NAM check (`firmware/apps/gamut/tests/test_nam.py`, the fixed-point network against the float reference) also needs NumPy
 and is skipped without it (the container has none).
 
-The NAM factory models (`firmware/apps/gamut/engine/px_nam_factory.h`, v37) are generated, not hand-written: `tools/train_a2.py` trains each
-A2-Lite network from a capture (needs `pip install jax optax numpy scipy`, about 15 minutes a model on two CPU cores),
-then `tools/mk_nam_factory.py LIST.txt DIR docs/nam_di.wav` writes the header with each model's level trim
-([NAM.md](NAM.md)).
+The NAM factory models (`firmware/apps/gamut/engine/px_nam_factory.h`) are generated, not hand-written:
+`tools/mk_nam_factory.py CAPTURES docs/nam_di.wav` takes the A2-Lite part of each TONE3000 capture listed in
+`tools/nam_factory.txt` (a folder of the capture files, each checked by SHA-256) and writes the header with each
+model's level trim ([NAM.md](NAM.md)). `tools/train_a2.py` is for training your own model and is not used for the factory set.
 
 Slot IR1's factory IR (`firmware/apps/gamut/engine/px_ir_factory.h`) is generated too: `node tools/mk_ir_factory.mjs "ML Sound Lab's BEST IR
 IN THE WORLD.wav"` converts ML Sound Lab's WAV file as the editor converts any IR (`docs/pxir.js`) and writes the header.

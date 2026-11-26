@@ -21,7 +21,12 @@
 # (firmware/apps/gamut/ui_boot.h), the MIDI page's USB PORT row, the pedal the USB MIDI host of a footswitch by cable
 # (firmware/px_usb.h, firmware/px_usbhost.h), and cabinet IR slots at 44.1 or 48 kHz (version 2), an IR made at the
 # engine's other rate resampled when it is loaded, slot IR1's factory IR at both rates, and the editor protocol 6's
-# sample rate in INFO (firmware/apps/gamut/px_irs.h, engine/px_dsp.c, px_editor.h).
+# sample rate in INFO (firmware/apps/gamut/px_irs.h, engine/px_dsp.c, px_editor.h), and its factory amps the A2-Lite
+# parts of twelve NAM captures from TONE3000 with the factory presets rebuilt round them (engine/px_nam_factory.h,
+# tools/nam_factory.txt, engine/px_dsp.c), and its sound at 48 kHz: the engine built for it, the I2S moved there through
+# base/rate.h's guard without a write to PLL0, else 44.1 kHz without USB audio, USB audio at 48 kHz, and DIAG's clock
+# line (firmware/apps/gamut/openpocket.c OP_RATE48, firmware/build.sh, firmware/px_uaconf.h). The pin before it, at
+# 44.1 kHz, is in the changelog: the changeset gamut-48k-default.
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 NAME="$1"
 case "$NAME" in ""|*[!a-z0-9-]*) echo "usage: tests/release_pin.sh NAME [SUMS]   (NAME: a folder of firmware/apps)"; exit 2;; esac

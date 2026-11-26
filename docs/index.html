@@ -211,10 +211,10 @@ h2{font-size:clamp(40px,6.4vw,104px);line-height:.88;font-weight:900;font-variat
   <div class="wrap">
     <h2 id="h-numbers">Gamut in five numbers</h2>
     <ul class="nums">
-      <li><b>12</b><span>neural amp models trained for the pedal's own chip</span></li>
+      <li><b>12</b><span>neural amp models, players' captures from TONE3000, run on the pedal's own chip</span></li>
       <li><b>16</b><span>slots for your own NAM captures, from TONE3000 or anywhere else, and 8 for cabinet IRs</span></li>
       <li><b>52</b><span>preset slots you can overwrite, kept across updates</span></li>
-      <li><b>2.9<small>ms</small></b><span>a block of audio: 128 samples at 44.1 kHz</span></li>
+      <li><b>2.7<small>ms</small></b><span>a block of audio: 128 samples at 48 kHz</span></li>
       <li><b>−23</b><span>LUFS for every preset, measured on real guitar, so switching keeps the volume</span></li>
     </ul>
   </div>
@@ -222,23 +222,23 @@ h2{font-size:clamp(40px,6.4vw,104px);line-height:.88;font-weight:900;font-variat
 
 <section class="dark" id="amps" aria-labelledby="h-amps">
   <div class="wrap">
-    <h2 id="h-amps">Twelve amps, trained to match real captures</h2>
-    <p class="lede">Each model is a small network trained for the pedal to sound like a community capture of a real amp. The bar is its ESR, how far it is from that capture on 20 seconds of guitar it never heard: a shorter bar is a closer match, and left of the lime mark, at 0.05, the two are hard to tell apart.</p>
+    <h2 id="h-amps">Twelve amps, captured by players on TONE3000</h2>
+    <p class="lede">Each model is a Neural Amp Modeler capture of a real amp, published on TONE3000 and shipped with its author's permission. The pedal plays the capture's small A2-Lite network as it is. The bar is its ESR, how far that network is from the capture's full one on guitar: a shorter bar is a closer match, and left of the lime mark, at 0.05, the two are hard to tell apart.</p>
     <div class="amps" style="--ink:var(--bone)">
-      <div class="amp"><b>Fender Twin Reverb</b><span>Normal, bright. Capture by Tim R</span><span class="esr"><i aria-hidden="true" style="--e:5%"></i>ESR 0.006</span></div>
-      <div class="amp"><b>Vox AC15 Top Boost</b><span>Capture by Phillipe P</span><span class="esr"><i aria-hidden="true" style="--e:36%"></i>ESR 0.045</span></div>
-      <div class="amp"><b>Magnatone Super 59 Mk II</b><span>Capture by Tim R</span><span class="esr"><i aria-hidden="true" style="--e:7%"></i>ESR 0.009</span></div>
-      <div class="amp"><b>Friedman Dirty Shirley Mini</b><span>Clean. Capture by Sascha S</span><span class="esr"><i aria-hidden="true" style="--e:11%"></i>ESR 0.014</span></div>
-      <div class="amp"><b>Marshall JCM900</b><span>50 W Dual Verb. Capture by Tim R</span><span class="esr"><i aria-hidden="true" style="--e:9%"></i>ESR 0.011</span></div>
-      <div class="amp"><b>Friedman Dirty Shirley Mini</b><span>Crunch. Capture by Sascha S</span><span class="esr"><i aria-hidden="true" style="--e:26%"></i>ESR 0.033</span></div>
-      <div class="amp"><b>Marshall JCM2000 DSL</b><span>Lead. Capture by Tim R</span><span class="esr"><i aria-hidden="true" style="--e:34%"></i>ESR 0.042</span></div>
-      <div class="amp"><b>Mesa Boogie Mark IV</b><span>Capture by Roman A</span><span class="esr"><i aria-hidden="true" style="--e:33%"></i>ESR 0.041</span></div>
-      <div class="amp"><b>Marshall JVM</b><span>OD2. Capture by Phillipe P</span><span class="esr"><i aria-hidden="true" style="--e:45%"></i>ESR 0.056</span></div>
-      <div class="amp"><b>Splawn Pro Mod</b><span>Second gear. Capture by Tim R</span><span class="esr"><i aria-hidden="true" style="--e:42%"></i>ESR 0.052</span></div>
-      <div class="amp"><b>Peavey 5150</b><span>Block letter, boosted. Capture by Helga B</span><span class="esr"><i aria-hidden="true" style="--e:52%"></i>ESR 0.064</span></div>
-      <div class="amp"><b>Peavey 6505+</b><span>Red channel, MXR drive. Capture by Helga B</span><span class="esr"><i aria-hidden="true" style="--e:100%"></i>ESR 0.124</span></div>
+      <div class="amp"><b>Fender Super Reverb 1965</b><span>Edge of breakup, with its cabinet. Capture by amalgamaudio</span><span class="esr"><i aria-hidden="true" style="--e:27%"></i>ESR 0.034</span></div>
+      <div class="amp"><b>Vox AC30 Top Boost 1964</b><span>Edge of breakup, with its cabinet. Capture by amalgamaudio</span><span class="esr"><i aria-hidden="true" style="--e:23%"></i>ESR 0.028</span></div>
+      <div class="amp"><b>Bogner TM 26</b><span>Green channel, clean. Capture by torcuato</span><span class="esr"><i aria-hidden="true" style="--e:4%"></i>ESR 0.005</span></div>
+      <div class="amp"><b>Bogner TM 26</b><span>Plexi Red, low gain. Capture by torcuato</span><span class="esr"><i aria-hidden="true" style="--e:4%"></i>ESR 0.005</span></div>
+      <div class="amp"><b>Bogner TM 26</b><span>Blue, crunch. Capture by torcuato</span><span class="esr"><i aria-hidden="true" style="--e:11%"></i>ESR 0.014</span></div>
+      <div class="amp"><b>Bogner TM 26</b><span>Red, lead. Capture by torcuato</span><span class="esr"><i aria-hidden="true" style="--e:17%"></i>ESR 0.021</span></div>
+      <div class="amp"><b>Soldano SLO-100</b><span>Lead, with its cabinet. Capture by subterraneans</span><span class="esr"><i aria-hidden="true" style="--e:6%"></i>ESR 0.008</span></div>
+      <div class="amp"><b>Soldano SLO-100</b><span>Rhythm, with its cabinet. Capture by subterraneans</span><span class="esr"><i aria-hidden="true" style="--e:29%"></i>ESR 0.036</span></div>
+      <div class="amp"><b>Orange Dual Terror</b><span>Unboosted, mids, with its cabinet. Capture by chuggernautxanner</span><span class="esr"><i aria-hidden="true" style="--e:9%"></i>ESR 0.011</span></div>
+      <div class="amp"><b>Orange Dual Terror</b><span>Boosted, scooped, with its cabinet. Capture by chuggernautxanner</span><span class="esr"><i aria-hidden="true" style="--e:18%"></i>ESR 0.022</span></div>
+      <div class="amp"><b>Orange Jim Root Terror</b><span>Gain 5. Capture by CavLabs</span><span class="esr"><i aria-hidden="true" style="--e:36%"></i>ESR 0.045</span></div>
+      <div class="amp"><b>Orange Jim Root Terror</b><span>Gain 7. Capture by CavLabs</span><span class="esr"><i aria-hidden="true" style="--e:35%"></i>ESR 0.043</span></div>
     </div>
-    <p class="amps-note" style="color:var(--soft)">High-gain captures are harder for a network this small, so their ESR is higher. The models are amps without a cabinet: the CAB block after them plays a cabinet IR you load. Load a capture of your own into one of the 16 slots from the editor. The list and the training: <a href="https://github.com/VinSpee/undertone/blob/main/docs/NAM.md">NAM.md</a>. Product names belong to their owners and only describe the sound.</p>
+    <p class="amps-note" style="color:var(--soft)">Eight captures hold their cabinet: play them with the CAB block off. The four TM 26 and Jim Root Terror amps want a cabinet IR in the CAB block. Load a capture of your own into one of the 16 slots from the editor. The list and the credits: <a href="https://github.com/VinSpee/undertone/blob/main/docs/NAM.md">NAM.md</a>. Product names belong to their owners and only describe the sound.</p>
     <div class="drives">
       <h3>Four drives</h3><span>TS9</span><span>Klon</span><span>MXR M77</span><span>HM-2</span>
     </div>

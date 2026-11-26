@@ -81,8 +81,8 @@ r = op(["package-test"]);
 assert.equal(r.calls.filter((c) => c[0] === "run").length, 1, "package-test is one container run");
 assert.match(r.calls.at(-1).at(-1), /^OP_CHANNEL=midi-test sh firmware\/build\.sh && .*sha256sum build\/apps\/gamut\/openpocket-midi-test\.bin build\/apps\/gamut\/midi-test\/\*\.fwsc/);
 assert.doesNotMatch(r.calls.at(-1).at(-1), /docs\/firmware\/manifest\.json/, "the test package never touches the default manifest");
-r = op(["package-test", "rate48"]);
-assert.match(r.calls.at(-1).at(-1), /^OP_CHANNEL=rate48 sh firmware\/build\.sh && sha256sum build\/apps\/gamut\/openpocket-rate48\.bin build\/apps\/gamut\/rate48\/\*\.fwsc build\/apps\/gamut\/rate48\/\*-v23\.bin build\/apps\/gamut\/rate48\/manifest\.json > build\/apps\/gamut\/SHA256SUMS-rate48/, "package-test CHANNEL: that channel's files");
+r = op(["package-test", "rate-diag"]);
+assert.match(r.calls.at(-1).at(-1), /^OP_CHANNEL=rate-diag sh firmware\/build\.sh && sha256sum build\/apps\/gamut\/openpocket-rate-diag\.bin build\/apps\/gamut\/rate-diag\/\*\.fwsc build\/apps\/gamut\/rate-diag\/\*-v23\.bin build\/apps\/gamut\/rate-diag\/manifest\.json > build\/apps\/gamut\/SHA256SUMS-rate-diag/, "package-test CHANNEL: that channel's files");
 r = op(["package-test", "release"]);
 assert.ok(r.status !== 0 && r.calls.filter((c) => c[0] === "run").length === 0, "package-test refuses a channel it does not know, before any build");
 

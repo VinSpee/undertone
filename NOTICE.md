@@ -16,16 +16,28 @@ Undertone is GPL-3.0-only (`LICENSE`), except the parts below, which keep their 
 | `firmware/apps/gamut/ui_fonts.h` (bitmaps generated from B612 and B612 Mono by `tools/mkfont.py gamut`: a modified version of the fonts, which declare no reserved font name) | [B612](https://github.com/polarsys/b612), The B612 Project Authors | SIL OFL 1.1 (`LICENSES/OFL-1.1-B612.txt`) |
 | `assets/loops/*.wav` (guitar loops for the simulator), and `docs/assets/audio/riff.m4a` (`riff.wav` as AAC, which the site's home page plays) | cut from [Guitar-TECHS](https://zenodo.org/records/14963133), credits in `assets/loops/ATTRIBUTION.md` | CC BY 4.0 |
 
-The factory NAM models (`firmware/apps/gamut/engine/px_nam_factory.h`, v37) are A2-Lite networks trained for Gamut from Neural Amp
-Modeler community captures ([pelennor2170/NAM_models](https://github.com/pelennor2170/NAM_models), GPL v3; authors
-in `docs/NAM.md`) played with DI guitar from [Alec-Wright/Automated-GuitarAmpModelling](https://github.com/Alec-Wright/Automated-GuitarAmpModelling)
-(GPL v3). The NAM A2 architecture is from Neural Amp Modeler (Steven Atkinson, MIT); `firmware/apps/gamut/engine/px_nam.c`,
-`tools/nam_a2.py` and `tools/train_a2.py` are written for Gamut from the published architecture.
+The factory NAM models (`firmware/apps/gamut/engine/px_nam_factory.h`) are the A2-Lite networks of Neural Amp Modeler
+A2 captures published on [TONE3000](https://www.tone3000.com/). Each author gave the project's owner written permission
+to ship them inside this GPL-3.0 firmware; on TONE3000 they carry its T3K licence, which allows redistribution only
+with that permission. `tools/nam_factory.txt` lists each capture file and its SHA-256.
+
+| Models | Author on TONE3000 | Captures |
+| --- | --- | --- |
+| SUPER 65, AC30 TB | Amalgam Captures (amalgamaudio) | [Fender Super Reverb 1965 edge of breakup A2](https://www.tone3000.com/tones/fender-super-reverb-1965-edge-of-breakup-a2-88775); [1964 Vox AC30 Top Boost Super Twin edge of breakup A2](https://www.tone3000.com/tones/1964-vox-ac30-top-boost-super-twin-edge-of-breakup-a2-82521) |
+| TM26 GRN, TM26 PLX, TM26 BLU, TM26 RED | torcuato | [Bogner TM 26 no cab](https://www.tone3000.com/tones/bogner-tm-26-no-cab-109210) |
+| SLO 100, SLO RIFF | subterraneans | [Soldano SLO-100](https://www.tone3000.com/tones/soldano-slo-100-106781) |
+| DT MIDS, DT SCOOP | chuggernautxanner | [Orange Dual Terror full rig, boosted and unboosted](https://www.tone3000.com/tones/orange-dual-terror-full-rig-boostedunboosted-81959) |
+| JRT GN 5, JRT GN 7 | CavLabs (caveraolabs) | [CavLabs #4 Orange Jim Root Terror](https://www.tone3000.com/tones/cavlabs-4-orange-jim-root-terror-24650) |
+
+The NAM A2 architecture is from Neural Amp Modeler (Steven Atkinson, MIT); `firmware/apps/gamut/engine/px_nam.c`,
+`tools/nam_a2.py` and `tools/train_a2.py` are written for Gamut from the published architecture. The level reference
+`docs/nam_di.wav` is DI guitar from [Alec-Wright/Automated-GuitarAmpModelling](https://github.com/Alec-Wright/Automated-GuitarAmpModelling)
+(GPL v3).
 
 The factory cabinet IR (`firmware/apps/gamut/engine/px_ir_factory.h`, slot IR1's IR while the user has loaded none there) is
 ["BEST IR IN THE WORLD"](https://www.facebook.com/watch/?ref=embed_video&v=1053603041469100), a free cabinet impulse response by ML Sound Lab. It is redistributed
 with the creator's permission, as stated by the project's owner; no other licence is given for it, and the GPL of this
-repository does not cover it. The firmware holds it converted (44.1 kHz, its first 1024 samples, `tools/mk_ir_factory.mjs`);
+repository does not cover it. The firmware holds it converted (at 44.1 and at 48 kHz, its first 1024 samples, `tools/mk_ir_factory.mjs`);
 the original WAV file is not in this repository or in the firmware.
 
 Contributors: **Vince Speelman ([VinSpee](https://github.com/VinSpee))**: the simulator's WebAssembly engine and its sound, the

@@ -8,7 +8,11 @@
 #define FELUCCA_UAC_48K 0                       /* 44.1 kHz only, as the stock firmware: no resampler in the interrupt */
 #define FELUCCA_UAC_OUT 1                       /* the computer's playback to the pedal's output (EP4 OUT, adaptive) */
 #define FELUCCA_UAC_MIDI_LAST 1                 /* audio control, the streams, then MIDI: the order macOS 13-15 need (usb.c) */
-#define UAC_RATE A_SR                           /* the streams' rate, the only one offered: the I2S's (base/audio.h) */
+#if OP_RATE48                                   /* the streams' rate, the only one offered: the I2S's (base/audio.h); a */
+#define UAC_RATE 48000u                         /* build that picks it at the start (base/rate.h) offers 48 kHz's, and */
+#else                                           /* the streams only while the I2S runs there (px_usb.h, px_uaudio.h) */
+#define UAC_RATE A_SR
+#endif
 /* UAC_I2S_HZ100: the I2S clock's real rate at it (Hz x 100), which usb.c's packet pattern (UA_N1, UA_FRAC) and playback
  * step (UO_STEP) follow. UA_UP: frames the record ring's band sits higher than the 44.1 kHz times give (below) */
 #if UAC_RATE == 44100u
@@ -16,8 +20,8 @@
 #define UA_UP 0u
 #elif UAC_RATE == 48000u
 /* NOMINAL, NOT MEASURED: the 48 kHz family's real rate is not known yet. 48,019.21 Hz (usb.c UA_FRAC48) is only an
- * estimate from the old resampler mode's rate (44,117.647 Hz x 160 / 147), not a measurement. Measure the clock with the
- * rate48 build (docs/RATE48-TEST.md: `node tools/op.mjs log`) and set it here. The margins hold for 500 ppm either way
+ * estimate from the old resampler mode's rate (44,117.647 Hz x 160 / 147), not a measurement. Measure the clock with
+ * Gamut's DIAG line (docs/RATE48-TEST.md: `node tools/op.mjs log`) and set it here. The margins hold for 500 ppm either way
  * (tests/test_usb_audio.c, also at 48,019.21 Hz, 400 ppm above this constant) */
 #define UAC_I2S_HZ100 4800000u
 /* at a whole 48 frames a ms, 3 blocks are 8 packets: the blocks' phase against the packets barely moves, so the fill read

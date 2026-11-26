@@ -1,9 +1,10 @@
 /* SPDX-License-Identifier: GPL-3.0-only
- * The base firmware (docs/BASE-FIRMWARE.md): the I2S clock's two test builds, which decide whether the sound can run at
- * 48 kHz (docs/RATE48-TEST.md). Gamut's test channels only (firmware/build.sh): no release has either.
- *   OP_RATE_DIAG 1  (channel rate-diag) 44.1 kHz as ever. It reads the clock's registers before the I2S's rate is set and
- *                   at each DIAG, times the guitar's blocks against TIMER4, and writes no clock register
- *   OP_RATE48 1     (channel rate48) the same report, at 48 kHz when the guard lets it: else 44.1 kHz, and says why
+ * The base firmware (docs/BASE-FIRMWARE.md): the I2S clock at 48 kHz without a write to PLL0, and its report
+ * (docs/RATE48-TEST.md).
+ *   OP_RATE48 1     Gamut (its release): 48 kHz when the guard lets it, else 44.1 kHz, and it says why. It reads the
+ *                   clock's registers before the I2S's rate is set and at each DIAG, and times the guitar's blocks
+ *                   against TIMER4
+ *   OP_RATE_DIAG 1  (Gamut's test channel rate-diag) the same report at 44.1 kHz as ever, writing no clock register
  * The JieLi driver's 48 kHz case (sdk/iis.bc iis_set_sample_rate, ALNK0) differs from its 44.1 kHz case in two writes:
  * it ORs bit 25 into PLL0's CON1 (0x119A4), the PLL that probably clocks USB too, and it sets bit 8 of 0x10014 where the
  * 44.1 kHz case clears it. Both cases write the same divider byte and clear bit 9. So 48 kHz here is the driver's

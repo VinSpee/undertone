@@ -177,10 +177,10 @@ before it is answered, so a state read right after a press shows the press.
 `state`:
 
 ```json
-{"slot": 0, "name": "twin clean", "dirty": 0, "saved": 0, "mode": "chain", "block": 5, "item": 0, "volume": 80,
+{"slot": 0, "name": "super clean", "dirty": 0, "saved": 0, "mode": "chain", "block": 5, "item": 0, "volume": 80,
  "battery_mv": 3920, "usb_mv": 0, "tuner_hz": 0, "writes_ok": 1, "frame": 35324,
  "dsp": {"load": 42, "bypass": 0, "core1": 1}, "last_press": "fs_up", "presses": 1, "knob": 0, "held": [],
- "preset": {"name": "twin clean", "on": [..12], "type": [..12], "order": [..12], "p": [[..5] x 12]}}
+ "preset": {"name": "super clean", "on": [..12], "type": [..12], "order": [..12], "p": [[..5] x 12]}}
 ```
 
 `slot` is 0..51 (the pedal shows 1..52); `dirty`: the sound differs from its slot (the pedal's "edited"); `saved`: the
@@ -242,7 +242,7 @@ The API is the one above, with these differences:
 | `POST /api/sound/HZ` | a sine of `HZ` at a quarter of full scale as the guitar; answers `{left, right}`, the two outputs' RMS as a part of full scale, measured by the pedal's own audio stages |
 | `POST /api/nan` | the app's sound gives a NaN in its next block |
 | `POST /api/loop/NAME` | a loop of `assets/loops` (`riff`, `chords`, ...) as the guitar, around and around, in the tone's place. `none` ends it |
-| `POST /api/audio/MS` | `MS` milliseconds of the pedal's time pass at once, and its two outputs come back: 16-bit frames, left then right, at the pedal's rate (48 kHz for the Gamut pedal, 44.1 kHz for a base-firmware app). From the first request on, the audio interrupt runs only inside these requests, so one request's sound continues the one before. `0`, or 3 s without a request, ends that |
+| `POST /api/audio/MS` | `MS` milliseconds of the pedal's time pass at once, and its two outputs come back: 16-bit frames, left then right, at the app's rate, 44.1 kHz (the base firmware's `A_SR`). Only an app's simulator has this request; the Gamut pedal's sound plays in its page, at 48 kHz. From the first request on, the audio interrupt runs only inside these requests, so one request's sound continues the one before. `0`, or 3 s without a request, ends that |
 | `POST /api/clock/N/MS` | `N` MIDI clocks, `MS` + 1 milliseconds apart, with the even timing a test needs |
 | `POST /api/midi` | SysEx reaches the update code's handshake, INFO and the app's own requests; any other message goes through the MIDI ring to the app's map |
 

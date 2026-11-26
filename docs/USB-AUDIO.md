@@ -20,7 +20,7 @@ as a device named **OpenPocket** with an audio input, an audio output and the MI
 power cycles and firmware updates. The web editor connects again by itself; the installer and firmware updates work the
 same with the setting on or off.
 
-**Record the pedal.** Choose the input **OpenPocket** in the recording program, at 44.1 kHz. Both channels carry the
+**Record the pedal.** Choose the input **OpenPocket** in the recording program, at 48 kHz. Both channels carry the
 same signal: the pedal's sound after the whole effect chain. The level is the one the output has with MASTER at 100, so
 the MASTER knob does not change the recording, and the tuner's mute is in it.
 
@@ -32,7 +32,7 @@ is not in the recording.
 
 | | |
 | --- | --- |
-| Format | 2 channels, 16 bit, 44.1 kHz, both ways. Only this rate: set the project or the device to 44.1 kHz |
+| Format | 2 channels, 16 bit, 48 kHz, both ways. Only this rate: set the project or the device to 48 kHz (44.1 kHz on Gamut before its 48 kHz release) |
 | Record | the pedal's sound on both channels; delay from the output block to the cable about 1 to 5.5 ms |
 | Playback | stereo; delay from the cable to the output block about 5 ms |
 | USB | full speed (USB 1.1 rates), one isochronous endpoint each way, beside the MIDI endpoints |
@@ -41,12 +41,14 @@ is not in the recording.
 
 - A change of an effect's type, of the block order or of the NAM model, a preset change and a save silence the pedal
   for a few milliseconds, as before. The recording has the same silence.
-- The pedal's clock is its own (44,117.6 Hz, as the stock firmware's). The computer follows it when it records, and the
-  pedal follows the computer when it plays. Nothing drifts apart over time; a recording made by another sound card at
+- The pedal's clock is its own (48 kHz, its real rate not measured yet; 44,117.6 Hz at 44.1 kHz, as the stock
+  firmware's). The computer follows it when it records, and the pedal follows the computer when it plays. Nothing drifts apart over time; a recording made by another sound card at
   the same time is not sample-locked to it, as with any two sound cards.
 - USB audio adds up to 1 point of DSP load while the computer records and up to 2 while it also plays (see "Cost"
   below). Nothing is added while no program uses the device, or with the setting off.
-- The Bluetooth test image has no USB audio (its memory is full).
+- The Bluetooth test image has no USB audio (its memory is full). Nor does a pedal whose 48 kHz clock was refused at the
+  start, or a safe-mode start: it runs at 44.1 kHz, and the streams are 48 kHz's, so it is the plain MIDI device
+  ([RATE48-TEST.md](RATE48-TEST.md)).
 
 **If the computer does not see the device**, switch USB AUDIO off on the pedal's MIDI page: the pedal is then the plain
 MIDI device again and the editor and installer reach it as before. Tested so far: macOS 26 on Apple silicon. Windows,
@@ -72,10 +74,10 @@ So the feature is felucca-bsp's streams switched on, a setting, and the pedal's 
 ### The smallest design
 
 - **The streams** are felucca-bsp's as they are: endpoint 4 IN, isochronous asynchronous, for the record stream;
-  endpoint 4 OUT, isochronous adaptive, for playback; 16 bit, 2 channels, 44.1 kHz, one packet a millisecond. No 48 kHz:
-  it needs a resampler in the audio interrupt, and the stock firmware offers 44.1 kHz only too. A build whose I2S runs
-  at 48 kHz offers 48 kHz only instead, with no resampler: `firmware/px_uaconf.h` sets the packet pattern and the
-  playback step from that clock's rate, which is nominal (48,000 Hz), not measured: 48,019.21 Hz is only an estimate from
+  endpoint 4 OUT, isochronous adaptive, for playback; 16 bit, 2 channels, one packet a millisecond, at the I2S's rate
+  only, with no resampler in the audio interrupt: 48 kHz on Gamut, 44.1 kHz on a build that runs there (the stock
+  firmware offers 44.1 kHz only). `firmware/px_uaconf.h` sets the packet pattern and the playback step from the clock's
+  rate. At 48 kHz that rate is nominal (48,000 Hz), not measured: 48,019.21 Hz is only an estimate from
   the old resampler mode's rate, and the real clock must be measured on a pedal (`docs/RATE48-TEST.md`). The 48 kHz
   rings' margins hold for 500 ppm of clock error either way.
 - **The interfaces** are in the order audio control, record stream, playback stream, MIDI
@@ -97,8 +99,9 @@ So the feature is felucca-bsp's streams switched on, a setting, and the pedal's 
 
 ### The two clocks
 
-The pedal's sample clock comes from its own crystal: 6 MHz / 136 = 44,117.647 Hz. USB's millisecond comes from the
-computer. They are not locked, so neither side may assume 44.1 frames a millisecond.
+The figures here are 44.1 kHz's; at 48 kHz a packet carries 48 frames, a block is 2.7 ms, and the clock's figure is the
+nominal 48,000 Hz until a pedal measures it. At 44.1 kHz the pedal's sample clock comes from its own crystal:
+6 MHz / 136 = 44,117.647 Hz. USB's millisecond comes from the computer. They are not locked, so neither side may assume 44.1 frames a millisecond.
 
 - **Record (asynchronous endpoint):** the pedal is the clock. Each packet carries the frames the pedal's clock made in
   that millisecond: 44, and 45 every 8.5th packet. A ring of 512 frames lies between the audio interrupt, which writes
@@ -186,7 +189,7 @@ code.
 
 ### Limits, and what is not done
 
-- 16 bit, 44.1 kHz only. The stock firmware sends 24 bit; felucca-bsp's streams are 16 bit and were kept as they are.
+- 16 bit, at the I2S's rate only (48 kHz on Gamut). The stock firmware sends 24 bit; felucca-bsp's streams are 16 bit and were kept as they are.
 - The recording is mono on both channels (the engine is mono). A dry guitar on the second channel for reamping in the
   computer, and playing the computer's sound into the effect chain, are not done.
 - No volume or mute control is offered to the computer.

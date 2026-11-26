@@ -554,13 +554,16 @@ enum { NPRESETS = 52 };
 int px_preset_count(void) { return NPRESETS; }
 /* v37: 24 factory presets built round the factory NAM A2 models (NAM(model, gain, bass, mid, treble): knobs at noon
  * = the captured amp), each one levelled (LEVEL, tools/level_presets.py: -23 LUFS on DI guitar, as v36); slots 25..52: USER,
- * a clean starting point. Store format 6: their cabinet is USER IR in slot IR1 (IR1), which plays the factory IR
- * (px_ir_factory.h) until the user loads one there; LEVEL is set with it (docs/nam_di.wav). */
+ * a clean starting point. Store format 6: an amp-only model's cabinet is USER IR in slot IR1 (IR1), which plays the
+ * factory IR (px_ir_factory.h) until the user loads one there; a capture of an amp with its cabinet plays with the CAB
+ * block off (NOCAB). LEVEL is set with them (docs/nam_di.wav). */
 #define LVL(v) (p->p[PX_B_GATE][PX_PATCH_LEVEL] = (uint8_t)(v))
 #define NOGATE (p->on[PX_B_GATE] = 0)
 #define NAM(m, g, b, md, t) blk(p, PX_B_AMP, 1, PX_AMP_NAM, px_nam_knob(m), g, b, md, t)
 #define IR1 blk(p, PX_B_CAB, 1, PX_CAB_IR, px_ir_knob(0), 0, 0, 0, 0)
-enum { M_TWIN, M_AC15, M_SUPER59, M_SHIRLCL, M_JCM900, M_SHIRLEY, M_JCM2000, M_MARK4, M_JVM, M_PROMOD, M_5150, M_6505 };
+#define NOCAB (p->on[PX_B_CAB] = 0)
+/* the factory models (px_nam_factory.h, tools/nam_factory.txt); SUPER 65, AC30 TB, the SLO and DT captures hold their cabinet */
+enum { M_SUPERRVB, M_AC30, M_GREEN, M_PLXRED, M_BLUE, M_RED, M_SLOCLASSIC, M_SLORIFF, M_DTMIDS, M_DTSCOOP, M_JRT5, M_JRT7 };
 void px_preset_factory(px_preset_t *p, int idx)
 {
     base_preset(p);
@@ -568,88 +571,88 @@ void px_preset_factory(px_preset_t *p, int idx)
     p->on[PX_B_AMP] = p->on[PX_B_CAB] = 1;
     switch (idx) {
     /* ---- clean ---- */
-    case 0: setname(p, "twin clean"); blk(p, PX_B_GATE, 1, 0, 15, 50, 50, 0, 0); LVL(37);
+    case 0: setname(p, "super clean"); blk(p, PX_B_GATE, 1, 0, 15, 50, 50, 0, 0); LVL(58);
         blk(p, PX_B_COMP, 1, PX_CMP_STUDIO, 30, 50, 50, 50, 0);
-        NAM(M_TWIN, 50, 50, 50, 55); IR1;
+        NAM(M_SUPERRVB, 50, 50, 50, 55); NOCAB;
         blk(p, PX_B_REVERB, 1, PX_REV_PLATE, 40, 50, 22, 0, 0); break;
-    case 1: setname(p, "chorus clean"); blk(p, PX_B_GATE, 1, 0, 15, 50, 50, 0, 0); LVL(43);
-        NAM(M_TWIN, 45, 50, 50, 55); IR1;
+    case 1: setname(p, "chorus clean"); blk(p, PX_B_GATE, 1, 0, 15, 50, 50, 0, 0); LVL(40);
+        NAM(M_GREEN, 45, 50, 50, 55); IR1;
         blk(p, PX_B_MOD, 1, PX_MOD_CHORUS, 30, 50, 50, 0, 0);
         blk(p, PX_B_DELAY, 1, PX_DLY_DIGITAL, 35, 25, 18, 50, 0); blk(p, PX_B_REVERB, 1, PX_REV_HALL, 45, 50, 22, 0, 0); break;
-    case 2: setname(p, "ac15 chime"); blk(p, PX_B_GATE, 1, 0, 20, 50, 50, 0, 0); LVL(34);
-        NAM(M_AC15, 50, 48, 50, 52); IR1;
+    case 2: setname(p, "ac30 chime"); blk(p, PX_B_GATE, 1, 0, 20, 50, 50, 0, 0); LVL(57);
+        NAM(M_AC30, 50, 48, 50, 52); NOCAB;
         blk(p, PX_B_REVERB, 1, PX_REV_SPRING, 40, 50, 20, 40, 0); break;
-    case 3: setname(p, "funk wah"); NOGATE; LVL(32);
+    case 3: setname(p, "funk wah"); NOGATE; LVL(34);
         blk(p, PX_B_COMP, 1, PX_CMP_SQUASH, 55, 35, 50, 0, 0); blk(p, PX_B_SFX, 1, PX_SFX_AUTOWAH, 55, 50, 55, 40, 0);
-        NAM(M_TWIN, 45, 45, 55, 60); IR1;
+        NAM(M_GREEN, 45, 45, 55, 60); IR1;
         blk(p, PX_B_REVERB, 1, PX_REV_ROOM, 35, 50, 15, 0, 0); break;
-    case 4: setname(p, "surf spring"); blk(p, PX_B_GATE, 1, 0, 15, 50, 50, 0, 0); LVL(41);
-        NAM(M_SUPER59, 45, 50, 45, 58); IR1;
+    case 4: setname(p, "surf spring"); blk(p, PX_B_GATE, 1, 0, 15, 50, 50, 0, 0); LVL(61);
+        NAM(M_SUPERRVB, 45, 50, 45, 58); NOCAB;
         blk(p, PX_B_DELAY, 1, PX_DLY_TAPE, 7, 10, 15, 50, 20); blk(p, PX_B_REVERB, 1, PX_REV_SPRING, 55, 55, 40, 60, 0); break;
-    case 5: setname(p, "ambient swell"); blk(p, PX_B_GATE, 1, 0, 18, 50, 50, 0, 0); LVL(68);
+    case 5: setname(p, "ambient swell"); blk(p, PX_B_GATE, 1, 0, 18, 50, 50, 0, 0); LVL(79);
         blk(p, PX_B_COMP, 1, PX_CMP_SWELL, 50, 50, 50, 0, 0);
-        NAM(M_TWIN, 45, 50, 50, 50); IR1;
+        NAM(M_SUPERRVB, 45, 50, 50, 50); NOCAB;
         blk(p, PX_B_MOD, 1, PX_MOD_CHORUS, 20, 30, 30, 0, 0);
         blk(p, PX_B_DELAY, 1, PX_DLY_DUAL, 35, 45, 30, 40, 0); blk(p, PX_B_REVERB, 1, PX_REV_AMBIENT, 50, 45, 40, 0, 0); break;
     /* ---- edge of break-up, crunch ---- */
-    case 6: setname(p, "ts blues"); blk(p, PX_B_GATE, 1, 0, 18, 50, 50, 0, 0); LVL(40);
+    case 6: setname(p, "ts blues"); blk(p, PX_B_GATE, 1, 0, 18, 50, 50, 0, 0); LVL(58);
         blk(p, PX_B_DRIVE, 1, PX_DRV_TS9, 35, 50, 50, 0, 0);
-        NAM(M_SUPER59, 55, 50, 50, 52); IR1;
+        NAM(M_SUPERRVB, 55, 50, 50, 52); NOCAB;
         blk(p, PX_B_REVERB, 1, PX_REV_SPRING, 40, 50, 18, 40, 0); break;
-    case 7: setname(p, "blues breakup"); blk(p, PX_B_GATE, 1, 0, 22, 50, 50, 0, 0); LVL(34);
-        NAM(M_SHIRLCL, 55, 50, 50, 50); IR1;
+    case 7: setname(p, "blues breakup"); blk(p, PX_B_GATE, 1, 0, 22, 50, 50, 0, 0); LVL(58);
+        NAM(M_AC30, 55, 50, 50, 50); NOCAB;
         blk(p, PX_B_DELAY, 1, PX_DLY_ANALOG, 29, 20, 15, 40, 0); blk(p, PX_B_REVERB, 1, PX_REV_ROOM, 40, 50, 18, 0, 0); break;
-    case 8: setname(p, "klon crunch"); blk(p, PX_B_GATE, 1, 0, 18, 50, 50, 0, 0); LVL(37);
+    case 8: setname(p, "klon crunch"); blk(p, PX_B_GATE, 1, 0, 18, 50, 50, 0, 0); LVL(40);
         blk(p, PX_B_DRIVE, 1, PX_DRV_KLON, 40, 50, 55, 0, 0);
-        NAM(M_JCM900, 45, 50, 50, 50); IR1;
+        NAM(M_PLXRED, 45, 50, 50, 50); IR1;
         blk(p, PX_B_REVERB, 1, PX_REV_ROOM, 40, 50, 18, 0, 0); break;
-    case 9: setname(p, "brit crunch"); blk(p, PX_B_GATE, 1, 0, 25, 30, 50, 0, 0); LVL(27);
-        NAM(M_JCM900, 55, 50, 55, 50); IR1;
+    case 9: setname(p, "brit crunch"); blk(p, PX_B_GATE, 1, 0, 25, 30, 50, 0, 0); LVL(32);
+        NAM(M_BLUE, 55, 50, 55, 50); IR1;
         blk(p, PX_B_REVERB, 1, PX_REV_ROOM, 35, 50, 15, 0, 0); break;
-    case 10: setname(p, "70s rock"); blk(p, PX_B_GATE, 1, 0, 25, 30, 50, 0, 0); LVL(29);
+    case 10: setname(p, "70s rock"); blk(p, PX_B_GATE, 1, 0, 25, 30, 50, 0, 0); LVL(35);
         blk(p, PX_B_DRIVE, 1, PX_DRV_M77, 20, 50, 65, 0, 0);
-        NAM(M_AC15, 60, 55, 55, 50); IR1;
+        NAM(M_BLUE, 60, 55, 55, 50); IR1;
         blk(p, PX_B_REVERB, 1, PX_REV_PLATE, 35, 50, 15, 0, 0); break;
     case 11: setname(p, "boutique"); blk(p, PX_B_GATE, 1, 0, 25, 30, 50, 0, 0); LVL(35);
-        NAM(M_SHIRLEY, 50, 50, 50, 50); IR1;
+        NAM(M_PLXRED, 50, 50, 50, 50); IR1;
         blk(p, PX_B_DELAY, 1, PX_DLY_DIGITAL, 29, 15, 12, 45, 0); blk(p, PX_B_REVERB, 1, PX_REV_ROOM, 40, 50, 15, 0, 0); break;
     /* ---- lead ---- */
     case 12: setname(p, "brit lead"); blk(p, PX_B_GATE, 1, 0, 30, 30, 50, 0, 0); LVL(34);
-        NAM(M_JCM2000, 55, 50, 55, 50); IR1;
+        NAM(M_RED, 55, 50, 55, 50); IR1;
         blk(p, PX_B_DELAY, 1, PX_DLY_ANALOG, 39, 30, 20, 45, 0); blk(p, PX_B_REVERB, 1, PX_REV_HALL, 45, 45, 20, 0, 0); break;
-    case 13: setname(p, "smooth lead"); blk(p, PX_B_GATE, 1, 0, 30, 30, 50, 0, 0); LVL(36);
-        NAM(M_MARK4, 55, 50, 55, 50); IR1;
+    case 13: setname(p, "smooth lead"); blk(p, PX_B_GATE, 1, 0, 30, 30, 50, 0, 0); LVL(57);
+        NAM(M_SLOCLASSIC, 55, 50, 55, 50); NOCAB;
         blk(p, PX_B_DELAY, 1, PX_DLY_TAPE, 35, 30, 20, 45, 20); blk(p, PX_B_REVERB, 1, PX_REV_HALL, 45, 45, 18, 0, 0); break;
-    case 14: setname(p, "hair metal"); blk(p, PX_B_GATE, 1, 0, 35, 30, 50, 0, 0); LVL(41);
+    case 14: setname(p, "hair metal"); blk(p, PX_B_GATE, 1, 0, 35, 30, 50, 0, 0); LVL(64);
         blk(p, PX_B_DRIVE, 1, PX_DRV_M77, 25, 55, 60, 0, 0);
-        NAM(M_JVM, 50, 55, 45, 55); IR1;
+        NAM(M_SLORIFF, 50, 55, 45, 55); NOCAB;
         blk(p, PX_B_DELAY, 1, PX_DLY_DIGITAL, 33, 25, 15, 50, 0); blk(p, PX_B_REVERB, 1, PX_REV_PLATE, 40, 50, 18, 0, 0); break;
     case 15: setname(p, "space lead"); blk(p, PX_B_GATE, 1, 0, 30, 30, 50, 0, 0); LVL(35);
-        NAM(M_PROMOD, 50, 50, 50, 50); IR1;
+        NAM(M_RED, 50, 50, 50, 50); IR1;
         blk(p, PX_B_DELAY, 1, PX_DLY_DUAL, 29, 40, 25, 40, 0); blk(p, PX_B_REVERB, 1, PX_REV_SHIMMER, 55, 45, 30, 40, 0); break;
     /* ---- high gain ---- */
-    case 16: setname(p, "modern rock"); blk(p, PX_B_GATE, 1, 0, 40, 30, 50, 0, 0); LVL(32);
-        NAM(M_PROMOD, 55, 50, 50, 50); IR1;
+    case 16: setname(p, "modern rock"); blk(p, PX_B_GATE, 1, 0, 40, 30, 50, 0, 0); LVL(33);
+        NAM(M_JRT5, 55, 50, 50, 50); IR1;
         blk(p, PX_B_REVERB, 1, PX_REV_ROOM, 30, 50, 12, 0, 0); break;
-    case 17: setname(p, "5150 rhythm"); blk(p, PX_B_GATE, 1, 0, 45, 25, 50, 0, 0); LVL(39);
+    case 17: setname(p, "chug rhythm"); blk(p, PX_B_GATE, 1, 0, 45, 25, 50, 0, 0); LVL(62);
         blk(p, PX_B_DRIVE, 1, PX_DRV_TS9, 0, 55, 75, 0, 0);
-        NAM(M_5150, 50, 50, 50, 50); IR1; break;
+        NAM(M_DTMIDS, 50, 50, 50, 50); NOCAB; break;
     case 18: setname(p, "tight metal"); blk(p, PX_B_GATE, 1, 0, 50, 20, 50, 0, 0); LVL(37);
-        NAM(M_6505, 50, 55, 45, 55); IR1; break;
-    case 19: setname(p, "swede death"); blk(p, PX_B_GATE, 1, 0, 55, 25, 50, 0, 0); LVL(50);
+        NAM(M_JRT7, 50, 55, 45, 55); IR1; break;
+    case 19: setname(p, "swede death"); blk(p, PX_B_GATE, 1, 0, 55, 25, 50, 0, 0); LVL(36);
         blk(p, PX_B_DRIVE, 1, PX_DRV_HM2, 70, 80, 80, 50, 0);
-        NAM(M_JCM900, 40, 50, 50, 50); IR1; break;
-    case 20: setname(p, "doom"); blk(p, PX_B_GATE, 1, 0, 40, 35, 50, 0, 0); LVL(33);
-        NAM(M_5150, 60, 62, 45, 45); IR1;
+        NAM(M_BLUE, 40, 50, 50, 50); IR1; break;
+    case 20: setname(p, "doom"); blk(p, PX_B_GATE, 1, 0, 40, 35, 50, 0, 0); LVL(54);
+        NAM(M_DTSCOOP, 60, 62, 45, 45); NOCAB;
         blk(p, PX_B_DELAY, 1, PX_DLY_ANALOG, 45, 20, 10, 40, 0); blk(p, PX_B_REVERB, 1, PX_REV_HALL, 40, 35, 15, 0, 0); break;
     /* ---- effects ---- */
-    case 21: setname(p, "vibe rock"); blk(p, PX_B_GATE, 1, 0, 18, 50, 50, 0, 0); LVL(22);
+    case 21: setname(p, "vibe rock"); blk(p, PX_B_GATE, 1, 0, 18, 50, 50, 0, 0); LVL(29);
         blk(p, PX_B_MOD, 1, PX_MOD_UNIVIBE, 35, 55, 60, 0, 0);
-        NAM(M_JCM900, 55, 50, 50, 50); IR1;
+        NAM(M_PLXRED, 55, 50, 50, 50); IR1;
         blk(p, PX_B_REVERB, 1, PX_REV_ROOM, 40, 50, 18, 0, 0); break;
-    case 22: setname(p, "organ"); NOGATE; LVL(54);
+    case 22: setname(p, "organ"); NOGATE; LVL(48);
         blk(p, PX_B_SYN, 1, PX_SYN_ORGAN, 50, 70, 40, 30, 0);
-        NAM(M_TWIN, 45, 50, 50, 50); IR1;
+        NAM(M_GREEN, 45, 50, 50, 50); IR1;
         blk(p, PX_B_MOD, 1, PX_MOD_ROTARY, 30, 60, 50, 0, 0); blk(p, PX_B_REVERB, 1, PX_REV_ROOM, 40, 50, 18, 0, 0); break;
     case 23: setname(p, "acoustic"); NOGATE; LVL(66);
         blk(p, PX_B_SYN, 1, PX_SYN_ACOUSTIC, 55, 50, 55, 40, 0); blk(p, PX_B_COMP, 1, PX_CMP_STUDIO, 40, 40, 85, 60, 0);
@@ -660,23 +663,25 @@ void px_preset_factory(px_preset_t *p, int idx)
         char n[14] = "user ";
         n[5] = (char)('0' + (idx + 1) / 10); n[6] = (char)('0' + (idx + 1) % 10); n[7] = 0;
         setname(p, n); NOGATE; LVL(50);
-        NAM(M_TWIN, 50, 50, 50, 50); IR1;
+        NAM(M_GREEN, 50, 50, 50, 50); IR1;
         blk(p, PX_B_REVERB, 1, PX_REV_ROOM, 35, 50, 15, 0, 0);
     } break;
     }
 }
 #undef NAM
 #undef IR1
+#undef NOCAB
 #undef LVL
 #undef NOGATE
-/* a preset of the v34 set (store formats 1..5) -> format 6. A built-in amp becomes the factory NAM model trained on the
- * same amp's capture, its GAIN, BASS, MID and TREBLE kept (PRESENCE has no place); NAM keeps its settings. A built-in
+/* a preset of the v34 set (store formats 1..5) -> format 6. A built-in amp becomes the factory NAM model nearest its
+ * character, one without a cabinet of its own, its GAIN, BASS, MID and TREBLE kept (PRESENCE has no place); NAM keeps
+ * its settings and its MODEL number, whichever model that now is. A built-in
  * cabinet becomes USER IR in slot IR1 with its cuts off, on or off as it was: an empty slot passes the sound, a loaded one
  * plays it. DI (NO CAB), which played the amp alone 2.6 dB up, becomes the CAB block off and the preset LEVEL 2.7 dB up.
  * USER IR keeps its settings. */
 void px_preset_v34_set(px_preset_t *p)
 {
-    static const uint8_t M[V34_NAM] = {M_TWIN, M_AC15, M_JCM900, M_JCM2000, M_MARK4, M_SHIRLEY, M_PROMOD, M_5150};
+    static const uint8_t M[V34_NAM] = {M_GREEN, M_PLXRED, M_BLUE, M_RED, M_RED, M_PLXRED, M_JRT5, M_JRT7};
     uint8_t *a = p->p[PX_B_AMP], *c = p->p[PX_B_CAB];
     int t = p->type[PX_B_AMP];
     if (t != V34_NAM) {

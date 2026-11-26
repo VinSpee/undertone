@@ -15,7 +15,9 @@
 #include <math.h>
 #include "px_dsp.h"
 #include "base/audio.h"                                 /* the I2S, a_input, dsp_out, dsp_load, a_output, the tuner */
-#if !OP_RATE48                                          /* (that test build picks its rate at the start) */
+#if OP_RATE48                                           /* (the rate is picked at the start: 48 kHz, or 44.1 kHz refused) */
+_Static_assert(PX_FS == 48000, "a 48 kHz build's engine must hold 48 kHz's memory (px_dsp.h PX_FS)");
+#else
 _Static_assert(A_SR == PX_FS, "the engine is built for another rate than the I2S's (px_dsp.h PX_FS, base/audio.h A_SR)");
 #endif
 
@@ -576,9 +578,6 @@ static void audio_bench(void)
 
 static void audio_start(void)
 {
-#if OP_RATE_DIAG
-    a_rate_pick();                                     /* base/rate.h: the clock's test builds, before the engine takes the rate */
-#endif
 #if BENCH_AT_BOOT
     px_engine_init(&g_eng, PX_SR);
     audio_bench();                                     /* benchmark screen (diagnostic): off by default */

@@ -19,14 +19,15 @@ R.G. Keen, Boss/Roland/EHX manuals). They are digital models, not copies. The pr
 owners, used only to describe the sound.
 
 ### AMP — NAM: neural amp models (v37; MODEL, GAIN, BASS, MID, TREBLE)
-The AMP block plays Neural Amp Modeler A2 networks: 12 factory models (TWIN, AC15, SUPER 59, SHIRL CL, JCM900,
-SHIRLEY, JCM2000, MARK IV, JVM OD2, PRO MOD, 5150, 6505 RED) and 16 user slots filled from the web editor with A2
-captures. MODEL picks the network, GAIN sets the level into it (±12 dB), BASS / MID / TREBLE are an EQ after it. The
-factory models have no cabinet: keep a CAB after the AMP and load an IR into it. Details: [NAM.md](NAM.md).
+The AMP block plays Neural Amp Modeler A2 networks: 12 factory models, captures from TONE3000 (SUPER 65, AC30 TB,
+TM26 GRN, TM26 PLX, TM26 BLU, TM26 RED, SLO 100, SLO RIFF, DT MIDS, DT SCOOP, JRT GN 5, JRT GN 7), and 16 user slots
+filled from the web editor with A2 captures. MODEL picks the network, GAIN sets the level into it (±12 dB), BASS / MID /
+TREBLE are an EQ after it. The TM26 and JRT models have no cabinet: keep a CAB after the AMP and load an IR into it. The
+other eight hold their cabinet: play them with the CAB block off. Details: [NAM.md](NAM.md).
 
 ### CAB — USER IR (v38; IR, LOW CUT, HIGH CUT)
 The CAB block plays a cabinet impulse response loaded from the web editor (8 slots, a `.wav` file each): its first
-1024 samples at the pedal's rate (23 ms at 44.1 kHz), convolved exactly (partitioned FFT), every IR at the same energy. IR picks the slot
+1024 samples at the pedal's rate (21 ms at 48 kHz), convolved exactly (partitioned FFT), every IR at the same energy. IR picks the slot
 (its name shows on the PLAY page), LOW CUT 20..400 Hz, HIGH CUT 20 kHz..2 kHz. An empty slot (any but IR1, which
 always plays something) passes the sound as it is: the amp alone, as a DI.
 
@@ -37,8 +38,9 @@ the editor converts any WAV file (48 kHz to the pedal's rate, its first 1024 sam
 
 The built-in amps (TWIN, AC15 TB, JCM900, JCM2000, MARK IV, SHIRLEY, PRO MOD, 5150) and cabinets (1x12 US OPEN,
 2x12 BLUE, 4x12 GREEN, 4x12 T75, 4x12 V30, 1x12 CREAM, DI) were removed in store format 6. A preset saved with one
-changes when it loads: a built-in amp becomes the NAM model trained on the same amp, with its GAIN, BASS, MID and
-TREBLE (PRESENCE has no place); a built-in cabinet becomes USER IR in slot IR1 with its cuts off, on or off as it
+changes when it loads: a built-in amp becomes the factory NAM model nearest its character, one without a cabinet of
+its own (TWIN: TM26 GRN; AC15 TB and SHIRLEY: TM26 PLX; JCM900: TM26 BLU; JCM2000 and MARK IV: TM26 RED; PRO MOD:
+JRT GN 5; 5150: JRT GN 7), with its GAIN, BASS, MID and TREBLE (PRESENCE has no place); a built-in cabinet becomes USER IR in slot IR1 with its cuts off, on or off as it
 was; DI becomes the CAB block off, with the preset's LEVEL 2.7 dB up for the level DI added. A preset file from the
 editor changes the same way when it is imported.
 
@@ -117,20 +119,21 @@ the trails come back with the sound.
 ## Factory presets (v37): 24 sounds, all at the same loudness, then 28 USER slots
 Built round the NAM models (v37) and the drives. Every preset is levelled to the same loudness (-23 LUFS, EBU R128,
 measured on real DI guitar by `tools/level_presets.py`): going from a clean to a high-gain preset no longer jumps by
-20 dB. Their CAB block is USER IR in slot IR1, which plays the factory IR ML BEST IR, and their levels are set with
-it (`docs/nam_di.wav`). Load an IR of yours into IR1 and every factory preset plays through it instead; the pedal sets
-every IR to the same energy, so the loudness changes only as much as the two cabinets' tones differ.
+20 dB. A preset on a model without a cabinet has its CAB block on USER IR in slot IR1, which plays the factory IR ML
+BEST IR; a preset on a capture that holds its cabinet has the CAB block off. Their levels are set that way
+(`docs/nam_di.wav`). Load an IR of yours into IR1 and every factory preset that uses IR1 plays through it instead; the
+pedal sets every IR to the same energy, so the loudness changes only as much as the two cabinets' tones differ.
 
 | | Clean | Crunch | Lead | High gain | Effects |
 |---|---|---|---|---|---|
-| | 01 twin clean | 07 ts blues | 13 brit lead | 17 modern rock | 22 vibe rock |
-| | 02 chorus clean | 08 blues breakup | 14 smooth lead | 18 5150 rhythm | 23 organ |
-| | 03 ac15 chime | 09 klon crunch | 15 hair metal | 19 tight metal | 24 acoustic |
+| | 01 super clean | 07 ts blues | 13 brit lead | 17 modern rock | 22 vibe rock |
+| | 02 chorus clean | 08 blues breakup | 14 smooth lead | 18 chug rhythm | 23 organ |
+| | 03 ac30 chime | 09 klon crunch | 15 hair metal | 19 tight metal | 24 acoustic |
 | | 04 funk wah | 10 brit crunch | 16 space lead | 20 swede death | |
 | | 05 surf spring | 11 70s rock | | 21 doom | |
 | | 06 ambient swell | 12 boutique | | | |
 
-25–52: **user 25 … user 52**, a clean NAM TWIN + USER IR (IR1) + a little room, to build your own.
+25–52: **user 25 … user 52**, a clean NAM TM26 GRN + USER IR (IR1) + a little room, to build your own.
 
 The factory names are in small letters since the screen's new fonts. A sound you saved before keeps the name it was
 saved with, in capitals.

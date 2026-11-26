@@ -195,7 +195,7 @@ static void px_flash_boot(void)                 /* interrupts still off (before 
 static void px_usb_start(void)                  /* interrupts still off */
 {
 #if OP_UAUDIO
-    usb_uac_on = px_ua_on;
+    usb_uac_on = PX_UA_SHOWN;
     a_ua = usb_uac_on;
 #endif
     usb_start();

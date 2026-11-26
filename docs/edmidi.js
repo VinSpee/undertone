@@ -175,7 +175,7 @@ function renderConn() {
       ua && h("dt", { text: "USB audio" }),
       ua && h("dd", { id: "uarow" }, h("span", { id: "uastate", text: uaText(ua) }), " ",
         h("button", { type: "button", class: "btn small", id: "uabtn", text: ua.on ? "Turn off" : "Turn on", onclick: uaToggle }))),
-    ua && h("p", { class: "dim", id: "uanote", text: "With USB audio on, the pedal is also a USB sound card, with no driver to install (stereo, 16 bit, 44.1 kHz). The computer records the pedal's sound, and what the computer plays comes out of the pedal's output." }),
+    ua && h("p", { class: "dim", id: "uanote", text: `With USB audio on, the pedal is also a USB sound card, with no driver to install (stereo, 16 bit, ${app.ed.rate / 1000} kHz). The computer records the pedal's sound, and what the computer plays comes out of the pedal's output.` }),
     h("p", { class: "dim" }, "The pedal's own MIDI settings are on the pedal: ", h("b", { text: "hold FX for 0.8 s" }),
       " for CHANNEL (OMNI or 1 to 16), SEND and CLOCK > DELAY. The editor cannot read or change them. ",
       h("a", { href: "https://github.com/isod89/openpocket/blob/main/docs/MIDI.md", target: "_blank", rel: "noopener" }, "The MIDI reference ", icon("ext"))));

@@ -43,7 +43,7 @@ const number = (line, key, radix = 10) => {
   return m ? parseInt(m[1], radix) : null;
 };
 
-// the clock's test builds' one line (firmware/base/rate.h a_rate_text, docs/RATE48-TEST.md); hz is the rate measured
+// the clock's line, Gamut's and the rate-diag build's (firmware/base/rate.h a_rate_text, docs/RATE48-TEST.md); hz is the rate measured
 // over the last 10 s window of TIMER4 (24 MHz), null before the first one ends
 const RATE_RE = /^RATE ASK (\d+) SR (\d+) GUARD (\w+) W (\d+) F (\d+) T (\d+) PLL0 (\w{8}) (\w{8}) PLL1 (\w{8}) (\w{8}) HSB (\w{8}) MUX (\w{8}) SYS (\w{8}) DIV (\w{8}) BEFORE (\w{8}) (\w{8}) (\w{8})$/;
 export function parseRate(raw) {
@@ -130,7 +130,7 @@ export function judge(readings, scan) {
         : `${now.id.text} answers only the identity query: it is not Gamut. There is no status to read.` };
   }
   if (now.level === "info") {
-    return { result: "unknown", reason: `${now.info.identity} ${now.info.version} runs and answers MIDI (DSP load ${now.ping.load}%), but it has no log channel: only the Bluetooth test image and the clock's test builds built with DIAG have one. Bluetooth state, counters and last-boot report cannot be read; use the screen.` };
+    return { result: "unknown", reason: `${now.info.identity} ${now.info.version} runs and answers MIDI (DSP load ${now.ping.load}%), but it has no log channel: only the Bluetooth test image and the builds with the clock's line (Gamut at 48 kHz, rate-diag) have one. Bluetooth state, counters and last-boot report cannot be read; use the screen.` };
   }
   if (now.level === "rate") return judgeRate(now.rate);
   const { boot, lastBoot, ble } = now;
@@ -164,7 +164,7 @@ export function judge(readings, scan) {
   return judged("fail", `${rate} and the controller reports advertising, but this Mac saw no advertisement in ${scan.seconds} s (${scan.others} other devices seen, so the scanner works).`);
 }
 
-// the clock's test builds (docs/RATE48-TEST.md, "Reading the result"): what the gate decides
+// the clock's line (docs/RATE48-TEST.md, "Reading the result"): what it says of the rate
 export function judgeRate(r) {
   const hex = (v) => v.toString(16).toUpperCase().padStart(8, "0");
   if (!r.ok) return { result: "unknown", reason: `The clock line is not one this tool knows: ${r.raw}` };
@@ -176,7 +176,7 @@ export function judgeRate(r) {
   const off = (r.hz / r.sr - 1) * 100, at = `${r.hz.toFixed(2)} Hz (${off >= 0 ? "+" : ""}${off.toFixed(3)} % from ${r.sr})`;
   if (Math.abs(off) > 0.5) return { result: "fail", reason: `Asked for ${r.sr} Hz, the guitar's blocks come at ${at}.` };
   if (r.guard === "PASS") return { result: "pass", reason: `The I2S runs from the 48 kHz family at ${at}. Next: the sound (docs/RATE48-TEST.md).` };
-  return { result: "pass", reason: `The I2S runs at ${at}, and ${bit25}: ${r.before.pll0 & RATE_BIT25 ? "the rate48 build will try 48 kHz" : "the rate48 build will stay at 44.1 kHz"}.` };
+  return { result: "pass", reason: `The I2S runs at ${at}, and ${bit25}: ${r.before.pll0 & RATE_BIT25 ? "Gamut at 48 kHz will try 48 kHz" : "Gamut at 48 kHz will stay at 44.1 kHz"}.` };
 }
 
 // one reading, at the deepest level the pedal answers

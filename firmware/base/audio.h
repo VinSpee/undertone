@@ -85,8 +85,8 @@ int gpio_set_pull_down(uint32_t g, int on)   { jl_rmw(g, 0x14, on); return 0; }
 /* ===================== the block: its buffers, its figures, its stages ===================== */
 #define A_FR     128u                                  /* frames per I2S block */
 /* the sample rate the I2S is set to (Hz), the one place it is said: the block's budget, the app's engine (Gamut: PX_SR),
- * USB audio's rate (px_uaconf.h). The 44.1 kHz family's clock runs at 44,117.6 Hz (docs/USB-AUDIO.md). The 48 kHz test
- * build (base/rate.h, OP_RATE48) picks it at the start: then a variable */
+ * USB audio's rate (px_uaconf.h). The 44.1 kHz family's clock runs at 44,117.6 Hz (docs/USB-AUDIO.md). An app that asks
+ * for 48 kHz (OP_RATE48: Gamut) has it picked at the start, through base/rate.h's guard: then a variable */
 #ifndef OP_RATE48
 #define OP_RATE48 0
 #endif

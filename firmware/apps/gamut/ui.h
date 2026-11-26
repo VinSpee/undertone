@@ -7,7 +7,7 @@
  *  PLAY                                   EDIT (a block)
  *  +------------------------------+       +------------------------------+
  *  |::vol 80 [=]78% edited dsp 42%|       |#amp ######################on#|  band: the block, its ON / OFF key
- *  | 07    amp                    |       | <         JCM900          >  |  model
+ *  | 07    amp                    |       | <        TM26 BLU         >  |  model
  *  |        brit crunch           |       | gain                     55  |
  *  |[gt][cmp]----------------[drv]|       | ==========-----------------  |  up to 5 settings, bar + value
  *  |         [pit][sfx][syn]      |       | bass                     50  |

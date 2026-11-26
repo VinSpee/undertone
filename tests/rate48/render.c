@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-3.0-only
- * OpenPocket — the engine at one rate, for tests/rate48/score.sh (the 48 kHz port, docs/RATE48-TEST.md): built once as
- * the engine is today (44.1 kHz) and once for 48 kHz (-DPX_FS=48000, px_dsp.h), each run at its own rate.
+ * OpenPocket — the engine at one rate, for tests/rate48/score.sh (the 48 kHz port, docs/RATE48-TEST.md): built once for
+ * 44.1 kHz (-DPX_FS=44100, px_dsp.h) and once for 48 kHz, the release's, each run at its own rate.
  *   render bands RATE DI.wav   every block type but AMP and CAB alone, all five settings at 0, 50 and 100, through the
  *                              DI (a 16-bit mono WAV at 44.1 kHz, cut at 20 kHz and resampled to RATE): its level and
  *                              its third-octave bands from 99 Hz to 10 kHz, in dB, one line a case
@@ -123,6 +123,7 @@ static void alone(px_preset_t *q, int blk, int type, int v)
 {
     px_preset_factory(q, 0);
     for (int j = 0; j < PX_NBLK; j++) q->on[j] = j == blk;
+    q->p[PX_B_GATE][PX_PATCH_LEVEL] = 50;          /* 0 dB, whatever the factory preset's: the output limiter stays out of it */
     q->type[blk] = (uint8_t)type;
     for (int k = 0; k < PX_NPAR; k++) q->p[blk][k] = (uint8_t)v;
 }

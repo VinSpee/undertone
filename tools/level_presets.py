@@ -2,11 +2,12 @@
 # SPDX-License-Identifier: GPL-3.0-only
 # OpenPocket — level the factory presets (v36): sets each preset's LEVEL (LVL(..) in px_preset_factory) so that it
 # plays at TARGET LUFS (BS.1770) on DI guitar, the level tools/calib_levels.py sets the blocks to. Prints loudness and peak.
-#   python3 tools/level_presets.py DI.wav [DI2.wav ...]
+#   python3 tools/level_presets.py DI.wav [DI2.wav ...]   (44.1 kHz WAVs, played at the engine's rate: calib_levels.at_rate)
+#   python3 tools/level_presets.py --check DI.wav [...]   changes nothing: fails unless every one is within 0.5 LU of TARGET
 import os, re, subprocess, sys
 import numpy as np
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from calib_levels import lufs, ROOT, TARGET
+from calib_levels import at_rate, lufs, ROOT, TARGET
 
 EXE = os.path.join(ROOT, "build", "lvl_preset")
 SRC = os.path.join(ROOT, "firmware", "apps", "gamut", "engine", "px_dsp.c")
@@ -36,9 +37,23 @@ def set_levels(levels):
     open(SRC, "w").write(s)
 
 
+def check(dis):
+    bad = 0
+    for k in range(NFACT):
+        name, l, pk = measure(k, dis)
+        ok = abs(l - TARGET) <= 0.5
+        bad += not ok
+        print("%2d %-14s %6.2f LUFS  peak %5.1f dBFS  %s" % (k + 1, name, l, pk, "ok" if ok else "FAIL"))
+    print("presets: %d of %d within 0.5 LU of %.0f LUFS" % (NFACT - bad, NFACT, TARGET))
+    return bad
+
+
 def main():
-    dis = sys.argv[1:]
+    os.makedirs(os.path.join(ROOT, "build"), exist_ok=True)
+    dis = [at_rate(a) for a in sys.argv[1:] if a != "--check"]
     build()
+    if len(dis) < len(sys.argv) - 1:
+        sys.exit(1 if check(dis) else 0)
     for it in range(3):
         lv = {}
         for k in range(NFACT):

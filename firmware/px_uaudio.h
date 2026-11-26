@@ -6,7 +6,9 @@
  * rings and their pacing). This file is the
  * pedal's side:
  *   px_ua_block     each output block: the pedal's sound into the record ring, the computer's playback into the output
- *   px_ua_service   the USB AUDIO setting (px_midi.h px_ua_on) to the USB device, which re-enumerates on a change
+ *   px_ua_service   the USB AUDIO setting (px_midi.h px_ua_on) to the USB device, which re-enumerates on a change. The
+ *                   streams are presented while it is on and the I2S runs at their rate (PX_UA_SHOWN): a pedal whose
+ *                   48 kHz clock was refused (base/rate.h) runs at 44.1 kHz without them
  *   ed_ua_stat      the streams' state and counts, for the editor's USB_AUDIO (docs/EDITOR-PROTOCOL.md)
  * The clocks: the pedal's I2S clock (44,117.6 Hz at 44.1 kHz) is not locked to USB's. To the computer the endpoint is
  * asynchronous: each 1 ms packet carries the frames the I2S clock made (44 or 45) and the ring's fill steers the rest by
@@ -16,6 +18,7 @@
  * and a_swaps (px_audio.h) and px_ua_on (px_midi.h); tests/test_usb_audio.c runs this file and usb.c on a PC.
  */
 #pragma once
+#define PX_UA_SHOWN (px_ua_on && A_SR == UAC_RATE)
 
 #if OP_UADEV
 /* the measurement option (base/audio.h OP_UADEV). USB_AUDIO's first argument: bit 0 the setting, bit 1 a counter in the
@@ -152,12 +155,12 @@ static void px_ua_service(uint32_t now)
 {
     static uint32_t t;
     static uint8_t seen;
-    if (px_ua_on == usb_uac_on) { seen = 0; return; }
+    if (PX_UA_SHOWN == usb_uac_on) { seen = 0; return; }
     if (!seen) { seen = 1; t = now; return; }
     if (now - t < 150u) return;
     seen = 0;
     a_ua = 0;                                   /* (the interrupt leaves the rings alone before the streams go) */
-    usb_uac_switch(px_ua_on);
+    usb_uac_switch(PX_UA_SHOWN);
     a_uat = 0;
     a_ua = usb_uac_on;
     usb_retry_ms = now;                         /* off the bus for a whole second: the computer sees it leave */

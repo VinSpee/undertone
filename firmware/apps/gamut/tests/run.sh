@@ -11,8 +11,11 @@
 #  - wet lanes (v39): the delay through its lane as inline bit for bit, the reverb's tail lag frames later, the pipeline
 #  - trails: after px_engine_switch the outgoing delay and reverb are their own tails, sample for sample, on every type;
 #    they end; the stretches of the delay memory never overlap through changes at random (under the sanitizers)
-#  - the engine built for 48 kHz (px_dsp.h PX_FS): the sweep (no NaN) and the trails in its memory
-#  - NAM: firmware/apps/gamut/engine/px_nam.c against tools/nam_a2.py with every factory model (needs numpy)
+#  - the engine built for 44.1 kHz (px_dsp.h PX_FS 44100, the rate-diag test build's): the sweep (no NaN) and the trails in
+#    its memory
+#  - NAM: firmware/apps/gamut/engine/px_nam.c against tools/nam_a2.py with every factory model, at GAIN noon and +12 dB
+#    (needs numpy)
+#  - factory preset levels: each within 0.5 LU of -23 LUFS on docs/nam_di.wav (tools/level_presets.py --check; needs scipy)
 #  - MIDI: the musical-MIDI code (firmware/apps/gamut/px_midi.h) on a PC: decoder, CC map, messages sent, settings byte, clock
 #  - preset store: save / reload / power cut at every step of a save (firmware/apps/gamut/px_store.h on a simulated flash)
 #  - flash hold (firmware/apps/gamut/px_store.h, px_models.h, px_irs.h): every erase, program and SPI read of a save or an erase
@@ -45,13 +48,16 @@ $CC -O2 -Ifirmware/apps/gamut/engine -Ifirmware firmware/apps/gamut/tests/engine
 $CC -O2 -Ifirmware/apps/gamut/engine -Ifirmware firmware/apps/gamut/tests/engine/ir_test.c firmware/px_math.c -lm -o build/ir_test && build/ir_test | tail -1
 $CC -O2 -Ifirmware/apps/gamut/engine firmware/apps/gamut/tests/engine/wet_test.c firmware/apps/gamut/engine/px_dsp.c firmware/px_math.c -lm -o build/wet_test && build/wet_test | tail -1
 $CC -O1 -g -fsanitize=address,undefined -fno-sanitize-recover=all -Ifirmware/apps/gamut/engine -Ifirmware firmware/apps/gamut/tests/engine/trail_test.c firmware/px_math.c -lm -o build/trail_test && build/trail_test | tail -1
-# the engine built for 48 kHz (px_dsp.h PX_FS: its memory and its counts of samples): the sweep at 48 kHz; the trails (at
-# 44.1 kHz, where their test places its changes) in its delay memory and its reverb ring, which is not a power of two
-base_test sweep48 $CC -O2 -DPX_FS=48000 -Ifirmware/apps/gamut/engine firmware/apps/gamut/tests/engine/sweep2.c firmware/apps/gamut/engine/px_dsp.c firmware/px_math.c -lm
-base_test trail_test48 $CC -O1 -g -fsanitize=address,undefined -fno-sanitize-recover=all -DPX_FS=48000 -Ifirmware/apps/gamut/engine -Ifirmware firmware/apps/gamut/tests/engine/trail_test.c firmware/px_math.c -lm
+# the engine built for 44.1 kHz (px_dsp.h PX_FS 44100: its memory and its counts of samples, the rate-diag test build's):
+# the sweep at 44.1 kHz; the trails in its delay memory and its reverb ring, a power of two. (The tests above build the
+# engine for 48 kHz, the release's: a reverb ring that is not a power of two)
+base_test sweep44 $CC -O2 -DPX_FS=44100 -Ifirmware/apps/gamut/engine firmware/apps/gamut/tests/engine/sweep2.c firmware/apps/gamut/engine/px_dsp.c firmware/px_math.c -lm
+base_test trail_test44 $CC -O1 -g -fsanitize=address,undefined -fno-sanitize-recover=all -DPX_FS=44100 -Ifirmware/apps/gamut/engine -Ifirmware firmware/apps/gamut/tests/engine/trail_test.c firmware/px_math.c -lm
 echo "== NAM (fixed point against the float reference, every factory model)"
 $CC -O2 -DPXN_EMUVEC -Ifirmware/apps/gamut/engine firmware/apps/gamut/tests/engine/nam_test.c firmware/apps/gamut/engine/px_nam.c -o build/nam_test
 if python3 -c "import numpy" 2>/dev/null; then mkdir -p build/nam; python3 firmware/apps/gamut/tests/test_nam.py build/nam_test > build/nam/log.txt || { cat build/nam/log.txt; exit 1; }; tail -1 build/nam/log.txt; else echo "(numpy not installed: NAM comparison skipped)"; fi
+echo "== factory preset levels (tools/level_presets.py --check)"
+if python3 -c "import numpy, scipy" 2>/dev/null; then python3 tools/level_presets.py --check docs/nam_di.wav > build/levels.log || { cat build/levels.log; exit 1; }; tail -1 build/levels.log; else echo "(numpy or scipy not installed: preset levels skipped)"; fi
 echo "== preset store"
 $CC -O1 -Ifirmware/apps/gamut/engine firmware/apps/gamut/tests/test_store.c firmware/apps/gamut/engine/px_dsp.c firmware/px_math.c -lm -o build/test_store && build/test_store | tail -2
 echo "== flash hold (every flash access of a save or an erase with the audio held and the second core collected)"

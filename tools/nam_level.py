@@ -1,32 +1,32 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: GPL-3.0-only
 # OpenPocket — the level trim of a NAM model: the same loudness for every model. The model plays docs/nam_di.wav
-# (6 s of real DI guitar, Alec-Wright/Automated-GuitarAmpModelling, GPL v3) at its own level; trim = REF - loudness
-# (ITU BS.1770 K-weighting, 400 ms blocks, absolute and relative gates). docs/pxedit.js computes the same for the
-# models the web editor loads (namLevelTrim): keep the two in step.
+# (6 s of real DI guitar at 44.1 kHz, Alec-Wright/Automated-GuitarAmpModelling, GPL v3), at the pedal's rate (to48)
+# and at its own level; trim = REF - loudness (ITU BS.1770 K-weighting, 400 ms blocks, absolute and relative gates).
+# docs/pxnam.js computes the same for the models the web editor loads (levelTrim, to48): keep the two in step.
 import os, sys, wave
 import numpy as np
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-SR = 44100
+SR = 48000               # the pedal's rate (firmware/apps/gamut/engine/px_dsp.h PX_FS)
 REF = -20.0              # LUFS of the model's own output after the trim (v37: with the engine's PX_NAM_REF_DB, a
                          # model at GAIN noon through a cabinet plays at about the presets' -23 LUFS)
 CLAMP = 24.0
 
 
-def kweight(x):
-    # BS.1770 pre-filter + RLB high-pass at 44.1 kHz (same coefficients as tools/calib_levels.py)
+def kweight(x, sr=SR):
+    # BS.1770 pre-filter + RLB high-pass at the rate sr (same coefficients as tools/calib_levels.py)
     from scipy import signal
     f0, G, Q = 1681.974450955533, 3.999843853973347, 0.7071752369554196
-    K = np.tan(np.pi * f0 / SR); Vh = 10 ** (G / 20); Vb = Vh ** 0.4996667741545416; a0 = 1 + K / Q + K * K
+    K = np.tan(np.pi * f0 / sr); Vh = 10 ** (G / 20); Vb = Vh ** 0.4996667741545416; a0 = 1 + K / Q + K * K
     y = signal.lfilter([(Vh + Vb * K / Q + K * K) / a0, 2 * (K * K - Vh) / a0, (Vh - Vb * K / Q + K * K) / a0],
                        [1, 2 * (K * K - 1) / a0, (1 - K / Q + K * K) / a0], x)
-    f0, Q = 38.13547087602444, 0.5003270373238773; K = np.tan(np.pi * f0 / SR); a0 = 1 + K / Q + K * K
+    f0, Q = 38.13547087602444, 0.5003270373238773; K = np.tan(np.pi * f0 / sr); a0 = 1 + K / Q + K * K
     return signal.lfilter([1, -2, 1], [1, 2 * (K * K - 1) / a0, (1 - K / Q + K * K) / a0], y)
 
 
-def lufs(x):
-    y = kweight(x); blk, hop = int(0.4 * SR), int(0.1 * SR)
+def lufs(x, sr=SR):
+    y = kweight(x, sr); blk, hop = int(0.4 * sr), int(0.1 * sr)
     z = np.array([np.mean(y[i:i + blk] ** 2) for i in range(0, len(y) - blk + 1, hop)])
     z = z[-0.691 + 10 * np.log10(z + 1e-20) > -70]
     if not len(z):
@@ -36,16 +36,29 @@ def lufs(x):
     return float(-0.691 + 10 * np.log10(np.mean(z)))
 
 
-def di(path=None):
+def to48(x, Z=16):
+    """44.1 kHz -> 48 kHz: windowed sinc (Kaiser, beta 8.6), Z zero crossings a side, 160 phases (docs/pxnam.js to48)"""
+    x = np.asarray(x, dtype=np.float64)
+    m = np.arange(len(x) * 160 // 147)
+    k = np.arange(-Z + 1, Z + 1)
+    d = (m * 147 % 160)[:, None] / 160.0 - k[None, :]          # each tap's distance from the output's time, in input samples
+    h = np.sinc(d) * np.i0(8.6 * np.sqrt(np.clip(1 - (d / (Z + 1)) ** 2, 0, None))) / np.i0(8.6)
+    i = (m * 147 // 160)[:, None] + k[None, :]
+    return np.sum(np.where((i >= 0) & (i < len(x)), x[np.clip(i, 0, len(x) - 1)], 0.0) * h, axis=1)
+
+
+def di(path=None, sr=44100):
+    """the DI clip (a 44.1 kHz WAV) at 44.1 or 48 kHz"""
     w = wave.open(path or os.path.join(ROOT, "docs", "nam_di.wav"))
-    return np.frombuffer(w.readframes(w.getnframes()), dtype=np.int16).astype(np.float64) / 32768.0
+    x = np.frombuffer(w.readframes(w.getnframes()), dtype=np.int16).astype(np.float64) / 32768.0
+    return to48(x) if sr == 48000 else x
 
 
-def trim_db(net, path=None):
+def trim_db(net, path=None, sr=SR):
     sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
     import nam_a2
-    y = nam_a2.run(net, di(path))
-    t = REF - lufs(y)
+    y = nam_a2.run(net, di(path, sr))
+    t = REF - lufs(y, sr)
     return float(max(-CLAMP, min(CLAMP, t)))
 
 

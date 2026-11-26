@@ -11,8 +11,9 @@ export const NW = 1871;                 // A2-Lite weights (head_scale included)
 export const REF_LUFS = -20;            // tools/nam_level.py REF: every model at this loudness after its trim
 export const SLOT_BYTES = 64 + NW * 4;  // header + weights
 const SLOPE = 0.01;
-// The authors of the TONE3000 captures cleared to ship as the factory amps, by their written permission, and each pack's
-// tone page. The editor's pedal panel lists them; docs/NAM.md holds the same list and must be edited with it.
+// The authors of the TONE3000 captures the factory amps are, shipped with their written permission, and each pack's tone
+// page: exactly the packs of tools/nam_factory.txt (tests/test_editor.mjs). The editor's pedal panel lists them;
+// docs/NAM.md holds the same list and must be edited with it.
 const T3K = "https://www.tone3000.com/tones/";
 export const CAPTURE_CREDITS = [
   { author: "subterraneans", packs: [["Soldano SLO-100", T3K + "soldano-slo-100-106781"]] },
@@ -146,7 +147,26 @@ function rescale(weights, s) {
   return w;
 }
 
-// ITU BS.1770 loudness at 44.1 kHz (K-weighting, 400 ms blocks, gates): tools/nam_level.py's lufs()
+// 44.1 kHz -> 48 kHz: windowed sinc (Kaiser, beta 8.6), Z zero crossings a side, 160 phases: tools/nam_level.py's to48()
+const i0 = (t) => { let s = 1, d = 1; for (let k = 1; k < 40; k++) { d *= (t / (2 * k)) ** 2; s += d; } return s; };
+export function to48(x, Z = 16) {
+  const H = [], kn = i0(8.6), y = new Float32Array(Math.floor(x.length * 160 / 147));
+  for (let ph = 0; ph < 160; ph++) {
+    H.push(Float64Array.from({ length: 2 * Z }, (_, j) => {
+      const d = ph / 160 - (j - Z + 1), u = d / (Z + 1);
+      return (d === 0 ? 1 : Math.sin(Math.PI * d) / (Math.PI * d)) * (Math.abs(u) >= 1 ? 0 : i0(8.6 * Math.sqrt(1 - u * u)) / kn);
+    }));
+  }
+  for (let m = 0; m < y.length; m++) {
+    const c = Math.floor(m * 147 / 160), h = H[m * 147 % 160];
+    let acc = 0;
+    for (let j = 0; j < 2 * Z; j++) { const i = c + j - Z + 1; if (i >= 0 && i < x.length) acc += x[i] * h[j]; }
+    y[m] = acc;
+  }
+  return y;
+}
+
+// ITU BS.1770 loudness (K-weighting, 400 ms blocks, gates): tools/nam_level.py's lufs()
 function biquad(x, b, a) {
   const y = new Float64Array(x.length); let x1 = 0, x2 = 0, y1 = 0, y2 = 0;
   for (let n = 0; n < x.length; n++) {
@@ -172,9 +192,13 @@ export function lufs(x, SR = 44100) {
   return L(g.reduce((a, b) => a + b, 0) / g.length);
 }
 
-// level trim (dB) that brings the model to REF_LUFS on the DI clip (docs/nam_di.wav, 44.1 kHz)
-export function levelTrim(weights, di) {
-  const t = REF_LUFS - lufs(a2Run(weights, di));
+// level trim (dB) that brings the model to REF_LUFS on the DI clip (docs/nam_di.wav, 44.1 kHz) played at `rate`, the
+// pedal's (44.1 or 48 kHz): tools/nam_level.py's trim_db
+const di48 = new WeakMap();                    // each DI clip at 48 kHz, made once
+export function levelTrim(weights, di, rate = 44100) {
+  const r48 = rate === 48000;
+  if (r48 && !di48.has(di)) di48.set(di, to48(di));
+  const t = REF_LUFS - lufs(a2Run(weights, r48 ? di48.get(di) : di), r48 ? 48000 : 44100);
   return Math.max(-24, Math.min(24, t));
 }
 
@@ -214,10 +238,10 @@ export function packModel(name, weights, levelDb) {
 }
 
 // a .nam file's text -> what the pedal stores, at the same loudness as every other model: { name, bytes, detail }.
-// `di`: readDi(nam_di.wav); `rate`: the pedal's, for the note (parseNam). The editor's Models section and t3k.html
-// (TONE3000 in the same tab, with no pedal: 44.1 kHz) both make their entries here.
+// `di`: readDi(nam_di.wav); `rate`: the pedal's, for the note (parseNam) and the level. The editor's Models section and
+// t3k.html (TONE3000 in the same tab, with no pedal: 48 kHz, the release's) both make their entries here.
 export function namEntry(text, fileName, di, rate = 44100) {
-  const m = parseNam(text, fileName, rate), { weights } = fitRange(m.weights, di), lv = levelTrim(weights, di);
+  const m = parseNam(text, fileName, rate), { weights } = fitRange(m.weights, di), lv = levelTrim(weights, di, rate);
   return { name: m.name, bytes: packModel(m.name, weights, lv), detail: [`level ${lv >= 0 ? "+" : ""}${lv.toFixed(1)} dB`, m.note].filter(Boolean).join("; ") };
 }
 
