@@ -54,10 +54,10 @@ Apple silicon and other ARM machines Docker emulates it (Rosetta or QEMU); you c
 Python 3. Its NAM check (`firmware/apps/gamut/tests/test_nam.py`, the fixed-point network against the float reference) also needs NumPy
 and is skipped without it (the container has none).
 
-The NAM factory models (`firmware/apps/gamut/engine/px_nam_factory.h`, v37) are generated, not hand-written: `tools/train_a2.py` trains each
-A2-Lite network from a capture (needs `pip install jax optax numpy scipy`, about 15 minutes a model on two CPU cores),
-then `tools/mk_nam_factory.py LIST.txt DIR docs/nam_di.wav` writes the header with each model's level trim
-([NAM.md](NAM.md)).
+The NAM factory models (`firmware/apps/gamut/engine/px_nam_factory.h`) are generated, not hand-written:
+`tools/mk_nam_factory.py CAPTURES docs/nam_di.wav` takes the A2-Lite part of each TONE3000 capture listed in
+`tools/nam_factory.txt` (a folder of the capture files, each checked by SHA-256) and writes the header with each
+model's level trim ([NAM.md](NAM.md)). `tools/train_a2.py` is for training your own model and is not used for the factory set.
 
 Slot IR1's factory IR (`firmware/apps/gamut/engine/px_ir_factory.h`) is generated too: `node tools/mk_ir_factory.mjs "ML Sound Lab's BEST IR
 IN THE WORLD.wav"` converts ML Sound Lab's WAV file as the editor converts any IR (`docs/pxir.js`) and writes the header.
