@@ -14,7 +14,7 @@
 # Prints a line a model, then "amps: N failures".
 import json, os, re, subprocess, sys
 import numpy as np
-from scipy.signal import resample_poly, welch
+from scipy.signal import welch
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, os.path.join(ROOT, "tools"))
@@ -42,7 +42,7 @@ def main():
     body = hdr[hdr.index("PXN_FW[PX_NAM_NFACT][PXN_NW] = {"):]
     models = [np.array([float(v.rstrip("f")) for v in re.findall(r"[-+0-9.eE]+f", m)], np.float32)
               for m in re.findall(r"\{([^{}]*)\}", body)]
-    x = resample_poly(nam_level.di(), 160, 147)
+    x = nam_level.di(sr=SR)
     xq = x[:SR] / 0.15 * 0.5
     fails = 0
     for (name, fn, sha, author, page), w in zip(mk_nam_factory.rows(), models):

@@ -257,6 +257,12 @@ list = await ed.list();
   const shipped = new Set(rows.map((r) => `${r[3]} ${r[4]}`));
   ok(fnames.join() === rows.map((r) => r[0]).join() && [...shipped].every((k) => credited.has(k)) && [...credited].every((k) => shipped.has(k)),
      `NAM: the ${rows.length} factory models' captures and the credits name the same ${credited.size} packs`);
+  // their level trims (tools/nam_level.py at 48 kHz, the pedal's rate) are the editor's at 48 kHz: the first model, and
+  // the last, scaled by 1/4
+  const lvls = hdr.match(/PXN_FLVL\[PX_NAM_NFACT\] = \{(.*?)\};/)[1].split(",").map(parseFloat);
+  const fw = [...hdr.slice(hdr.indexOf("PXN_FW[PX_NAM_NFACT][PXN_NW] = {")).matchAll(/\{([^{}]*)\}/g)].map((x) => Float32Array.from(x[1].match(/[-+0-9.eE]+f/g), parseFloat));
+  const dt = [0, 11].map((k) => levelTrim(fw[k], di, 48000) - lvls[k]);
+  ok(dt.every((d) => Math.abs(d) <= 0.01), `NAM: the factory level trims are the editor's at 48 kHz (${dt.map((d) => d.toFixed(3)).join(", ")} dB)`);
 }
 // ---- 8. v38: cabinet IRs (a WAV file -> an IR slot -> the CAB block's USER IR type) ----
 {

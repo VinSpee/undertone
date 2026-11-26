@@ -11,6 +11,9 @@
 #define DSP_CPU1 1         /* 1 = DSP engine on the 2nd core (automatic fallback to CPU0 on trouble) */
 #define OP_NAME "Gamut"                 /* the name: the boot screen draws it in small letters (ui_boot.h) */
 #define OP_RAM_CODE px_block_label      /* the engine's RAM code: a crash report gives its place (base/boot_screens.h) */
+#ifndef OP_RATE48                     /* (the rate-diag test build and the Bluetooth test image set 0: 44.1 kHz) */
+#define OP_RATE48 1                   /* 48 kHz, the rate of the factory amps' captures, through base/rate.h's guard */
+#endif
 #include "base/board.h"               /* the chip, the pins, the screen and its text (docs/BASE-FIRMWARE.md) */
 /* ---- preset: the v2 engine's struct (firmware/apps/gamut/engine/px_dsp.h), edited directly by the UI ---- */
 #define PX_SR ((float)A_SR)             /* the engine's rate: the I2S's (base/audio.h) */
@@ -205,6 +208,9 @@ static void app_main(void)
     a_hold = 1;                          /* DSP bypassed until the UI is up and 1.5 s have passed */
     px_flash_boot();                     /* the flash's size; a staging area an update left */
     px_store_boot();                     /* the saved presets and the settings; start on the last one saved */
+#if OP_RATE_DIAG
+    a_rate_pick();                       /* base/rate.h: the rate, before USB audio (only at the I2S's rate) and the engine take it */
+#endif
     px_usb_start();                      /* USB-MIDI device + update entry (web installer); v42: USB audio when set */
     nm_scan();                           /* v37: the NAM user models (names, levels) */
     ir_scan();                           /* v38: the user cabinet IRs (names) */

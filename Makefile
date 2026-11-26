@@ -8,7 +8,7 @@
 #   make test       the host tests (tests/run_tests.sh)
 #   make package    build + build/apps/gamut/SHA256SUMS of the outputs, then the release pin
 #   make package-test   the MIDI test channel package (build/apps/gamut/midi-test/, never the installer default)
-#   make package-test ARGS=rate-diag   (or rate48) the I2S clock's test builds (docs/RATE48-TEST.md)
+#   make package-test ARGS=rate-diag   the I2S clock's report at 44.1 kHz (docs/RATE48-TEST.md)
 #   make clean      remove every build output (needs no Docker)
 #   make shell      a shell in the build container
 #   make image      (re)build the container image

@@ -5,8 +5,8 @@
 # tools/nam_factory.txt lists the 12 models: "NAME|capture file|SHA-256|author|tone page". CAPTURES is a folder that holds
 # the capture files (in any subfolder); each must have its SHA-256 and its author. Each model is the A2-Lite part of its
 # capture, as the web editor imports one (docs/pxnam.js namEntry): scaled into the pedal's fixed-point range
-# (nam_a2.fit_range: the output stays exactly the same), then its level trim, so that every model plays at the same
-# loudness (tools/nam_level.py).
+# (nam_a2.fit_range: the output stays exactly the same), then its level trim at the pedal's rate, so that every model
+# plays at the same loudness (tools/nam_level.py).
 import hashlib, json, os, sys
 import numpy as np
 

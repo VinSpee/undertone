@@ -7,13 +7,15 @@
 # The numbers in px_trim.h were measured in v36 round the built-in TWIN amp and 1x12 cabinet, which store format 6
 # removed; a new run measures them round the first factory NAM model (SUPER 65 since the TONE3000 captures), so it
 # changes them.
-#   python3 tools/calib_levels.py DI.wav [DI2.wav ...]
-import os, re, subprocess, sys
+#   python3 tools/calib_levels.py DI.wav [DI2.wav ...]      (44.1 kHz WAVs, played at the engine's rate: at_rate)
+import os, re, subprocess, sys, wave
 import numpy as np
 from scipy import signal
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-SR = 44100
+sys.path.insert(0, os.path.join(ROOT, "tools"))
+import nam_level  # noqa: E402
+SR = 48000                          # the engine's rate (firmware/apps/gamut/engine/px_dsp.h PX_FS), which the harnesses run at
 TARGET = -23.0                      # LUFS at noon (EBU R128; engine output, before the master volume): headroom for cleans
 EXE = os.path.join(ROOT, "build", "lvl_chain")
 TRIM = os.path.join(ROOT, "firmware", "apps", "gamut", "engine", "px_trim.h")
@@ -39,6 +41,16 @@ def lufs(x):
     rel = -0.691 + 10 * np.log10(np.mean(z)) - 10
     z = z[-0.691 + 10 * np.log10(z) > rel]
     return float(-0.691 + 10 * np.log10(np.mean(z)))
+
+
+def at_rate(path):
+    """a 44.1 kHz DI WAV at SR, as the harnesses read one (16-bit mono): build/lvl_di_SR_NAME"""
+    out = os.path.join(ROOT, "build", "lvl_di_%d_%s" % (SR, os.path.basename(path)))
+    w = wave.open(out, "wb")
+    w.setnchannels(1); w.setsampwidth(2); w.setframerate(SR)
+    w.writeframes(np.clip(np.round(nam_level.di(path, SR) * 32768), -32768, 32767).astype("<i2").tobytes())
+    w.close()
+    return out
 
 
 def build():
@@ -68,7 +80,7 @@ def write(t):
 
 
 def main():
-    dis = sys.argv[1:]
+    dis = [at_rate(d) for d in sys.argv[1:]]
     if not dis: sys.exit(__doc__ or "usage: calib_levels.py DI.wav [...]")
     t = {k: [0.0] * n for k, n in NT.items()}
     write(t); build()

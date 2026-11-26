@@ -30,7 +30,7 @@
  */
 #pragma once
 static const char *const PXN_FNAME[PX_NAM_NFACT] = {"SUPER 65", "AC30 TB", "TM26 GRN", "TM26 PLX", "TM26 BLU", "TM26 RED", "SLO 100", "SLO RIFF", "DT MIDS", "DT SCOOP", "JRT GN 5", "JRT GN 7"};
-static const float PXN_FLVL[PX_NAM_NFACT] = {-6.46f, -5.48f, -5.50f, 1.44f, -6.58f, -2.46f, 0.52f, -1.80f, -3.71f, -2.09f, -3.03f, -3.15f};
+static const float PXN_FLVL[PX_NAM_NFACT] = {-6.37f, -5.35f, -5.34f, 1.15f, -6.88f, -2.87f, 0.11f, -2.26f, -4.15f, -2.70f, -3.26f, -3.34f};
 static const float PXN_FW[PX_NAM_NFACT][PXN_NW] = {
   {-0.322220623f, -1.08836114f, -0.954530597f, 0.103484251f, 0.285153151f, 0.275282919f, -0.945831478f, 0.0466951914f, 0.0373669975f, 0.0578535274f,
    0.204623133f, 0.345096797f, -1.04897785f, -0.19631508f, 0.0153264655f, 0.0464313254f, 0.37394768f, 0.273515195f, -0.762687027f, -0.269812405f,

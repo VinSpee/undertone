@@ -23,12 +23,13 @@
 extern "C" {
 #endif
 
-/* PX_FS: the rate the engine is built for (Hz). Its memory (the delay's 2 s, the reverb's ring, the shifters' rings)
- * and its counts of samples (the shifters' windows, the per-sample decays: px_dsp.c PX_N44) are set for it, as
- * constants; what is given in seconds or hertz follows the rate px_engine_init is given: PX_FS, or the clock's measure
- * of it. At 44.1 kHz the engine is the one it has always been, byte for byte. */
+/* PX_FS: the rate the engine is built for (Hz): 48 kHz, the pedal's since the factory amps became 48 kHz captures. Its
+ * memory (the delay's 2 s, the reverb's ring, the shifters' rings) and its counts of samples (the shifters' windows, the
+ * per-sample decays: px_dsp.c PX_N44) are set for it, as constants; what is given in seconds or hertz follows the rate
+ * px_engine_init is given: PX_FS, or the rate the I2S runs at (base/rate.h). Built for 44.1 kHz (-DPX_FS=44100: the
+ * rate-diag test build), the engine is the one it has always been, byte for byte. */
 #ifndef PX_FS
-#define PX_FS 44100
+#define PX_FS 48000
 #endif
 #ifndef PX_SR
 #define PX_SR ((float)PX_FS)

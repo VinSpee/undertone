@@ -85,7 +85,7 @@ async function here(q) {
         const text = await t3kDownload(m);
         show(el("h1", { textContent: tone.title || "TONE3000" }), line(`Measuring the level of ${name}…`, "dim"));
         await new Promise((res) => setTimeout(res, 20));        // (the line shows before the work)
-        const made = namEntry(text, `${m.name || tone.title || "MODEL"}.nam`, di);
+        const made = namEntry(text, `${m.name || tone.title || "MODEL"}.nam`, di, 48000);   // (no pedal here: the release's rate)
         captures.push({ name: made.name, bytes: b64(made.bytes), detail: made.detail, source: t3kSource(tone, m) });
       }
       show(line(`Back to the editor with ${captures.map((c) => c.name).join(", ")}…`));

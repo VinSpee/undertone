@@ -3,7 +3,7 @@
 #   sh tests/rate48/score.sh            prints each failure, then "failures: N" (the target is 0)
 # Its checks, each failure counting 1, on the PC (no pedal, no toolchain; writes to build/rate48):
 #  - blocks: every block type but AMP and CAB alone, all its settings at 0, 50 and 100, through docs/nam_di.wav, at
-#    44.1 kHz with the engine built as today and at 48 kHz with the engine built for 48 kHz (-DPX_FS=48000): no NaN,
+#    44.1 kHz with the engine built for 44.1 kHz (-DPX_FS=44100) and at 48 kHz with the engine built for 48 kHz: no NaN,
 #    the level and every third-octave band from 99 Hz to 10 kHz within 0.5 dB (tests/rate48/compare.py, which lists
 #    the cases allowed to differ, by how much and why)
 #  - delay: DIGITAL at TIME 100 echoes at 48 kHz within one sample of where it does at 44.1 kHz (2000 ms)
@@ -15,8 +15,7 @@
 #    does not hold: each factory amp is its capture's A2-Lite part and the pedal's fixed point plays it at 48 kHz
 #    (tests/rate48/amps.py)
 # Not here, as it needs a file the repository does not hold: the factory cabinet IR against its 48 kHz WAV.
-# Guard, not scored: until the switch to 48 kHz, the 44.1 kHz engine stays bit for bit the one of the commit the
-# port started from (firmware/apps/gamut/tests/equiv.sh REF).
+# The release runs at 48 kHz since the factory amps became 48 kHz captures; this check keeps it sounding as 44.1 kHz did.
 cd "$(dirname "$0")/../.."
 CC="${CC:-cc}"
 B=build/rate48
@@ -26,7 +25,7 @@ fails=0
 fail() { echo "FAIL $*"; fails=$((fails + 1)); }
 why() { tail -1 "$B/$1.log"; grep -m1 error "$B/$1.err"; }   # a test's last line, or why it did not build
 EF="-O2 -w -fno-builtin -ffp-contract=off -Ifirmware/apps/gamut/engine"
-$CC $EF -o $B/render44 tests/rate48/render.c firmware/px_math.c -lm || exit 1
+$CC $EF -DPX_FS=44100 -o $B/render44 tests/rate48/render.c firmware/px_math.c -lm || exit 1
 $CC $EF -DPX_FS=48000 -o $B/render48 tests/rate48/render.c firmware/px_math.c -lm || exit 1
 $B/render44 bands 44100 docs/nam_di.wav > $B/bands44.txt & p44=$!
 $B/render48 bands 48000 docs/nam_di.wav > $B/bands48.txt || exit 1
