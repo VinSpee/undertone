@@ -242,7 +242,7 @@ The API is the one above, with these differences:
 | `POST /api/sound/HZ` | a sine of `HZ` at a quarter of full scale as the guitar; answers `{left, right}`, the two outputs' RMS as a part of full scale, measured by the pedal's own audio stages |
 | `POST /api/nan` | the app's sound gives a NaN in its next block |
 | `POST /api/loop/NAME` | a loop of `assets/loops` (`riff`, `chords`, ...) as the guitar, around and around, in the tone's place. `none` ends it |
-| `POST /api/audio/MS` | `MS` milliseconds of the pedal's time pass at once, and its two outputs come back: 16-bit frames, left then right, at 44.1 kHz. From the first request on, the audio interrupt runs only inside these requests, so one request's sound continues the one before. `0`, or 3 s without a request, ends that |
+| `POST /api/audio/MS` | `MS` milliseconds of the pedal's time pass at once, and its two outputs come back: 16-bit frames, left then right, at the pedal's rate (48 kHz for the Gamut pedal, 44.1 kHz for a base-firmware app). From the first request on, the audio interrupt runs only inside these requests, so one request's sound continues the one before. `0`, or 3 s without a request, ends that |
 | `POST /api/clock/N/MS` | `N` MIDI clocks, `MS` + 1 milliseconds apart, with the even timing a test needs |
 | `POST /api/midi` | SysEx reaches the update code's handshake, INFO and the app's own requests; any other message goes through the MIDI ring to the app's map |
 
