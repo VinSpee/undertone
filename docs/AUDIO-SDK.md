@@ -377,7 +377,7 @@ Driver setup: `iis_open` IIS_PORTA, channel_in = BIT(1), channel_out = BIT(0), m
   back to the factory IR for IR1 only. An IR written to IR1 replaces it; `IR_ERASE` brings it back; the IR flash and
   its format do not change. `IR_LIST` reports it as present 2 (editor protocol 5).
 - `tools/mk_ir_factory.mjs` converts the creator's WAV (mono, 24-bit, 48 kHz, 65,536 frames, 1.37 s) with the editor's
-  own code (`docs/pxir.js`): onset, 44.1 kHz, the first 1024 samples, the 64-sample fade, int16. Measured against the
+  own code (`docs/pxir.js`): onset, the rate (since protocol 6 once at 44.1 and once at 48 kHz), the first 1024 samples, the 64-sample fade, int16. Measured against the
   original: the 23 ms kept hold 99.76 % of its energy (the tail after them is 26 dB below the whole, and already 48 dB
   below the peak at 21 ms); no latency is added (the onset is at its first sample; the convolution has none); the
   1/3-octave response matches within 0.17 dB from 80 Hz to 16 kHz (mean 0.03 dB). The loss is below 80 Hz, where

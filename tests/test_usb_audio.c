@@ -3,6 +3,8 @@
  * builds it) and its audio glue (firmware/px_uaudio.h) against a model of the USB controller and of a computer.
  *   cc -O1 -Wall -Wno-unused-function -Ifirmware/apps/gamut/engine -Ifirmware -Ifirmware/bsp/chip tests/test_usb_audio.c -lm -o build/test_usb_audio
  *   build/test_usb_audio            the tests
+ * Built with -DA_SR=48000u, the same with the streams and the I2S at 48 kHz (px_uaconf.h: that clock's nominal rate; 48,019.21 Hz is only an estimate
+ * from the old resampler mode's rate, not a measurement: the real clock is to be measured on a pedal, docs/RATE48-TEST.md).
  *   build/test_usb_audio desc       the device and configuration descriptors with USB AUDIO off, as hex
  * Built with -DT_REF (FELUCCA_UAC 0: the USB device every OpenPocket before v42 was), `desc` prints that device's;
  * tests/run_tests.sh compares the two, byte for byte.
@@ -10,10 +12,11 @@
  *   - USB AUDIO off: the descriptors a computer reads, and what it gets when it asks for the streams (refused);
  *   - USB AUDIO on: the descriptors' structure (interfaces in the order macOS 13-15 need, both isochronous endpoints),
  *     the streams' requests, the switch off again;
- *   - the record stream over 10 minutes with the pedal's clock 300 ppm fast or slow against the computer's, and with
+ *   - the record stream over 10 minutes with the pedal's clock 300 ppm (500 ppm at 48 kHz, and 400 ppm fast: 48,019.21 Hz)
+ *     fast or slow against the computer's, and with
  *     blocks that start up to 0.7 ms late: every frame the pedal made arrives once, in order (no gap, no repeat), the
  *     ring's fill stays in its band;
- *   - the playback stream over 10 minutes at the same clock differences: no gap, the ring neither empties nor
+ *   - the playback stream over 10 minutes at the same clock differences (500 ppm at 48 kHz): no gap, the ring neither empties nor
  *     overflows, the level follows MASTER, the sum with the pedal's sound is clipped, a flash write's mute stops it;
  *   - the MIDI input ring and an app's reader of it (firmware/base/midi.h): a ring nobody reads refuses the host's
  *     packets, the installer's SysEx among them; midi_poll empties it and gives the app's map each message. */
@@ -98,7 +101,7 @@ static void fm1_delay_ms(uint32_t ms) { (void)ms; }
 
 /* ---- usb.c, as firmware/px_usb.h builds it (T_REF: as it was built before USB audio) ---- */
 #define A_FR 128u
-#ifndef A_SR                                    /* (tests/rate48/score.sh: 48 kHz) */
+#ifndef A_SR                                    /* (-DA_SR=48000u: run_tests.sh, tests/rate48/score.sh) */
 #define A_SR 44100u                             /* (base/audio.h's: the streams' rate, px_uaconf.h) */
 #endif
 #define RING_PUBLISH() ((void)0)
@@ -165,6 +168,10 @@ static int desc_main(void)
 }
 
 #ifndef T_REF
+#define T_I2S (UAC_I2S_HZ100 / 100.0)          /* the pedal's I2S clock (Hz) */
+#define T_MS6 (A_SR * 6u / 10000u)              /* 0.6 ms in frames: the margin the rings keep (26 at 44.1 kHz) */
+#define T_HOSTF (A_SR / 1000u + 1u)             /* the most frames in a packet of the computer's (45 at 44.1 kHz) */
+static const uint8_t RATE3[3] = {A_SR & 0xFFu, (A_SR >> 8) & 0xFFu, A_SR >> 16};   /* the rate as SET_CUR sends it */
 /* ---- the pedal's side: what firmware/px_uaudio.h needs of px_audio.h and px_midi.h ---- */
 static float a_out[A_FR], a_gv = 1.0f;
 static volatile uint8_t a_mute, a_ua;
@@ -292,7 +299,7 @@ static void test_off(void)
     CHECK(ctrl(0x01, 11, 1, 1, 0, 0), "off: SET_INTERFACE 1 alt 1 is refused (interface 1 is MIDI)");
     CHECK(!ctrl(0x01, 11, 0, 1, 0, 0), "off: SET_INTERFACE 1 alt 0 is accepted");
     CHECK(!uac.alt && !uo.alt, "off: no stream opens");
-    CHECK(ctrl(0x22, 1, 0x0100, 0x84, 3, (const uint8_t *)"\x44\xAC\x00"), "off: the sampling frequency request is refused");
+    CHECK(ctrl(0x22, 1, 0x0100, 0x84, 3, RATE3), "off: the sampling frequency request is refused");
     CHECK(ctrl(0x02, 1, 0, 0x84, 0, 0), "off: CLEAR_FEATURE on endpoint 4 is refused");
     for (int i = 0; i < 100; i++) usb_poll();
     CHECK(m_tx4_n == 0u, "off: nothing is ever queued on endpoint 4");
@@ -306,7 +313,8 @@ static void test_on(void)
     int ok;
     px_ua_on = 1; usb_uac_on = 1;
     enumerate();
-    CHECK(get_descriptor(1, d1, 18) == 18u && d1[13] == 0x03 && d1[12] != 0x00, "on: another bcdDevice (the computer learns the device anew)");
+    CHECK(get_descriptor(1, d1, 18) == 18u && d1[13] == (A_SR == 48000u ? 0x07 : 0x03) && d1[12] != 0x00,
+          "on: another bcdDevice (the computer learns the device anew; 4.00 more at 48 kHz)");
     CHECK(d1[8] == 0x09 && d1[9] == 0x12 && d1[10] == 0x01 && d1[11] == 0x00, "on: the same vendor and product id");
     n = get_descriptor(2, d, 512);
     ac = parse_cfg(d, n, ifs, &nif, eps, &nep, &ok);
@@ -322,8 +330,8 @@ static void test_on(void)
     {
         int in = 0, out = 0, mi = 0, mo = 0;
         for (i = 0; i < nep; i++) {
-            if (eps[i].addr == 0x84u) in = (eps[i].attr == 0x05u && eps[i].maxp >= 46u * 4u && eps[i].ifn == 1u && eps[i].alt == 1u);
-            if (eps[i].addr == 0x04u) out = (eps[i].attr == 0x09u && eps[i].maxp >= 45u * 4u && eps[i].ifn == 2u && eps[i].alt == 1u);
+            if (eps[i].addr == 0x84u) in = (eps[i].attr == 0x05u && eps[i].maxp >= (UA_N1 + 2u) * 4u && eps[i].ifn == 1u && eps[i].alt == 1u);
+            if (eps[i].addr == 0x04u) out = (eps[i].attr == 0x09u && eps[i].maxp >= T_HOSTF * 4u && eps[i].ifn == 2u && eps[i].alt == 1u);
             if (eps[i].addr == 0x81u) mi = (eps[i].attr == 2u && eps[i].ifn == 3u);
             if (eps[i].addr == 0x01u) mo = (eps[i].attr == 2u && eps[i].ifn == 3u);
         }
@@ -332,8 +340,16 @@ static void test_on(void)
     CHECK(!ctrl(0x01, 11, 1, 1, 0, 0) && uac.alt == 1u, "on: SET_INTERFACE 1 alt 1 opens the record stream");
     CHECK(!ctrl(0x81, 10, 0, 1, 1, 0) && m_e0_n == 1u && m_e0_in[0] == 1u, "on: GET_INTERFACE 1 answers 1");
     CHECK(!ctrl(0x01, 11, 1, 2, 0, 0) && uo.alt == 1u, "on: SET_INTERFACE 2 alt 1 opens the playback stream");
-    CHECK(!ctrl(0x22, 1, 0x0100, 0x84, 3, (const uint8_t *)"\x44\xAC\x00"), "on: the sampling frequency 44100 is accepted");
-    CHECK(!ctrl(0xA2, 0x81, 0x0100, 0x84, 3, 0) && m_e0_n == 3u && !memcmp(m_e0_in, "\x44\xAC\x00", 3), "on: the sampling frequency reads 44100");
+    CHECK(!ctrl(0x22, 1, 0x0100, 0x84, 3, RATE3), "on: the sampling frequency (the streams' rate) is accepted");
+    CHECK(!ctrl(0xA2, 0x81, 0x0100, 0x84, 3, 0) && m_e0_n == 3u && !memcmp(m_e0_in, RATE3, 3), "on: the sampling frequency reads the streams' rate");
+    CHECK(!ctrl(0xA2, 0x82, 0x0100, 0x84, 3, 0) && !memcmp(m_e0_in, RATE3, 3) && !ctrl(0xA2, 0x83, 0x0100, 0x84, 3, 0) &&
+          !memcmp(m_e0_in, RATE3, 3), "on: it is the only one (its minimum and maximum)");
+    {
+        uint32_t f = 0;                         /* the format descriptor's one discrete rate */
+        for (i = 0; i + 10u < n; i += d[i] ? d[i] : 1u)
+            if (d[i] == 11u && d[i + 1] == 0x24u && d[i + 2] == 2u && d[i + 7] == 1u) f |= (d[i + 8] | (uint32_t)d[i + 9] << 8 | (uint32_t)d[i + 10] << 16) == A_SR ? 1u : 2u;
+        CHECK(f == 1u, "on: both streams' formats name the one rate");
+    }
     CHECK(!ctrl(0x01, 11, 0, 3, 0, 0) && ctrl(0x01, 11, 1, 3, 0, 0), "on: the MIDI interface has alt 0 only");
     CHECK(!ctrl(0x01, 11, 0, 1, 0, 0) && !uac.alt && !ctrl(0x01, 11, 0, 2, 0, 0) && !uo.alt, "on: alt 0 closes each stream");
 }
@@ -361,8 +377,8 @@ static void test_switch(void)                   /* the setting changed while a c
     CHECK(usb_uac_on == 1u && a_ua == 1u && m_off == off0 + 2u, "switch: and on again the same way");
 }
 
-/* ---- the streams over time. The pedal: a poll every 0.5 ms, a block of 128 frames every 128 / 44117.647 s, both on its
- * own clock (ppm against the computer's); the computer: a frame every 1 ms ---- */
+/* ---- the streams over time. The pedal: a poll every 0.5 ms, a block of 128 frames every 128 / T_I2S s (44,117.647 Hz at
+ * 44.1 kHz), both on its own clock (ppm against the computer's); the computer: a frame every 1 ms ---- */
 #define T_FS 1.0e12                             /* femtoseconds in a millisecond */
 static uint32_t rnd_s = 12345u;
 static uint32_t rnd(void) { rnd_s = rnd_s * 1664525u + 1013904223u; return rnd_s >> 8; }
@@ -370,7 +386,7 @@ static int32_t ramp(uint32_t k) { return (int32_t)(k % 20000u) - 10000; }   /* t
 
 static void test_record(double ppm, int late, const char *name)
 {
-    const double dev = 1.0 + ppm * 1e-6, t_poll = 0.5 * T_FS * dev, t_blk = 128.0 / 44117.647 * 1000.0 * T_FS * dev;
+    const double dev = 1.0 + ppm * 1e-6, t_poll = 0.5 * T_FS * dev, t_blk = 128.0 / T_I2S * 1000.0 * T_FS * dev;
     double tp = t_poll, tb0 = t_blk, tb = t_blk, th = T_FS, end = 600.0e3 * T_FS;
     uint32_t made = 0, got = 0, bad = 0, zeros = 0, short_ = 0, pk[3] = {0, 0, 0}, missed0 = 0;
     uint32_t un0, ov0, st0, up0, dn0;
@@ -399,7 +415,7 @@ static void test_record(double ppm, int late, const char *name)
         if (m_ep[4][1] & 0x01u) {
             const uint32_t nf = m_tx4_n / 4u;
             m_ep[4][1] &= (uint8_t)~0x01u;
-            if (nf >= 43u && nf <= 46u) pk[nf == 44u ? 0 : nf == 45u ? 1 : 2]++; else short_++;
+            if (nf + 1u >= UA_N1 && nf <= UA_N1 + 2u) pk[nf == UA_N1 ? 0 : nf == UA_N1 + 1u ? 1 : 2]++; else short_++;
             for (uint32_t i = 0; i < nf; i++) {
                 const int32_t l = (int16_t)m_tx4[i], r = (int16_t)(m_tx4[i] >> 16);
                 if (l != r) bad++;
@@ -418,15 +434,15 @@ static void test_record(double ppm, int late, const char *name)
     CHECK(uac.underruns == un0 && uac.overruns == ov0 && uac.missed == missed0 && uac.stalls == st0 && !short_, msg);
     snprintf(msg, sizeof msg, "%s: the ring's fill at a block's start leaves 0.6 ms in hand and room for a block (%u..%u of %u)", name,
              uac.fill_lo, uac.fill_hi, (unsigned)UA_N);
-    CHECK((late || uac.fill_lo >= 26u) && uac.fill_hi + A_FR + 46u < UA_N, msg);   /* (a late block finds less: no gap is the test) */
-    printf("  %s: packets of 44 / 45 / other: %u / %u / %u, steered +%u -%u, fill %u..%u, %.3f frames a ms\n", name, pk[0], pk[1],
-           pk[2], uac.adj_up - up0, uac.adj_down - dn0, uac.fill_lo, uac.fill_hi, (double)got / 600000.0);
+    CHECK((late || uac.fill_lo >= T_MS6) && uac.fill_hi + A_FR + UA_MAXF < UA_N, msg);   /* (a late block finds less: no gap is the test) */
+    printf("  %s: packets of %u / %u / other: %u / %u / %u, steered +%u -%u, fill %u..%u, %.3f frames a ms\n", name, UA_N1, UA_N1 + 1u,
+           pk[0], pk[1], pk[2], uac.adj_up - up0, uac.adj_down - dn0, uac.fill_lo, uac.fill_hi, (double)got / 600000.0);
 }
 
 static void test_play(double ppm, const char *name)
 {
-    const double dev = 1.0 + ppm * 1e-6, t_poll = 0.5 * T_FS * dev, t_blk = 128.0 / 44117.647 * 1000.0 * T_FS * dev;
-    const double w = 2.0 * 3.14159265358979 * 200.0 / 44100.0;   /* 200 Hz, L; R the same, inverted */
+    const double dev = 1.0 + ppm * 1e-6, t_poll = 0.5 * T_FS * dev, t_blk = 128.0 / T_I2S * 1000.0 * T_FS * dev;
+    const double w = 2.0 * 3.14159265358979 * 200.0 / A_SR;      /* 200 Hz, L; R the same, inverted */
     double tp = t_poll, tb = t_blk, th = T_FS, end = 600.0e3 * T_FS;
     uint32_t sent = 0, acc = 0, n_out = 0, jumps = 0, quiet = 0, lr = 0, fmin = ~0u, fmax = 0, un0, ov0;
     int32_t d[2 * A_FR], last = 0, peak = 0;
@@ -457,9 +473,9 @@ static void test_play(double ppm, const char *name)
             tb += t_blk;
             continue;
         }
-        if (!(m_ep[4][4] & 0x01u)) {             /* the computer's frame: 44 or 45 frames (44.1 a ms on its clock) */
-            uint32_t nf = 44u;
-            acc += 100u;
+        if (!(m_ep[4][4] & 0x01u)) {             /* the computer's frame: the rate's frames a ms on its clock (44 or 45 at 44.1 kHz) */
+            uint32_t nf = A_SR / 1000u;
+            acc += A_SR % 1000u;
             if (acc >= 1000u) { acc -= 1000u; nf++; }
             for (uint32_t i = 0; i < nf; i++) {
                 const int16_t s = (int16_t)lrint(10000.0 * sin(w * (double)(sent + i)));
@@ -476,7 +492,7 @@ static void test_play(double ppm, const char *name)
     snprintf(msg, sizeof msg, "%s: left and right kept apart, full level at MASTER 100 (peak %d of 2560000, %u frames off)", name, (int)peak, lr);
     CHECK(!lr && peak > 2540000 && peak <= 2560000, msg);
     snprintf(msg, sizeof msg, "%s: the ring's fill after a block's read leaves 0.6 ms in hand and stays inside it (%u..%u of %u)", name, fmin, fmax, (unsigned)UO_N);
-    CHECK(fmin >= 26u && fmax + 45u < UO_N, msg);
+    CHECK(fmin >= T_MS6 && fmax + T_HOSTF < UO_N, msg);
     printf("  %s: fill %u..%u frames (target %u)\n", name, fmin, fmax, (unsigned)UO_TGT);
 }
 
@@ -571,8 +587,16 @@ int main(int argc, char **argv)
     test_play(0.0, "playback, the nominal clocks");
     test_play(+300.0, "playback, the pedal 300 ppm slow");
     test_play(-300.0, "playback, the pedal 300 ppm fast");
+#if A_SR == 48000u
+    test_record(+500.0, 0, "record, the pedal 500 ppm slow");
+    test_record(-500.0, 0, "record, the pedal 500 ppm fast");
+    test_record(-400.0, 0, "record, the pedal's I2S at 48,019.21 Hz");
+    test_play(+500.0, "playback, the pedal 500 ppm slow");
+    test_play(-500.0, "playback, the pedal 500 ppm fast");
+    test_play(-400.0, "playback, the pedal's I2S at 48,019.21 Hz");
+#endif
     test_midi_ring();
-    printf("USB audio: %s (%d failures)\n", fails ? "FAIL" : "ok", fails);
+    printf("USB audio at %u Hz: %s (%d failures)\n", A_SR, fails ? "FAIL" : "ok", fails);
     return fails ? 1 : 0;
 }
 #endif

@@ -26,14 +26,14 @@ factory models have no cabinet: keep a CAB after the AMP and load an IR into it.
 
 ### CAB — USER IR (v38; IR, LOW CUT, HIGH CUT)
 The CAB block plays a cabinet impulse response loaded from the web editor (8 slots, a `.wav` file each): its first
-23 ms (1024 samples at 44.1 kHz), convolved exactly (partitioned FFT), every IR at the same energy. IR picks the slot
+1024 samples at the pedal's rate (23 ms at 44.1 kHz), convolved exactly (partitioned FFT), every IR at the same energy. IR picks the slot
 (its name shows on the PLAY page), LOW CUT 20..400 Hz, HIGH CUT 20 kHz..2 kHz. An empty slot (any but IR1, which
 always plays something) passes the sound as it is: the amp alone, as a DI.
 
 Slot IR1 comes with a factory IR, **ML BEST IR**: ["BEST IR IN THE WORLD"](https://www.facebook.com/watch/?ref=embed_video&v=1053603041469100), a free cabinet IR by ML Sound Lab,
 redistributed with the creator's permission as stated by the project's owner. It is in the firmware, not in the IR
 flash: IR1 plays it until you load an IR of yours there, and plays it again when you remove yours. It is converted as
-the editor converts any WAV file (48 kHz to 44.1 kHz, its first 23 ms of 1.37 s, which hold 99.8 % of its energy).
+the editor converts any WAV file (48 kHz to the pedal's rate, its first 1024 samples of 1.37 s, which hold 99.8 % of its energy).
 
 The built-in amps (TWIN, AC15 TB, JCM900, JCM2000, MARK IV, SHIRLEY, PRO MOD, 5150) and cabinets (1x12 US OPEN,
 2x12 BLUE, 4x12 GREEN, 4x12 T75, 4x12 V30, 1x12 CREAM, DI) were removed in store format 6. A preset saved with one

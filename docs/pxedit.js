@@ -122,6 +122,7 @@ export class Editor {
         if (args[0] === 0) this.other = parseInfo([0xF0, ...H, C.INFO, ...args, 0xF7]) || this.other;
         const r = new Reader(args);
         const info = { proto: r.b(), version: r.s(), identity: r.s(), nblk: r.b(), npar: r.b(), nslot: r.b(), nameMax: r.b(), port: input.name };
+        info.rate = info.proto >= 6 ? r.b() | r.b() << 7 | r.b() << 14 : 44100;   // (protocol 6) the pedal's sample rate, Hz
         if (info.proto >= 1) { this.info = info; return info; }
       } catch (_) { }
       input.onmidimessage = null;
@@ -281,6 +282,8 @@ export class Editor {
   // factory IR (pxir.js FACTORY_IR) while it holds none of the user's, and lists it as used, factory
   get hasIr() { return !!(this.info && this.info.proto >= 3); }
   get hasFactoryIr() { return !!(this.info && this.info.proto >= 5); }
+  // the pedal's sample rate (Hz): an IR is made at it (pxir.js prepareIr, packIr), a NAM model's note is about it
+  get rate() { return this.info ? this.info.rate : 44100; }
   async irList() {
     const r = new Reader(await this.request(C.IR_LIST));
     const n = r.b(), out = [];

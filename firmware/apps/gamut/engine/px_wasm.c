@@ -36,7 +36,7 @@ EXPORT(px_apply) void px_apply(void)                  /* v38: as the pedal: knob
     if (ch == PX_CH_KNOBS && !(load && px_trail_due(&g_eng, &preset))) px_engine_knobs(&g_eng, &preset);
     else if (ch != PX_CH_NONE) px_engine_switch(&g_eng, &preset);
 }
-EXPORT(px_reset) void px_reset(void) { px_engine_init(&g_eng, 44100.0f); px_engine_set(&g_eng, &preset); a_nan = 0; }
+EXPORT(px_reset) void px_reset(void) { px_engine_init(&g_eng, PX_SR); px_engine_set(&g_eng, &preset); a_nan = 0; }   /* (wasm.sh: PX_FS 48000) */
 EXPORT(px_volume) void px_volume(int vol) { float v = (float)vol * 0.01f; a_gain = v * v; }
 EXPORT(px_bypass) void px_bypass(int on) { a_bypass = on; }
 EXPORT(px_tuner_mute) void px_tuner_mute(int on) { a_tmute = on; }

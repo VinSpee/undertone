@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
-// The pedal's engine as WebAssembly (firmware/apps/gamut/engine/px_wasm.c, tools/sim/px_engine.wasm), on arrays of 128 samples at 44.1 kHz. One
+// The pedal's engine as WebAssembly (firmware/apps/gamut/engine/px_wasm.c, tools/sim/px_engine.wasm), on arrays of 128 samples at 48 kHz. One
 // class for the AudioWorklet (tools/sim/pedal-worklet.js) and the tests. docs/SIMULATOR.md.
-export const ENGINE_RATE = 44100;
+export const ENGINE_RATE = 48000;                     // (firmware/apps/gamut/engine/wasm.sh PX_FS)
 export const BLOCK = 128;
 // tools/calib_levels.py: a guitar at the pedal's level, which a full-scale DI recording reaches at this gain
 export const GUITAR_LEVEL = 0.15;

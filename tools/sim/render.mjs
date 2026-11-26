@@ -6,6 +6,7 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { basename, dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { BLOCK, ENGINE_RATE, GUITAR_LEVEL, PxEngine } from "./px-engine.js";
+import { resample } from "../../docs/pxir.js";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..", "..");
 
@@ -54,7 +55,8 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
   const module = engineModule();
   const { loops } = JSON.parse(readFileSync(join(ROOT, "assets/loops/manifest.json")));
   for (const loop of loops) {
-    const { samples } = readWav(readFileSync(join(ROOT, "assets/loops", loop.file)));
+    const wav = readWav(readFileSync(join(ROOT, "assets/loops", loop.file)));   // (44.1 kHz: brought to the engine's rate)
+    const samples = resample(wav.samples, wav.rate, Math.round(wav.samples.length * ENGINE_RATE / wav.rate), ENGINE_RATE);
     const twice = new Float32Array(samples.length * 2);
     twice.set(samples); twice.set(samples, samples.length);
     const engine = new PxEngine(module);

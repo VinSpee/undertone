@@ -20,7 +20,7 @@ int px_ir_user(int slot, char *name12, float *h)
     if (slot > 1) return 0;
     strcpy(name12, "GOLD");
     if (h) { memcpy(h, IRS, sizeof IRS); if (slot) for (int i = 0; i < PX_IR_LEN; i++) h[i] = -h[PX_IR_LEN - 1 - i] * 0.5f; }
-    return 1;
+    return 44100;
 }
 static px_engine e;
 #define NS (44100 * 2)

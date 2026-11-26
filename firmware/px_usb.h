@@ -33,7 +33,7 @@
 #if OP_UAUDIO
 #include "px_uaconf.h"                          /* the streams and their rings (also tests/test_usb_audio.c's) */
 #if OP_UADEV                                    /* the measurement option (base/audio.h): the band and the target set at run time */
-static uint32_t uad_lo = 52u, uad_hi = 108u, uad_prime = 80u, uad_tgt = 208u;
+static uint32_t uad_lo = UA_T(52u) + UA_UP, uad_hi = UA_T(108u) + UA_UP, uad_prime = UA_T(80u) + UA_UP, uad_tgt = UA_T(208u);
 #define UA_BAND_VAR 1
 #define UA_LO uad_lo
 #define UA_HI uad_hi

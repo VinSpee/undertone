@@ -113,7 +113,7 @@ The level matters to the sound: the amps are voiced for a guitar at the pedal's 
 engine (`tools/calib_levels.py`), which is what 100 % gives a full-scale recording. Drive it harder with Input level.
 
 **Why WebAssembly in a worklet, and not the native engine streamed over a WebSocket.** Latency: the worklet adds one
-block of 128 frames (2.9 ms, the firmware's own block) to what the browser's output costs, and a stream would add a round
+block of 128 frames (2.7 ms, the firmware's own block at 48 kHz) to what the browser's output costs, and a stream would add a round
 trip, two jitter buffers and the page's main thread. In Chrome on a Mac the context reported 5.4 ms of its own, the same
 at 44.1 kHz as at the sound card's 48 kHz; the output device adds what it adds (168 ms reported on that Mac's output),
 and the page shows the sum. Fidelity:
@@ -127,12 +127,13 @@ compiler. `node tools/op.mjs wasm` (`make wasm`) rebuilds it in the container wi
 if those change, change it with them. Left out: the 24-bit output rounding, and the overload guard that drops to bypass,
 because a computer's load says nothing about the pedal's.
 
-**Sample rates.** The audio context runs at the engine's 44.1 kHz, and the browser converts everything: files when it
+**Sample rates.** The audio context runs at the engine's 48 kHz, and the browser converts everything: files when it
 decodes them, devices at the source, and the output to the sound card. Firefox refuses to connect a device whose rate
-differs from the context's, and the page then says so; loops and files are not affected. This path was tested only in
+differs from the context's, and the page then says so; loops and files are not affected. The loops stay at 44.1 kHz,
+the rate of the apps on the base firmware, which play them too. This path was tested only in
 Chromium.
 
-**The load.** The status text ("DSP 3%") and `dsp.load` show the time the engine took for a block as a share of 2.9 ms,
+**The load.** The status text ("DSP 3%") and `dsp.load` show the time the engine took for a block as a share of 2.7 ms,
 as the firmware measures it, but on this computer, so it is no prediction of the pedal's load. It stays 42 until the
 sound first runs.
 
@@ -241,7 +242,7 @@ The API is the one above, with these differences:
 | `POST /api/sound/HZ` | a sine of `HZ` at a quarter of full scale as the guitar; answers `{left, right}`, the two outputs' RMS as a part of full scale, measured by the pedal's own audio stages |
 | `POST /api/nan` | the app's sound gives a NaN in its next block |
 | `POST /api/loop/NAME` | a loop of `assets/loops` (`riff`, `chords`, ...) as the guitar, around and around, in the tone's place. `none` ends it |
-| `POST /api/audio/MS` | `MS` milliseconds of the pedal's time pass at once, and its two outputs come back: 16-bit frames, left then right, at 44.1 kHz. From the first request on, the audio interrupt runs only inside these requests, so one request's sound continues the one before. `0`, or 3 s without a request, ends that |
+| `POST /api/audio/MS` | `MS` milliseconds of the pedal's time pass at once, and its two outputs come back: 16-bit frames, left then right, at the pedal's rate (48 kHz for the Gamut pedal, 44.1 kHz for a base-firmware app). From the first request on, the audio interrupt runs only inside these requests, so one request's sound continues the one before. `0`, or 3 s without a request, ends that |
 | `POST /api/clock/N/MS` | `N` MIDI clocks, `MS` + 1 milliseconds apart, with the even timing a test needs |
 | `POST /api/midi` | SysEx reaches the update code's handshake, INFO and the app's own requests; any other message goes through the MIDI ring to the app's map |
 

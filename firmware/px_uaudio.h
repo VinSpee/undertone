@@ -2,12 +2,13 @@
  * OpenPocket — USB audio (v42, docs/USB-AUDIO.md): the pedal as a class-compliant USB sound card.
  *
  * The USB side is felucca-bsp's (bsp/chip/usb.c, FELUCCA_UAC and FELUCCA_UAC_OUT: USB Audio Class 1, both streams on
- * endpoint 4, isochronous, 16-bit stereo at 44.1 kHz; its descriptors, its rings and their pacing). This file is the
+ * endpoint 4, isochronous, 16-bit stereo at the I2S's rate only, 44.1 or 48 kHz (px_uaconf.h); its descriptors, its
+ * rings and their pacing). This file is the
  * pedal's side:
  *   px_ua_block     each output block: the pedal's sound into the record ring, the computer's playback into the output
  *   px_ua_service   the USB AUDIO setting (px_midi.h px_ua_on) to the USB device, which re-enumerates on a change
  *   ed_ua_stat      the streams' state and counts, for the editor's USB_AUDIO (docs/EDITOR-PROTOCOL.md)
- * The clocks: the pedal's I2S clock is 44,117.6 Hz and not locked to USB's. To the computer the endpoint is
+ * The clocks: the pedal's I2S clock (44,117.6 Hz at 44.1 kHz) is not locked to USB's. To the computer the endpoint is
  * asynchronous: each 1 ms packet carries the frames the I2S clock made (44 or 45) and the ring's fill steers the rest by
  * one frame a block at most, so the computer follows the pedal's clock. From the computer the endpoint is adaptive:
  * its packets are resampled to the pedal's clock, the ring's fill steering the ratio.

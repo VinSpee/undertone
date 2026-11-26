@@ -154,17 +154,21 @@ static struct {
 #define UA_HI (128u + UA_DEEP)
 #endif
 #endif
-#ifndef UAC_RATE                 /* (the including file may set it: OpenPocket's px_uaconf.h) */
-#define UAC_RATE 44100u
+#ifndef UAC_RATE                 /* (the including file may set both: OpenPocket's px_uaconf.h) */
+#define UAC_RATE 44100u          /* the streams' rate */
 #endif
-/* The packets follow the I2S clock (6 MHz / 136 = 44,117.647 Hz; resampled x 160 / 147 at 48 kHz, 48,019.21 Hz) as a
+#ifndef UAC_I2S_HZ100
+#define UAC_I2S_HZ100 4411765u   /* the I2S clock's real rate at it, Hz x 100: 6 MHz / 136 = 44,117.647 Hz */
+#endif
+/* The packets follow the I2S clock (44,117.647 Hz; resampled x 160 / 147 at 48 kHz, 48,019.21 Hz) as a
  * steady pattern, as an asynchronous device's clock: 44 frames a ms and one more every ~8.5 ms (48 and one more
  * every ~52 ms at 48 kHz). The ring's fill then steers what is left (the crystals' difference) by one frame a render
  * at most. A host that follows the device's rate closely (iOS's Camera) fills a run of short packets with silence:
  * steering every packet until the next render's measurement sent 5..6 short or long ones in a row (heard there as
  * dropouts about once a second; macOS and Ableton Live took them) */
 #define UA_ACC_ONE 100000u
-#define UA_FRAC44 11765u
+#define UA_N1 (UAC_I2S_HZ100 / UA_ACC_ONE)          /* the I2S clock's whole frames a ms (44 at 44.1 kHz) */
+#define UA_FRAC (UAC_I2S_HZ100 % UA_ACC_ONE)        /* and the rest, in 1/UA_ACC_ONE frames (0.11765) */
 #define UA_FRAC48 1921u
 #if FELUCCA_UAC_48K
 /* 48 kHz: the same times in 48 kHz frames (x 160 / 147); a render of HALF_FRAMES gives 139..140 frames */
@@ -176,7 +180,7 @@ static struct {
 #define UA_MAXF 49u              /* frames in the largest packet: 48 + 1 */
 _Static_assert(UA_HI48 + UA_REND48 + UA_MAXF < UA_N, "the ring holds the band, a render and a packet (48 kHz)");
 #else
-#define UA_MAXF 46u              /* frames in the largest packet */
+#define UA_MAXF (UA_N1 + 2u)     /* frames in the largest packet (46 at 44.1 kHz) */
 #endif
 #define UAC_MAXP (UA_MAXF * 4u)
 #ifndef UA_BAND_VAR               /* (a measurement build whose band is set at run time: OpenPocket's OP_UADEV) */
@@ -349,7 +353,7 @@ static uint32_t midi_out_room(void)                  /* free slots in the out ri
  * bcdDevice: 3.00 MIDI, +0.10 the audio input (+0.20 since 1.1: 44.1 and 48 kHz, FELUCCA_UAC_48K), +0.40 the
  * audio output (FELUCCA_UAC_OUT), +0.08 the audio streaming interfaces first in the AC collection
  * (FELUCCA_UAC_AS_FIRST), +0.80 MIDI the last interface (FELUCCA_UAC_MIDI_LAST=1; =2: +1.00), +2.00 the
- * IAD without the console (FELUCCA_UAC_IAD), +0.01 CDC
+ * IAD without the console (FELUCCA_UAC_IAD), +4.00 the streams at 48 kHz alone (UAC_RATE 48000), +0.01 CDC
  * (+0.02 per FELUCCA_USB_LAYOUT step, so a host never reuses what it learnt about another layout).
  * FELUCCA_USB_LAYOUT, how the CDC build presents itself (#67: macOS 13-15 attach Apple's CDC composite
  * driver to a misc / IAD device that has a CDC function, and their kernel audio driver then never
@@ -500,7 +504,12 @@ static uint32_t midi_out_room(void)                  /* free slots in the out ri
 #define CDC_LEN 66                                         /* with its IAD */
 #define BCD_LO(cdc) (0x10 * (FELUCCA_UAC + FELUCCA_UAC_48K) + 0x40 * FELUCCA_UAC_OUT + 0x08 * FELUCCA_UAC_AS_FIRST + \
                      0x80 * (FELUCCA_UAC_MIDI_LAST == 1) + ((cdc) ? 0x01 + 2 * FELUCCA_USB_LAYOUT : 0))
-#define BCD_HI (0x03 + (FELUCCA_UAC_MIDI_LAST == 2) + 2 * FELUCCA_UAC_IAD)
+#if FELUCCA_UAC && UAC_RATE == 48000u
+#define BCD_R48 4                                          /* the streams at 48 kHz alone */
+#else
+#define BCD_R48 0
+#endif
+#define BCD_HI (0x03 + (FELUCCA_UAC_MIDI_LAST == 2) + 2 * FELUCCA_UAC_IAD + BCD_R48)
 #define D_DEV(bcdusb, cls, sub, proto, cdc)                                                          \
     18, 1, (bcdusb) & 0xFF, (bcdusb) >> 8, (cls), (sub), (proto), 64, 0x09, 0x12, FELUCCA_USB_PID & 0xFF, \
     FELUCCA_USB_PID >> 8, BCD_LO(cdc), BCD_HI, 1, 2, 0, 1
@@ -1509,11 +1518,11 @@ static __attribute__((noinline)) void uac_tap(const int32_t *out, uint32_t n)   
     ua_w = w + n;
 }
 
-/* the next packet into d: 44 / 45 frames (+-1 to hold the ring's fill), from the ring or, until it is
+/* the next packet into d: 44 / 45 frames at 44.1 kHz (+-1 to hold the ring's fill), from the ring or, until it is
  * primed, silence. An empty ring repeats the last frame. Returns the frame count. */
 static uint32_t uac_packet(uint32_t *d)
 {
-    uint32_t n = 44u, r, fill, k, i, lo = UA_LO, hi = UA_HI, frac = UA_FRAC44;
+    uint32_t n = UA_N1, r, fill, k, i, lo = UA_LO, hi = UA_HI, frac = UA_FRAC;
 #if FELUCCA_UAC_48K
     if (uac.r48) {                                      /* 48 frames a ms and the I2S clock's 0.0192 */
         n = 48u;
@@ -1602,10 +1611,12 @@ static void uo_service(void)                            /* an EP4 OUT packet int
 }
 
 /* audio ISR, after the render: the computer's audio added to the block (24-bit, as the I2S takes it), at gain
- * gain_q12 (4096 = as sent, the most), resampled from the ring: the read rate is 44.1 / 44.1176 kHz and steered by how
- * far the fill at a render's start is from UO_TGT (a frame's error: 1/32768 faster or slower).
+ * gain_q12 (4096 = as sent, the most), resampled from the ring: the read rate is the streams' rate over the I2S clock's
+ * (UO_STEP; 44.1 / 44.1176 kHz) and steered by how far the fill at a render's start is from UO_TGT (a frame's error:
+ * 1/32768 faster or slower).
  * OpenPocket: the frames are interpolated and added in integers (the fraction in Q15, the gain in Q12) and the sum is
  * clipped to the I2S's 24 bits here; in float a frame took 88 CPU cycles on the pedal, with a pass to clip after it */
+#define UO_STEP ((65536ull * UAC_RATE * 100u + UAC_I2S_HZ100 / 2u) / UAC_I2S_HZ100)   /* Q16: 65510 at 44.1 kHz */
 static __attribute__((noinline)) void uac_play(int32_t *out, uint32_t n, uint32_t gain_q12)
 {
     uint32_t r = uo_r, fill = uo_w - r, i, pos = uo.pos, step;
@@ -1633,7 +1644,7 @@ static __attribute__((noinline)) void uac_play(int32_t *out, uint32_t n, uint32_
     uo.err += ((float)fill - (float)UO_TGT - uo.err) * 0.05f;
     adj = uo.err * 2.0f;                                /* Q16 per frame of error */
     adj = adj > 400.0f ? 400.0f : adj < -400.0f ? -400.0f : adj;
-    step = (uint32_t)(65510.0f + adj);                  /* 65536 x 44100 / 44117.6 */
+    step = (uint32_t)((float)UO_STEP + adj);            /* 65536 x 44100 / 44117.6 at 44.1 kHz */
     if (fill < (uint32_t)(((uint64_t)n * step) >> 16) + 2u) {
         uo.underruns++;                                 /* ran dry: prime again */
         uo.go = 0;

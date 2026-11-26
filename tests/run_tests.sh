@@ -97,6 +97,9 @@ if cmp -s build/usb_desc_off.txt build/usb_desc_ref.txt; then echo "USB AUDIO of
 else echo "USB AUDIO off: the descriptors differ from the earlier device's"; diff build/usb_desc_ref.txt build/usb_desc_off.txt; exit 1; fi
 build/test_usb_audio > build/usb_audio.log || { cat build/usb_audio.log; exit 1; }
 tail -1 build/usb_audio.log
+$CC $UAF -DA_SR=48000u tests/test_usb_audio.c -lm -o build/test_usb_audio48    # the streams and the I2S at 48 kHz
+build/test_usb_audio48 > build/usb_audio48.log || { cat build/usb_audio48.log; exit 1; }
+tail -1 build/usb_audio48.log
 echo "== USB footswitch by cable (the descriptor parser on the Chocolate's layout, the packets passed, the screen's state, the host's clock)"
 base_test test_usb_host $CC -O1 -Wall -Wno-unused-function -Ifirmware tests/test_usb_host.c
 echo "== LED map and the lights driver (LED_PROBE build, issue #8)"

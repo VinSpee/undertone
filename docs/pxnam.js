@@ -42,8 +42,9 @@ export function a2Channels(m) {
   return ok ? c : 0;
 }
 
-// A .nam file (text) -> { name, weights: Float32Array(1871), sampleRate, note } or throws with a reason a person reads
-export function parseNam(text, fileName = "") {
+// A .nam file (text) -> { name, weights: Float32Array(1871), sampleRate, note } or throws with a reason a person reads.
+// `rate`: the pedal's (44.1 or 48 kHz), which it plays every model at: the note says how far the model's own is from it
+export function parseNam(text, fileName = "", rate = 44100) {
   let j;
   try { j = JSON.parse(text); } catch (_) { throw new Error("this is not a .nam file (not JSON)"); }
   const subs = j.architecture === "SlimmableContainer" ? ((j.config || {}).submodels || []).map((s) => s.model) : [j];
@@ -63,8 +64,8 @@ export function parseNam(text, fileName = "") {
   const sr = m.sample_rate || j.sample_rate || 48000;
   const meta = m.metadata || j.metadata || {};
   const base = (meta.name || fileName.replace(/\.nam$/i, "") || "MODEL").toUpperCase().replace(/[^ -~]/g, "?");
-  const note = Math.round(sr) !== 44100 ? `made at ${Math.round(sr / 100) / 10} kHz: the pedal plays it at 44.1 kHz ` +
-    `(its tone sits ${(12 * Math.log2(sr / 44100)).toFixed(1)} semitones lower)` : "";
+  const note = Math.round(sr) !== rate ? `made at ${Math.round(sr / 100) / 10} kHz: the pedal plays it at ${rate / 1000} kHz ` +
+    `(its tone sits ${Math.abs(12 * Math.log2(sr / rate)).toFixed(1)} semitones ${sr > rate ? "lower" : "higher"})` : "";
   return { name: base.slice(0, 11).trim(), weights, sampleRate: sr, note };
 }
 
@@ -213,9 +214,10 @@ export function packModel(name, weights, levelDb) {
 }
 
 // a .nam file's text -> what the pedal stores, at the same loudness as every other model: { name, bytes, detail }.
-// `di`: readDi(nam_di.wav). The editor's Models section and t3k.html (TONE3000 in the same tab) both make their entries here.
-export function namEntry(text, fileName, di) {
-  const m = parseNam(text, fileName), { weights } = fitRange(m.weights, di), lv = levelTrim(weights, di);
+// `di`: readDi(nam_di.wav); `rate`: the pedal's, for the note (parseNam). The editor's Models section and t3k.html
+// (TONE3000 in the same tab, with no pedal: 44.1 kHz) both make their entries here.
+export function namEntry(text, fileName, di, rate = 44100) {
+  const m = parseNam(text, fileName, rate), { weights } = fitRange(m.weights, di), lv = levelTrim(weights, di);
   return { name: m.name, bytes: packModel(m.name, weights, lv), detail: [`level ${lv >= 0 ? "+" : ""}${lv.toFixed(1)} dB`, m.note].filter(Boolean).join("; ") };
 }
 

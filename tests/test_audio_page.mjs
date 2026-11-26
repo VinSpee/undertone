@@ -18,9 +18,9 @@ let failed = 0;
 const ok = (c, what) => { console.log(`${what.padEnd(76)} ${c ? "ok" : "FAIL"}`); if (!c) failed++; };
 
 const tone = (rate, seconds, level) => wavBytes(Float32Array.from({ length: Math.round(rate * seconds) }, (_, i) => level * Math.sin(2 * Math.PI * 330 * i / rate)), rate);
-const LONG = join(TMP, "tone-48k.wav"), SHORT = join(TMP, "short.wav");
-writeFileSync(LONG, tone(48000, 2, 0.5));
-writeFileSync(SHORT, tone(44100, 0.3, 0.5));
+const LONG = join(TMP, "tone-44k.wav"), SHORT = join(TMP, "short.wav");
+writeFileSync(LONG, tone(44100, 2, 0.5));
+writeFileSync(SHORT, tone(48000, 0.3, 0.5));
 
 const sim = await startSim({ port: 0, flash: join(TMP, "flash.bin") });
 const state = async () => (await fetch(sim.url + "/api/state")).json();
@@ -50,7 +50,7 @@ ok(await page.locator("[data-panel=device]").isHidden(), "the device panel waits
 await page.click("#play");
 ok(await until(async () => (await audio()).running && await db("#in-meter") > -50), "Play starts the context and the input meter moves");
 a = await audio();
-ok(a.sampleRate === 44100, "the context runs at the engine's rate");
+ok(a.sampleRate === 48000, "the context runs at the engine's rate");
 ok(await until(async () => await db("#out-meter") > -50), "the output meter moves");
 ok(await until(async () => (await audio()).heard === (await state()).name), "what is heard is the preset on the screen");
 ok(await until(async () => (await state()).dsp.load !== 42, 2000), "the load on the pedal's status is measured");
@@ -67,7 +67,7 @@ ok(await page.locator("#drop").isVisible(), "the File radio shows the drop zone"
 await page.setInputFiles("#file", LONG);
 ok(await until(async () => (await audio()).playing), "a chosen file plays at once");
 const level = await loudest("#in-meter");
-ok(near(level, 20 * Math.log10(0.5 * 0.15), 1), `a 48 kHz file reaches the engine at the guitar level (${level.toFixed(1)} dB)`);
+ok(near(level, 20 * Math.log10(0.5 * 0.15), 1), `a 44.1 kHz file reaches the engine at the guitar level (${level.toFixed(1)} dB)`);
 await page.locator("#level").fill("200");
 ok(near(await (settle(), loudest("#in-meter")), level + 6, 1), "the level slider moves the input");
 await page.locator("#level").fill("100");
@@ -98,7 +98,7 @@ await page.evaluate(async (bytes) => {
   const transfer = new DataTransfer();
   transfer.items.add(new File([new Uint8Array(bytes)], "dropped.wav", { type: "audio/wav" }));
   document.dispatchEvent(new DragEvent("drop", { dataTransfer: transfer, bubbles: true, cancelable: true }));
-}, [...tone(44100, 0.3, 0.5)]);
+}, [...tone(48000, 0.3, 0.5)]);
 ok(await until(async () => (await page.locator("#file-name").textContent()) === "dropped.wav"), "a dropped file is taken");
 ok(await until(async () => (await page.locator("#play").textContent()) === "Play"), "without Loop, a short file ends by itself");
 await page.check("#repeat");

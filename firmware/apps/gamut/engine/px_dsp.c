@@ -1261,15 +1261,42 @@ PX_HOT __attribute__((noinline)) static void ir_run(float *xb)
 __attribute__((weak)) int px_ir_user(int slot, char *name12, float *h) { (void)slot; (void)name12; (void)h; return 0; }
 #endif
 #include "px_ir_factory.h"                             /* slot IR1's factory IR (tools/mk_ir_factory.mjs) */
-/* a slot's IR: the user's, else in slot IR1 the factory one (loading an IR there replaces it, emptying the slot brings
- * it back) */
-static int ir_get(int s, char *name12, float *h)
+/* a slot's IR and the rate it was made at (Hz; 0: none): the user's, else in slot IR1 the factory one, made at both
+ * rates, at the one nearer sr (loading an IR there replaces it, emptying the slot brings it back) */
+static int ir_get(int s, char *name12, float *h, float sr)
 {
-    if (px_ir_user(s, name12, h)) return 1;
+    const int u = px_ir_user(s, name12, h);
+    if (u) return u;
     if (s != 0) return 0;
     memcpy(name12, PXI_FNAME, 12);
-    if (h) for (int i = 0; i < PX_IR_LEN; i++) h[i] = (float)PXI_FS[i] * (PXI_FSCALE / 32767.0f);
-    return 1;
+    const int r48 = sr > 46050.0f;
+    if (h) {
+        const int16_t *t = r48 ? PXI_FS48 : PXI_FS;
+        const float k = (r48 ? PXI_FSCALE48 : PXI_FSCALE) / 32767.0f;
+        for (int i = 0; i < PX_IR_LEN; i++) h[i] = (float)t[i] * k;
+    }
+    return r48 ? 48000 : 44100;
+}
+/* an IR made at rate from, as PX_IR_LEN taps at rate to: windowed sinc (Blackman, IR_RS_Z zero crossings a side), cut at
+ * the lower Nyquist; from a lower rate, whose taps last longer, faded out over the last 64 as the editor fades a longer
+ * response (docs/pxir.js). About 10 ms on the pedal, once when a preset loads such an IR (a full change) */
+#define IR_RS_Z 16
+static void ir_resample(const float *x, float from, float *y, float to)
+{
+    const float r = from / to, fc = r > 1.0f ? 1.0f / r : 1.0f;   /* input samples an output sample; the cut, of from's Nyquist */
+    const int w = (int)((float)IR_RS_Z / fc) + 1;
+    for (int i = 0; i < PX_IR_LEN; i++) {
+        const float t = (float)i * r;
+        const int c = (int)t;
+        float acc = 0.0f;
+        for (int k = c - w + 1; k <= c + w; k++) {
+            if (k < 0 || k >= PX_IR_LEN) continue;
+            const float d = (t - (float)k) * fc * PI_F, u = cosf((t - (float)k) * (PI_F / (float)w));
+            acc += x[k] * (d == 0.0f ? 1.0f : sinf(d) / d) * (0.34f + 0.5f * u + 0.16f * u * u);
+        }
+        y[i] = acc * fc;
+    }
+    if (r < 1.0f) for (int i = 0; i < 64; i++) y[PX_IR_LEN - 64 + i] *= 0.5f + 0.5f * cosf(PI_F * (float)(i + 1) / 64.0f);
 }
 int px_ir_slot(int v) { if (v < 0) v = 0; if (v > 100) v = 100; return v * PX_IR_N / 101; }
 int px_ir_knob(int s)
@@ -1282,7 +1309,7 @@ int px_ir_knob(int s)
 }
 int px_ir_name(int s, char *buf)
 {
-    if (s >= 0 && s < PX_IR_N && ir_get(s, buf, 0)) { buf[11] = 0; return 1; }
+    if (s >= 0 && s < PX_IR_N && ir_get(s, buf, 0, 0.0f)) { buf[11] = 0; return 1; }
     const char *e = " EMPTY";
     int i = 0;
     buf[i++] = 'I'; buf[i++] = 'R'; buf[i++] = (char)('1' + (s < 0 ? 0 : s % 9));
@@ -1297,10 +1324,12 @@ static void rc_cab(px_engine *e)
     const int s = px_ir_slot(q[0]);
     if ((s != e->ir_slot || !ir_ok) && px_may_load) {  /* (a new slot is a full change: never on the audio side) */
         char nm[12];
-        float *h = &ir_X[0][0];                        /* (scratch: cleared after; the IR in the first half, ir_load_h's in the second) */
+        float *h = &ir_X[0][0], *b = &ir_X[IR_P / 2][0];   /* (scratch: cleared after; the IR in one half, ir_load_h's in the other) */
         if (!fft_ready) fft_init();
-        ir_ok = ir_get(s, nm, h);
-        if (ir_ok) ir_load_h(h, &ir_X[IR_P / 2][0]);
+        const int at = ir_get(s, nm, h, sr);
+        if (at && (float)at != sr) { float *t = b; ir_resample(h, (float)at, t, sr); b = h; h = t; }
+        ir_ok = at != 0;
+        if (ir_ok) ir_load_h(h, b);
         ir_clear();
         e->ir_slot = s;
     }

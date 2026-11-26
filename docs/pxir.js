@@ -1,13 +1,15 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // OpenPocket — cabinet impulse responses for the pedal (v38): read a WAV file (PCM 16 / 24 / 32-bit or float, any rate,
-// mono or stereo), bring it to 44.1 kHz, keep the first 1024 samples (23 ms) from its onset with a short fade at the end,
-// and pack it for a user slot (firmware/apps/gamut/px_irs.h: a 64-byte header, then 1024 16-bit samples). The pedal sets the
-// level itself (every IR at the same loudness as the modelled cabinets).
+// mono or stereo), bring it to the pedal's rate (44.1 or 48 kHz), keep the first 1024 samples (23 or 21 ms) from its onset
+// with a short fade at the end, and pack it for a user slot (firmware/apps/gamut/px_irs.h: a 64-byte header, then 1024
+// 16-bit samples). The pedal sets the level itself (every IR at the same loudness as the modelled cabinets), and plays an
+// IR made at its other rate resampled.
 
 import { crc16 } from "./pxnam.js";
 
 export const IR_LEN = 1024;
-export const IR_SR = 44100;
+// a slot's version by the rate its IR is made at (firmware/apps/gamut/px_irs.h)
+export const IR_VERSION = { 44100: 1, 48000: 2 };
 export const IR_BYTES = 64 + IR_LEN * 2;
 export const IR_CHUNK = 112;          // bytes per IR_WRITE (firmware/apps/gamut/px_irs.h IR_CHUNK)
 // the firmware's factory IR, which slot IR1 plays while it holds none of the user's (firmware/apps/gamut/engine/px_ir_factory.h)
@@ -47,11 +49,11 @@ export function parseWav(buf) {
   return { sampleRate: sr, channels: ch, bits, x };
 }
 
-// x at rate sr -> the first `count` samples at 44.1 kHz (windowed sinc, 24 zero crossings a side, a low-pass at the lower
+// x at rate sr -> the first `count` samples at rate `to` (windowed sinc, 24 zero crossings a side, a low-pass at the lower
 // Nyquist when the rate goes down)
-export function resample(x, sr, count = IR_LEN) {
-  if (sr === IR_SR) return Float32Array.from({ length: count }, (_, i) => (i < x.length ? x[i] : 0));
-  const r = IR_SR / sr, fc = Math.min(1, r), Z = 24, out = new Float32Array(count);
+export function resample(x, sr, count = IR_LEN, to = 44100) {
+  if (sr === to) return Float32Array.from({ length: count }, (_, i) => (i < x.length ? x[i] : 0));
+  const r = to / sr, fc = Math.min(1, r), Z = 24, out = new Float32Array(count);
   const bessel0 = (t) => { let s = 1, d = 1; for (let k = 1; k < 30; k++) { d *= (t / (2 * k)) ** 2; s += d; } return s; };
   const beta = 8.6, kn = bessel0(beta);
   for (let i = 0; i < count; i++) {
@@ -70,9 +72,9 @@ export function resample(x, sr, count = IR_LEN) {
   return out;
 }
 
-// a parsed WAV -> { h: Float32Array(1024) at 44.1 kHz, note }: from its onset (a pre-delay of silence dropped), faded out
-// over its last 64 samples when the response is longer
-export function prepareIr(w) {
+// a parsed WAV -> { h: Float32Array(1024) at `rate` (the pedal's), rate, note }: from its onset (a pre-delay of silence
+// dropped), faded out over its last 64 samples when the response is longer
+export function prepareIr(w, rate = 44100) {
   const { x, sampleRate: sr } = w;
   let peak = 0;
   for (const v of x) peak = Math.max(peak, Math.abs(v));
@@ -81,26 +83,27 @@ export function prepareIr(w) {
   while (on < x.length && Math.abs(x[on]) < peak * 0.01) on++;
   on = Math.max(0, on - Math.round(sr * 0.0001));      // keep 0.1 ms before the onset
   const src = x.subarray(on);
-  const h = resample(src, sr, IR_LEN);
-  const longer = src.length * IR_SR / sr > IR_LEN;
+  const h = resample(src, sr, IR_LEN, rate);
+  const longer = src.length * rate / sr > IR_LEN;
   if (longer) for (let i = 0; i < 64; i++) h[IR_LEN - 64 + i] *= 0.5 + 0.5 * Math.cos(Math.PI * (i + 1) / 64);
   const ms = (src.length / sr * 1000).toFixed(0);
   const notes = [];
-  if (sr !== IR_SR) notes.push(`resampled from ${sr / 1000} kHz`);
-  if (longer) notes.push(`its first 23 ms kept (of ${ms} ms)`);
+  if (sr !== rate) notes.push(`resampled from ${sr / 1000} kHz`);
+  if (longer) notes.push(`its first ${Math.floor(IR_LEN / rate * 1000)} ms kept (of ${ms} ms)`);
   if (w.channels > 1) notes.push("its left channel used");
-  return { h, note: notes.join(", ") };
+  return { h, rate, note: notes.join(", ") };
 }
 
-// a user slot's bytes (firmware/apps/gamut/px_irs.h ir_hdr_t + 1024 int16, little endian)
-export function packIr(name, h) {
+// a user slot's bytes (firmware/apps/gamut/px_irs.h ir_hdr_t + 1024 int16, little endian), h made at `rate`
+export function packIr(name, h, rate = 44100) {
+  if (!IR_VERSION[rate]) throw new Error(`an IR at ${rate / 1000} kHz: the pedal keeps 44.1 or 48 kHz`);
   const out = new Uint8Array(IR_BYTES), v = new DataView(out.buffer);
   let peak = 0;
   for (const s of h) peak = Math.max(peak, Math.abs(s));
   const scale = peak > 0 ? peak : 1;
   for (let i = 0; i < IR_LEN; i++) v.setInt16(64 + 2 * i, Math.max(-32767, Math.min(32767, Math.round(h[i] / scale * 32767))), true);
   v.setUint32(0, 0x5249504F, true);           // "OPIR"
-  v.setUint16(4, 1, true);
+  v.setUint16(4, IR_VERSION[rate], true);
   v.setUint16(6, IR_LEN, true);
   const nm = name.toUpperCase().replace(/[^ -~]/g, "?").slice(0, 11);
   for (let i = 0; i < nm.length; i++) out[8 + i] = nm.charCodeAt(i);

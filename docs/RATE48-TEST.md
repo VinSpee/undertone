@@ -27,11 +27,13 @@ Both cases write the same divider byte and clear bit 9 of `0x10014`. The rate48 
 
 At 48 kHz the rate48 build also gives the engine, the tuner, the block budget and the load figures the 48 kHz rate. Its
 engine is built for 48 kHz (`PX_FS` in `firmware/apps/gamut/engine/px_dsp.h`): its memory holds the 2 s delay, and its
-effects sound as they do at 44.1 kHz (`sh tests/rate48/score.sh` compares them). It has no USB audio, because USB
-audio's clock figures are for 44.1 kHz; USB MIDI, the editor and the installer work as usual. Known differences at
-48 kHz, which are expected and not part of this test:
+effects sound as they do at 44.1 kHz (`sh tests/rate48/score.sh` compares them). Its cabinet IRs play at 48 kHz: the
+factory IR from its 48 kHz table, and an IR of the user's made at 44.1 kHz resampled when a preset loads it. It has no
+USB audio, because USB audio's rate is fixed when the firmware is built and this build picks its rate at the start; USB
+MIDI, the editor and the installer work as usual. Known differences at 48 kHz, which are expected and not part of this
+test:
 
-- The NAM amps and the factory cabinet sound brighter.
+- The NAM amps sound brighter.
 - The bitcrusher's SR DIV divides 48 kHz, so its reduced rate is 9 % higher.
 
 When the build stays at 44.1 kHz, its pitch effects and synths sound slightly different from the release's, because
