@@ -75,7 +75,9 @@ So the feature is felucca-bsp's streams switched on, a setting, and the pedal's 
   endpoint 4 OUT, isochronous adaptive, for playback; 16 bit, 2 channels, 44.1 kHz, one packet a millisecond. No 48 kHz:
   it needs a resampler in the audio interrupt, and the stock firmware offers 44.1 kHz only too. A build whose I2S runs
   at 48 kHz offers 48 kHz only instead, with no resampler: `firmware/px_uaconf.h` sets the packet pattern and the
-  playback step from that clock's rate, which is nominal (48,000 Hz) until it is measured on a pedal.
+  playback step from that clock's rate, which is nominal (48,000 Hz), not measured: 48,019.21 Hz is only an estimate from
+  the old resampler mode's rate, and the real clock must be measured on a pedal (`docs/RATE48-TEST.md`). The 48 kHz
+  rings' margins hold for 500 ppm of clock error either way.
 - **The interfaces** are in the order audio control, record stream, playback stream, MIDI
   (`FELUCCA_UAC_MIDI_LAST 1`). felucca-bsp found that macOS 13 to 15 show no audio device when the MIDI interface comes
   before the streams.
@@ -204,7 +206,8 @@ code.
 - `tests/test_usb_audio.c` (in `tests/run_tests.sh`): `usb.c` and `px_uaudio.h` on a PC against a model of the USB
   controller and of a computer. It checks the descriptors and the requests with the setting off and on, the switch,
   the recording's level and soft knee, the playback's level, clipping and mute, a playback stream opened again, and
-  10 minutes of each stream with the pedal's clock 300 ppm fast and slow against the computer's: every frame arrives
+  10 minutes of each stream with the pedal's clock 300 ppm fast and slow against the computer's (at 48 kHz 500 ppm, and
+  with the I2S at 48,019.21 Hz, 400 ppm above the nominal constant): every frame arrives
   once and in order, and the rings keep 0.6 ms in hand.
 - `tests/test_aorder.c`: the audio callbacks in either order (`firmware/px_aorder.h`): every output block is the sound
   of its own interrupt's guitar block.

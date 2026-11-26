@@ -15,8 +15,10 @@
 #define UAC_I2S_HZ100 4411765u                  /* the 44.1 kHz family's 6 MHz / 136 = 44,117.647 Hz (docs/USB-AUDIO.md) */
 #define UA_UP 0u
 #elif UAC_RATE == 48000u
-/* NOMINAL, NOT MEASURED: the 48 kHz family's real rate is not known yet. The rate48 build ran on a pedal, but its clock
- * report (DIAG) was not read. Measure it with that build (docs/RATE48-TEST.md: `node tools/op.mjs log`) and set it here */
+/* NOMINAL, NOT MEASURED: the 48 kHz family's real rate is not known yet. 48,019.21 Hz (usb.c UA_FRAC48) is only an
+ * estimate from the old resampler mode's rate (44,117.647 Hz x 160 / 147), not a measurement. Measure the clock with the
+ * rate48 build (docs/RATE48-TEST.md: `node tools/op.mjs log`) and set it here. The margins hold for 500 ppm either way
+ * (tests/test_usb_audio.c, also at 48,019.21 Hz, 400 ppm above this constant) */
 #define UAC_I2S_HZ100 4800000u
 /* at a whole 48 frames a ms, 3 blocks are 8 packets: the blocks' phase against the packets barely moves, so the fill read
  * at a block's start can drop by a whole packet at once (tests/test_usb_audio.c: 25 frames at 300 ppm slow, with the

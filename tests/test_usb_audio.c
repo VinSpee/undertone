@@ -3,7 +3,8 @@
  * builds it) and its audio glue (firmware/px_uaudio.h) against a model of the USB controller and of a computer.
  *   cc -O1 -Wall -Wno-unused-function -Ifirmware/apps/gamut/engine -Ifirmware -Ifirmware/bsp/chip tests/test_usb_audio.c -lm -o build/test_usb_audio
  *   build/test_usb_audio            the tests
- * Built with -DA_SR=48000u, the same with the streams and the I2S at 48 kHz (px_uaconf.h: that clock's measured rate).
+ * Built with -DA_SR=48000u, the same with the streams and the I2S at 48 kHz (px_uaconf.h: that clock's nominal rate; 48,019.21 Hz is only an estimate
+ * from the old resampler mode's rate, not a measurement: the real clock is to be measured on a pedal, docs/RATE48-TEST.md).
  *   build/test_usb_audio desc       the device and configuration descriptors with USB AUDIO off, as hex
  * Built with -DT_REF (FELUCCA_UAC 0: the USB device every OpenPocket before v42 was), `desc` prints that device's;
  * tests/run_tests.sh compares the two, byte for byte.
@@ -11,10 +12,11 @@
  *   - USB AUDIO off: the descriptors a computer reads, and what it gets when it asks for the streams (refused);
  *   - USB AUDIO on: the descriptors' structure (interfaces in the order macOS 13-15 need, both isochronous endpoints),
  *     the streams' requests, the switch off again;
- *   - the record stream over 10 minutes with the pedal's clock 300 ppm fast or slow against the computer's, and with
+ *   - the record stream over 10 minutes with the pedal's clock 300 ppm (500 ppm at 48 kHz, and 400 ppm fast: 48,019.21 Hz)
+ *     fast or slow against the computer's, and with
  *     blocks that start up to 0.7 ms late: every frame the pedal made arrives once, in order (no gap, no repeat), the
  *     ring's fill stays in its band;
- *   - the playback stream over 10 minutes at the same clock differences: no gap, the ring neither empties nor
+ *   - the playback stream over 10 minutes at the same clock differences (500 ppm at 48 kHz): no gap, the ring neither empties nor
  *     overflows, the level follows MASTER, the sum with the pedal's sound is clipped, a flash write's mute stops it;
  *   - the MIDI input ring and an app's reader of it (firmware/base/midi.h): a ring nobody reads refuses the host's
  *     packets, the installer's SysEx among them; midi_poll empties it and gives the app's map each message. */
@@ -585,6 +587,14 @@ int main(int argc, char **argv)
     test_play(0.0, "playback, the nominal clocks");
     test_play(+300.0, "playback, the pedal 300 ppm slow");
     test_play(-300.0, "playback, the pedal 300 ppm fast");
+#if A_SR == 48000u
+    test_record(+500.0, 0, "record, the pedal 500 ppm slow");
+    test_record(-500.0, 0, "record, the pedal 500 ppm fast");
+    test_record(-400.0, 0, "record, the pedal's I2S at 48,019.21 Hz");
+    test_play(+500.0, "playback, the pedal 500 ppm slow");
+    test_play(-500.0, "playback, the pedal 500 ppm fast");
+    test_play(-400.0, "playback, the pedal's I2S at 48,019.21 Hz");
+#endif
     test_midi_ring();
     printf("USB audio at %u Hz: %s (%d failures)\n", A_SR, fails ? "FAIL" : "ok", fails);
     return fails ? 1 : 0;
