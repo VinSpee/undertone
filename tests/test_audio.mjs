@@ -59,7 +59,7 @@ check("bypass passes the dry input, at MASTER", () => {
   out.forEach((v, i) => assert.ok(Math.abs(v - IN[i] * 0.64) < 1e-6));
 });
 check("a preset change changes the spectrum", () => {
-  const clean = harmonics(tail(run(engine(0), IN)), 220), metal = harmonics(tail(run(engine(15), IN)), 220);
+  const clean = harmonics(tail(run(engine(2), IN)), 220), metal = harmonics(tail(run(engine(19), IN)), 220);   // AC30 CHIME, SWEDE DEATH
   const share = (h) => h.slice(1).reduce((a, b) => a + b) / h[0];
   assert.ok(share(metal) > 3 * share(clean), `harmonics over fundamental: ${share(clean)} ${share(metal)}`);
 });

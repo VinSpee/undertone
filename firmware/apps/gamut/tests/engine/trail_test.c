@@ -50,6 +50,7 @@ static px_preset_t bare(void)
     px_preset_t p;
     px_preset_factory(&p, 0);
     for (int b = 0; b < PX_NBLK; b++) p.on[b] = 0;
+    p.p[PX_B_GATE][PX_PATCH_LEVEL] = 50;               /* 0 dB, whatever the factory preset's: the trails' times follow it */
     px_order_default(p.order);
     return p;
 }

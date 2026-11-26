@@ -12,7 +12,9 @@
 #  - trails: after px_engine_switch the outgoing delay and reverb are their own tails, sample for sample, on every type;
 #    they end; the stretches of the delay memory never overlap through changes at random (under the sanitizers)
 #  - the engine built for 48 kHz (px_dsp.h PX_FS): the sweep (no NaN) and the trails in its memory
-#  - NAM: firmware/apps/gamut/engine/px_nam.c against tools/nam_a2.py with every factory model (needs numpy)
+#  - NAM: firmware/apps/gamut/engine/px_nam.c against tools/nam_a2.py with every factory model, at GAIN noon and +12 dB
+#    (needs numpy)
+#  - factory preset levels: each within 0.5 LU of -23 LUFS on docs/nam_di.wav (tools/level_presets.py --check; needs scipy)
 #  - MIDI: the musical-MIDI code (firmware/apps/gamut/px_midi.h) on a PC: decoder, CC map, messages sent, settings byte, clock
 #  - preset store: save / reload / power cut at every step of a save (firmware/apps/gamut/px_store.h on a simulated flash)
 #  - flash hold (firmware/apps/gamut/px_store.h, px_models.h, px_irs.h): every erase, program and SPI read of a save or an erase
@@ -52,6 +54,8 @@ base_test trail_test48 $CC -O1 -g -fsanitize=address,undefined -fno-sanitize-rec
 echo "== NAM (fixed point against the float reference, every factory model)"
 $CC -O2 -DPXN_EMUVEC -Ifirmware/apps/gamut/engine firmware/apps/gamut/tests/engine/nam_test.c firmware/apps/gamut/engine/px_nam.c -o build/nam_test
 if python3 -c "import numpy" 2>/dev/null; then mkdir -p build/nam; python3 firmware/apps/gamut/tests/test_nam.py build/nam_test > build/nam/log.txt || { cat build/nam/log.txt; exit 1; }; tail -1 build/nam/log.txt; else echo "(numpy not installed: NAM comparison skipped)"; fi
+echo "== factory preset levels (tools/level_presets.py --check)"
+if python3 -c "import numpy, scipy" 2>/dev/null; then python3 tools/level_presets.py --check docs/nam_di.wav > build/levels.log || { cat build/levels.log; exit 1; }; tail -1 build/levels.log; else echo "(numpy or scipy not installed: preset levels skipped)"; fi
 echo "== preset store"
 $CC -O1 -Ifirmware/apps/gamut/engine firmware/apps/gamut/tests/test_store.c firmware/apps/gamut/engine/px_dsp.c firmware/px_math.c -lm -o build/test_store && build/test_store | tail -2
 echo "== flash hold (every flash access of a save or an erase with the audio held and the second core collected)"

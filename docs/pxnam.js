@@ -11,8 +11,9 @@ export const NW = 1871;                 // A2-Lite weights (head_scale included)
 export const REF_LUFS = -20;            // tools/nam_level.py REF: every model at this loudness after its trim
 export const SLOT_BYTES = 64 + NW * 4;  // header + weights
 const SLOPE = 0.01;
-// The authors of the TONE3000 captures cleared to ship as the factory amps, by their written permission, and each pack's
-// tone page. The editor's pedal panel lists them; docs/NAM.md holds the same list and must be edited with it.
+// The authors of the TONE3000 captures the factory amps are, shipped with their written permission, and each pack's tone
+// page: exactly the packs of tools/nam_factory.txt (tests/test_editor.mjs). The editor's pedal panel lists them;
+// docs/NAM.md holds the same list and must be edited with it.
 const T3K = "https://www.tone3000.com/tones/";
 export const CAPTURE_CREDITS = [
   { author: "subterraneans", packs: [["Soldano SLO-100", T3K + "soldano-slo-100-106781"]] },

@@ -162,13 +162,13 @@ int main(void)
         for (int i = 0; i < 55; i++) want[i] = (uint8_t)(i + 27);
         want[PX_B_DELAY * 5] = (uint8_t)px_dly_time_v35(q.type[PX_B_DELAY], want[PX_B_DELAY * 5]);   /* the v35 2 s scale */
         want[PX_B_GATE * 5 + PX_PATCH_LEVEL] = 50;             /* v36: preset LEVEL, 0 dB */
-        memmove(want + PX_B_AMP * 5 + 1, want + PX_B_AMP * 5, 4);   /* amp 5 -> v34 AC15 TB -> the NAM model AC15: GAIN, */
-        want[PX_B_AMP * 5] = (uint8_t)px_nam_knob(1);          /* BASS, MID, TREBLE one place on */
+        memmove(want + PX_B_AMP * 5 + 1, want + PX_B_AMP * 5, 4);   /* amp 5 -> v34 AC15 TB -> the NAM model TM26 PLX: */
+        want[PX_B_AMP * 5] = (uint8_t)px_nam_knob(3);          /* GAIN, BASS, MID, TREBLE one place on */
         want[PX_B_CAB * 5] = (uint8_t)px_ir_knob(0); want[PX_B_CAB * 5 + 1] = 0; want[PX_B_CAB * 5 + 2] = 0;   /* cab 6: IR1 */
         ok &= !memcmp(q.p, want, 55);
         char mn[12];
         px_nam_name(px_nam_model(q.p[PX_B_AMP][0]), mn);
-        CHECK(ok && !strcmp(mn, "AC15") && st_saved(27) && cur_preset == 27, "format 1 store: saved sounds converted, the pedal starts on the last one");
+        CHECK(ok && !strcmp(mn, "TM26 PLX") && st_saved(27) && cur_preset == 27, "format 1 store: saved sounds converted, the pedal starts on the last one");
         st_get(2, &q); px_preset_factory(&f, 2);
         CHECK(!st_saved(2) && !memcmp(&q, &f, sizeof q), "format 1 store: unsaved slots stay factory");
         st_get(45, &q); px_preset_factory(&f, 45);
@@ -189,7 +189,7 @@ int main(void)
         strcpy(q.name, "MY RECTO");
         q.type[PX_B_AMP] = 17;                                 /* v33 RECTIFIED */
         q.type[PX_B_DRIVE] = 13;                               /* v33 MUFF PI */
-        q.type[PX_B_CAB] = 9;                                  /* v33 4x12 H30 */
+        q.type[PX_B_CAB] = 9; q.on[PX_B_CAB] = 1;              /* v33 4x12 H30, on */
         q.type[PX_B_MOD] = 2;                                  /* other blocks: untouched */
         CHECK(st_save(5, &q) == 0, "format 2 test store written");
         st_hdr_t h;                                            /* turn the copy just written into a format 2 one */
@@ -201,9 +201,9 @@ int main(void)
         st_get(5, &f);
         char nm[12];
         px_nam_name(px_nam_model(f.p[PX_B_AMP][0]), nm);
-        CHECK(st_saved(5) && !strcmp(f.name, "MY RECTO") && f.type[PX_B_AMP] == PX_AMP_NAM && !strcmp(nm, "5150") &&
+        CHECK(st_saved(5) && !strcmp(f.name, "MY RECTO") && f.type[PX_B_AMP] == PX_AMP_NAM && !strcmp(nm, "JRT GN 7") &&
               f.type[PX_B_DRIVE] == PX_DRV_M77 && f.type[PX_B_CAB] == PX_CAB_IR && px_ir_slot(f.p[PX_B_CAB][0]) == 0 &&
-              f.on[PX_B_CAB] && f.type[PX_B_MOD] == 2, "format 2 store: RECTIFIED -> NAM 5150, MUFF -> M77, H30 -> USER IR1 on");
+              f.on[PX_B_CAB] && f.type[PX_B_MOD] == 2, "format 2 store: RECTIFIED -> NAM JRT GN 7, MUFF -> M77, H30 -> USER IR1 on");
         CHECK(px_type_v34(PX_B_AMP, 99) == 0 && px_type_v34(PX_B_DRIVE, -1) == 0, "an unknown old type -> the first one");
         loader_bytes_clear();
     }
@@ -236,11 +236,11 @@ int main(void)
               !memcmp(f.p[PX_B_CAB], q.p[PX_B_CAB], PX_NPAR), "format 3 store: NAM and USER IR renumbered, their settings kept");
         loader_bytes_clear();
     }
-    /* format 5 (v36 .. store format 6): the built-in amps and cabinets go. Each built-in amp -> the NAM model of the same
-     * capture, its GAIN, BASS, MID, TREBLE kept; each built-in cabinet -> USER IR in IR1, on or off as it was; DI on -> the
+    /* format 5 (v36 .. store format 6): the built-in amps and cabinets go. Each built-in amp -> the factory NAM model nearest
+     * its character, its GAIN, BASS, MID, TREBLE kept; each built-in cabinet -> USER IR in IR1, on or off as it was; DI on -> the
      * CAB block off, LEVEL + 9 (2.7 dB); NAM and USER IR as they were */
     {
-        static const char *const MODEL[8] = {"TWIN", "AC15", "JCM900", "JCM2000", "MARK IV", "SHIRLEY", "PRO MOD", "5150"};
+        static const char *const MODEL[8] = {"TM26 GRN", "TM26 PLX", "TM26 BLU", "TM26 RED", "TM26 RED", "TM26 PLX", "JRT GN 5", "JRT GN 7"};
         static const uint8_t AMP[12] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 200, 8, 8}, CAB[12] = {0, 1, 2, 3, 4, 5, 6, 6, 7, 4, 6, 15};
         memset(nor + 0xF0000, 0xFF, 0x4000);
         reboot();
@@ -285,7 +285,7 @@ int main(void)
             ok &= g.p[PX_B_GATE][0] == old[k].p[PX_B_GATE][0] && g.p[PX_B_GATE][1] == old[k].p[PX_B_GATE][1];
         }
         CHECK(ok, "format 5 store: only the amp, the cabinet and the LEVEL change");
-        CHECK(amps, "format 5 store: each built-in amp -> the NAM model of its capture, GAIN BASS MID TREBLE kept; NAM untouched");
+        CHECK(amps, "format 5 store: each built-in amp -> its nearest NAM model, GAIN BASS MID TREBLE kept; NAM untouched");
         CHECK(cabs, "format 5 store: built-in cabinets -> USER IR1 (on as before), DI -> off with LEVEL +2.7 dB, USER IR untouched");
         px_preset_t g;
         st_get(3, &g);

@@ -37,7 +37,7 @@ const png = async (path = "/api/screen.png") => Buffer.from(await (await fetch(s
 let info = await get("/api/info");
 ok(info.kind === "pedal" && info.port === "OpenPocket" && info.controls.includes("fs_up"), `info: ${info.kind} on port "${info.port}"`);
 let s = await state();
-ok(s.slot === 0 && s.name === "twin clean" && s.mode === "chain" && s.saved === 0 && s.dirty === 0, `state: slot 1 "${s.name}", chain page, factory sound`);
+ok(s.slot === 0 && s.name === "super clean" && s.mode === "chain" && s.saved === 0 && s.dirty === 0, `state: slot 1 "${s.name}", chain page, factory sound`);
 ok(s.preset.p.length === 12 && s.preset.order.length === 12 && s.dsp.load === 42 && s.writes_ok === 1, "state: 12 blocks, the DSP load, flash writes allowed");
 
 // ---- 2. footswitches and the screen ----

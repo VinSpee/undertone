@@ -19,9 +19,10 @@ Written from scratch for the pedal's own chip (JieLi AC791N, two cores), install
 - **Synths, keyboards and other guitars** from a normal guitar (no MIDI pickup): organ, church organ, string machine,
   choir, mono synth with pitch tracking and a resonant ladder filter, PWM synth, bass synth, 12-string, acoustic,
   sitar (bridge buzz + sympathetic strings), baritone
-- **Neural amp models (v37)**: the AMP block runs Neural Amp Modeler **A2** networks on the pedal: 12 factory models
-  trained for it (Twin, AC15, Super 59, Dirty Shirley, JCM900, JCM2000, JVM, Mark IV, Pro Mod, 5150, 6505+) and 16
-  user slots you fill from the web editor with A2 captures (TONE3000...). Details: [docs/NAM.md](docs/NAM.md)
+- **Neural amp models (v37)**: the AMP block runs Neural Amp Modeler **A2** networks on the pedal: 12 factory models,
+  captures from TONE3000 shipped with their authors' permission (Fender Super Reverb, Vox AC30, Bogner TM 26, Soldano
+  SLO-100, Orange Dual Terror and Jim Root Terror), and 16 user slots you fill from the web editor with A2 captures
+  (TONE3000...). Details: [docs/NAM.md](docs/NAM.md)
 - **Your own cabinet IRs (v38)**: the CAB block plays an impulse response you load from the web editor (8 slots).
   There are no built-in amps or cabinets: the AMP block is NAM and the CAB block is USER IR. Slot IR1 comes with one
   IR, ML Sound Lab's free "BEST IR IN THE WORLD", which the factory presets play until you load your own
@@ -170,8 +171,10 @@ proposed upstream.
 ## Licence
 
 GPL-3.0-only. Board support and loader: MPL-2.0 (felucca-bsp). JieLi SDK files: Apache-2.0. Inter and B612: OFL 1.1.
-The factory NAM models were trained, and the drives' settings matched, on the NAM captures of
-[pelennor2170/NAM_models](https://github.com/pelennor2170/NAM_models) (GPL-3.0, thanks to their authors) and the DI recordings of
+The factory NAM models are captures from TONE3000, shipped with the written permission of their authors,
+amalgamaudio, torcuato, subterraneans, chuggernautxanner and CavLabs (caveraolabs); thanks to them (NOTICE.md). The
+drives' settings were matched on the NAM captures of [pelennor2170/NAM_models](https://github.com/pelennor2170/NAM_models)
+(GPL-3.0, thanks to their authors) and the DI recordings of
 [Alec-Wright/Automated-GuitarAmpModelling](https://github.com/Alec-Wright/Automated-GuitarAmpModelling) (GPL-3.0); neither is shipped.
 The factory cabinet IR in slot IR1 is ["BEST IR IN THE WORLD"](https://www.facebook.com/watch/?ref=embed_video&v=1053603041469100) by ML Sound Lab, a free IR, redistributed with
 the creator's permission as stated by the project's owner (thanks to ML Sound Lab).

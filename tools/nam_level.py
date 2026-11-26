@@ -14,19 +14,19 @@ REF = -20.0              # LUFS of the model's own output after the trim (v37: w
 CLAMP = 24.0
 
 
-def kweight(x):
-    # BS.1770 pre-filter + RLB high-pass at 44.1 kHz (same coefficients as tools/calib_levels.py)
+def kweight(x, sr=SR):
+    # BS.1770 pre-filter + RLB high-pass at the rate sr (same coefficients as tools/calib_levels.py)
     from scipy import signal
     f0, G, Q = 1681.974450955533, 3.999843853973347, 0.7071752369554196
-    K = np.tan(np.pi * f0 / SR); Vh = 10 ** (G / 20); Vb = Vh ** 0.4996667741545416; a0 = 1 + K / Q + K * K
+    K = np.tan(np.pi * f0 / sr); Vh = 10 ** (G / 20); Vb = Vh ** 0.4996667741545416; a0 = 1 + K / Q + K * K
     y = signal.lfilter([(Vh + Vb * K / Q + K * K) / a0, 2 * (K * K - Vh) / a0, (Vh - Vb * K / Q + K * K) / a0],
                        [1, 2 * (K * K - 1) / a0, (1 - K / Q + K * K) / a0], x)
-    f0, Q = 38.13547087602444, 0.5003270373238773; K = np.tan(np.pi * f0 / SR); a0 = 1 + K / Q + K * K
+    f0, Q = 38.13547087602444, 0.5003270373238773; K = np.tan(np.pi * f0 / sr); a0 = 1 + K / Q + K * K
     return signal.lfilter([1, -2, 1], [1, 2 * (K * K - 1) / a0, (1 - K / Q + K * K) / a0], y)
 
 
-def lufs(x):
-    y = kweight(x); blk, hop = int(0.4 * SR), int(0.1 * SR)
+def lufs(x, sr=SR):
+    y = kweight(x, sr); blk, hop = int(0.4 * sr), int(0.1 * sr)
     z = np.array([np.mean(y[i:i + blk] ** 2) for i in range(0, len(y) - blk + 1, hop)])
     z = z[-0.691 + 10 * np.log10(z + 1e-20) > -70]
     if not len(z):

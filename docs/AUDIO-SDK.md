@@ -356,9 +356,9 @@ Driver setup: `iis_open` IIS_PORTA, channel_in = BIT(1), channel_out = BIT(0), m
 - A chain of NAM, USER IR, drives and the other effects sounds as before, bit for bit: 240 runs of random presets
   (types, settings, order, blocks on or off, knob changes while playing, the two-core pipeline and the wet lanes)
   hash the same with this engine and the one before, the types renumbered (AMP NAM 8 -> 0, CAB USER IR 7 -> 0).
-- Saved presets (store format 1..5) are converted at boot by `px_preset_v34_set()`: a built-in amp becomes the
-  factory NAM model trained on the same amp's capture (TWIN, AC15, JCM900, JCM2000, MARK IV, SHIRLEY, PRO MOD, 5150),
-  its GAIN, BASS, MID and TREBLE kept; a built-in cabinet becomes USER IR in slot IR1 with its cuts off, on or off as
+- Saved presets (store format 1..5) are converted at boot by `px_preset_v34_set()`: a built-in amp becomes a
+  factory NAM model (then the one trained on the same amp's capture; since the TONE3000 captures, the nearest in
+  character without a cabinet of its own), its GAIN, BASS, MID and TREBLE kept; a built-in cabinet becomes USER IR in slot IR1 with its cuts off, on or off as
   it was; DI on becomes the CAB block off and the preset LEVEL +9 steps (2.7 dB, DI's +2.6 dB trim). The editor does
   the same with a preset file that names a removed type (`docs/pxedit.js`, `V34_AMPS`, `V34_CABS`).
 - The factory presets' CAB block is USER IR in IR1. While the slot is empty it passes the sound, which measured 0 to

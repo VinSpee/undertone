@@ -13,42 +13,48 @@ networks of NAM's **A2** architecture, at its 3-channel size, **A2-Lite**. That 
 | GAIN | the level into the network, ±12 dB around the level of the captures (noon) |
 | BASS, MID, TREBLE | an EQ after the network: ±10 dB at 120 Hz, ±8 dB at 800 Hz, ±10 dB above 2.5 kHz |
 
-The factory models are amp captures without a cabinet, so keep a CAB after the AMP and load a cabinet IR into it (the
-editor's **Models** section; the factory presets play slot IR1, which holds the factory IR until you load one there). A capture of an amp and its cabinet together
-needs no CAB: switch the block off. Every model plays at the same loudness (-20 LUFS on the reference clip
+Four factory models (the TM26 and JRT ones) are amps without a cabinet: keep a CAB after the AMP and load a cabinet IR
+into it (the editor's **Models** section; the factory presets play slot IR1, which holds the factory IR until you load
+one there). The other eight are captures of an amp and its cabinet together, which need no CAB: switch the block off,
+as the factory presets that use them do. Every model plays at the same loudness (-20 LUFS on the reference clip
 `docs/nam_di.wav`), so switching models keeps the volume.
 
 ## Factory models
 
-Twelve A2-Lite networks, trained for the pedal at 44.1 kHz (`tools/train_a2.py`). Each one learnt to sound like a
-community capture of a real amp, playing real DI guitar. Accuracy is ESR, the error on 20 s of guitar the training never
-heard: 0.01 is very close, and below about 0.05 the two are hard to tell apart.
+Twelve NAM A2 captures published on [TONE3000](https://www.tone3000.com/), shipped inside the firmware with their
+authors' written permission. The pedal plays each one's A2-Lite part as it is: nothing is retrained. They were made at
+48 kHz. `tools/nam_factory.txt` names each capture file with its SHA-256, and `tools/mk_nam_factory.py` writes them into
+`firmware/apps/gamut/engine/px_nam_factory.h` the way the editor imports a capture: scaled into the pedal's fixed-point
+range where needed (the output stays exactly the same), and levelled.
 
-| MODEL | Amp | Capture (author) | ESR |
-| --- | --- | --- | --- |
-| TWIN | Fender Twin Reverb (normal, bright) | Tim R Fender TwinVerb Norm Bright (Tim R) | 0.006 |
-| AC15 | Vox AC15 Top Boost | Phillipe P VOXAC15-TopBoost (Phillipe P) | 0.045 |
-| SUPER 59 | Magnatone Super 59 Mk II | Tim R Magnatone Super 59 Mkii Ch1 Br (Tim R) | 0.009 |
-| SHIRL CL | Friedman Dirty Shirley Mini, clean | Sascha S DirtyShirleyMini_Clean_B1_M6_T7_MV10_G4 (Sascha S) | 0.014 |
-| JCM900 | Marshall JCM900 50 W Dual Verb | Tim R JCM90050WDualVerbCHAG6 (Tim R) | 0.011 |
-| SHIRLEY | Friedman Dirty Shirley Mini, crunch | Sascha S DirtyShirleyMini_crunch_G6 (Sascha S) | 0.033 |
-| JCM2000 | Marshall JCM2000 DSL, lead | Tim R JCM2000 L2 G6 (Tim R) | 0.042 |
-| MARK IV | Mesa Boogie Mark IV | Roman A LT_MESA_MARKIV_1 (Roman A) | 0.041 |
-| JVM OD2 | Marshall JVM, OD2 | Phillipe P JVM-OD2-RD-NoDrive-ESR0,003 (Phillipe P) | 0.056 |
-| PRO MOD | Splawn Pro Mod, 2nd gear | Tim R Splawn Pro Mod 2nd Gear - G12 (Tim R) | 0.052 |
-| 5150 | Peavey 5150 (block letter), boosted | Helga B 5150 BlockLetter - Boosted (Helga B) | 0.064 |
-| 6505 RED | Peavey 6505+ red channel, MXR drive | Helga B 6505+ Red ch - MXR Drive (Helga B) | 0.124 |
+ESR is how far the A2-Lite part the pedal plays is from the capture's own A2-Full network, on the DI clip at 48 kHz
+(`tests/rate48/amps.py`): 0.01 is very close, and below about 0.05 the two are hard to tell apart.
 
-High-gain captures are harder for a network this small: their error is higher (the 6505+ most), while the clean
-and crunch models are very close. A larger A2 would do better, but would not fit the pedal's CPU.
+| MODEL | Amp, setting | Cabinet | Capture (author) | ESR |
+| --- | --- | --- | --- | --- |
+| SUPER 65 | Fender Super Reverb 1965, edge of breakup | in the capture | FNDR BFSR VB Edge WRM2 CAB FREE (amalgamaudio) | 0.034 |
+| AC30 TB | Vox AC30 Top Boost 1964, edge of breakup | in the capture | VX TB30 BR Edge0 BAL2 CAB FREE (amalgamaudio) | 0.028 |
+| TM26 GRN | Bogner TM 26, Green channel: clean | CAB block | Bogner Green 1 TM 26 (torcuato) | 0.005 |
+| TM26 PLX | Bogner TM 26, Plexi Red: low gain | CAB block | Bogner Plexi Red 1 TM 26 (torcuato) | 0.005 |
+| TM26 BLU | Bogner TM 26, Blue: crunch | CAB block | Bogner Blue 1 TM 26 (torcuato) | 0.014 |
+| TM26 RED | Bogner TM 26, Red: lead | CAB block | Bogner Red 1 TM 26 (torcuato) | 0.021 |
+| SLO 100 | Soldano SLO-100, lead | in the capture | Soldano high gain, "SLO-100 Classic" (subterraneans) | 0.008 |
+| SLO RIFF | Soldano SLO-100, rhythm | in the capture | Soldano Riff Machine (subterraneans) | 0.036 |
+| DT MIDS | Orange Dual Terror, unboosted, mids | in the capture | unboosted dual terror (mids) full rig (chuggernautxanner) | 0.011 |
+| DT SCOOP | Orange Dual Terror, boosted, scooped | in the capture | boosted dual terror (scoop) full rig (chuggernautxanner) | 0.022 |
+| JRT GN 5 | Orange Jim Root Terror, gain 5 | CAB block | CavLabs #4 - Gain 5 (caveraolabs) | 0.045 |
+| JRT GN 7 | Orange Jim Root Terror, gain 7 | CAB block | CavLabs #4 - Gain 7 (caveraolabs) | 0.043 |
 
-The factory presets use them.
+The factory presets use them. Until this set, the factory models were twelve networks trained at 44.1 kHz on community
+captures (TWIN, AC15, SUPER 59, SHIRL CL, JCM900, SHIRLEY, JCM2000, MARK IV, JVM OD2, PRO MOD, 5150, 6505 RED). A saved
+preset keeps its MODEL number, so a preset you saved with one of them now plays the model in the same place of the
+list above, and may need its knobs and its CAB block set again.
 
-### TONE3000 captures cleared for the factory amps
+### Credits
 
-The authors of these A2 captures on [TONE3000](https://www.tone3000.com/) have given written permission for them to
-ship inside the firmware as factory amps. The editor lists the same credits in its pedal panel (the connection button,
-top right), from `CAPTURE_CREDITS` in `docs/pxnam.js`.
+The authors of the TONE3000 captures the factory models are, who gave written permission for them to ship inside the
+firmware. The editor lists the same credits in its pedal panel (the connection button, top right), from
+`CAPTURE_CREDITS` in `docs/pxnam.js`.
 
 | Author | Pack | Terms |
 | --- | --- | --- |
@@ -98,8 +104,8 @@ The 16 user slots are in the pedal's flash at 0xC0000..0xE0000, outside the area
 models stay through updates.
 
 Most captures are made at 48 kHz. The pedal runs at 44.1 kHz, so such a model plays with its tone about 1.5
-semitones lower (the amp's filters sit 8% lower). The editor says so when it loads one. The factory models are
-trained at 44.1 kHz and are not affected.
+semitones lower (the amp's filters sit 8% lower). The editor says so when it loads one. The factory models are 48 kHz
+captures too.
 
 ## How it runs
 
@@ -204,11 +210,10 @@ trained at 44.1 kHz and are not affected.
 
 `train_a2.py --capture CAPTURE.nam --di DI.wav --val DI2.wav --out MODEL.nam --name NAME` trains an A2-Lite network
 (JAX) on a capture: the DI goes through the capture (resampled to its rate and back), the A2-Lite learns the result at
-44.1 kHz. Loss: pre-emphasised ESR plus a multi-resolution spectral term. `tools/mk_nam_factory.py` writes the
-factory models into `firmware/apps/gamut/engine/px_nam_factory.h`, each with its level trim.
+44.1 kHz. Loss: pre-emphasised ESR plus a multi-resolution spectral term. It made the factory models before the
+TONE3000 captures; the factory set is no longer trained.
 
-Credits: the captures are from the Neural Amp Modeler community collection
-[pelennor2170/NAM_models](https://github.com/pelennor2170/NAM_models) (GNU GPL v3), by the authors named in the
-table; the DI guitar is from [Alec-Wright/Automated-GuitarAmpModelling](https://github.com/Alec-Wright/Automated-GuitarAmpModelling)
-(GNU GPL v3). The A2 architecture is Steven Atkinson's (Neural Amp Modeler, MIT); the pedal's code is written for
-Gamut from the published architecture.
+Credits: the factory captures' authors are listed above; the DI guitar is from
+[Alec-Wright/Automated-GuitarAmpModelling](https://github.com/Alec-Wright/Automated-GuitarAmpModelling) (GNU GPL v3).
+The A2 architecture is Steven Atkinson's (Neural Amp Modeler, MIT); the pedal's code is written for Gamut from the
+published architecture.

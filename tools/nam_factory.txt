@@ -1,0 +1,17 @@
+# The factory NAM models (tools/mk_nam_factory.py -> firmware/apps/gamut/engine/px_nam_factory.h), in MODEL order: one
+# NAM A2 capture from TONE3000 a line, shipped with its author's written permission (docs/NAM.md). The capture files
+# are not in the repository: the generator finds each by its name and checks its SHA-256 and its author. A NAME has 8
+# characters at most: the MODEL knob's text on the screen and in the editor is a name's first 8 (px_param_text).
+# NAME|capture file|SHA-256|author (TONE3000)|tone page
+SUPER 65|FNDR BFSR VB Edge WRM2 CAB FREE.nam|3c308e31061740c915264f13e8fd23b0a106d11c81ffe0ed367946058aecbb08|amalgamaudio|https://www.tone3000.com/tones/fender-super-reverb-1965-edge-of-breakup-a2-88775
+AC30 TB|VX TB30 BR Edge0 BAL2 CAB FREE.nam|b2ac7d25995137c920155290e6b4009681c7c3d810eb9a38fc9c2fb43c5a42ba|amalgamaudio|https://www.tone3000.com/tones/1964-vox-ac30-top-boost-super-twin-edge-of-breakup-a2-82521
+TM26 GRN|Bogner Green 1 TM 26.nam|154bb9fb249d29644d049100e31337ef39b70ce9b09907869738bc8dad2f3eda|torcuato|https://www.tone3000.com/tones/bogner-tm-26-no-cab-109210
+TM26 PLX|Bogner Plexi Red 1 TM 26.nam|ec023030773f267bd1d861fc67dffc3a1c5fdbb470603ebf80baa4500b8139fb|torcuato|https://www.tone3000.com/tones/bogner-tm-26-no-cab-109210
+TM26 BLU|Bogner Blue 1 TM 26.nam|b0b6d5a6bfd7a35d7ad84e55a63441be9c6416041473ccc0f6d2acf5edef4c56|torcuato|https://www.tone3000.com/tones/bogner-tm-26-no-cab-109210
+TM26 RED|Bogner Red 1 TM 26.nam|7d820c383a3497c55ed1c06a75e33bf347850264bd5fe306a386eb0d1b085954|torcuato|https://www.tone3000.com/tones/bogner-tm-26-no-cab-109210
+SLO 100|Soldano high gain.nam|ae9b21da49845d127db757e80a6ef635d2b5557552f4eb3764655062370a324a|subterraneans|https://www.tone3000.com/tones/soldano-slo-100-106781
+SLO RIFF|Soldano Riff Machine.nam|d06a0f8c4511776cb819359ea226b2137594dfc768f7d63fade5d4acd93944f8|subterraneans|https://www.tone3000.com/tones/soldano-slo-100-106781
+DT MIDS|unboosted dual terror (mids) full rig (dv77).nam|ace4436eed44a2085302d21a6e303cdde73306909485159e3e4daf885e79c7d0|chuggernautxanner|https://www.tone3000.com/tones/orange-dual-terror-full-rig-boostedunboosted-81959
+DT SCOOP|boosted dual terror (scoop) full rig (dv77).nam|ef70574ef48fd591641f6ff3a662c07c497fa6eb838f7839b5a82ad4a94b0ea8|chuggernautxanner|https://www.tone3000.com/tones/orange-dual-terror-full-rig-boostedunboosted-81959
+JRT GN 5|CavLabs #4 - Gain 5.nam|51c25988703726d83ba6e148ec9d58ea027ed44308fbe140fd10de3eadbf84d0|caveraolabs|https://www.tone3000.com/tones/cavlabs-4-orange-jim-root-terror-24650
+JRT GN 7|CavLabs #4 - Gain 7.nam|a4786507e9008c7c9ad76f29d9a1297ea155835f968e8162b049f256bfb9a2e5|caveraolabs|https://www.tone3000.com/tones/cavlabs-4-orange-jim-root-terror-24650

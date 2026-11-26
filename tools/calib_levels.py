@@ -2,10 +2,11 @@
 # SPDX-License-Identifier: GPL-3.0-only
 # OpenPocket — level calibration (v36) -> firmware/apps/gamut/engine/px_trim.h. Loudness = ITU-R BS.1770 (K-weighted, gated) of real DI
 # guitar at the pedal's level (x 0.15: hard playing peaks about -17 dBFS at the converter).
-#  - every type of the effect blocks (knobs at noon, in front of / after the NAM model TWIN at noon): switching it on
-#    keeps the loudness
+#  - every type of the effect blocks (knobs at noon, in front of / after the first factory NAM model at noon): switching
+#    it on keeps the loudness
 # The numbers in px_trim.h were measured in v36 round the built-in TWIN amp and 1x12 cabinet, which store format 6
-# removed; a new run measures them round the NAM model, so it changes them.
+# removed; a new run measures them round the first factory NAM model (SUPER 65 since the TONE3000 captures), so it
+# changes them.
 #   python3 tools/calib_levels.py DI.wav [DI2.wav ...]
 import os, re, subprocess, sys
 import numpy as np
@@ -18,7 +19,7 @@ EXE = os.path.join(ROOT, "build", "lvl_chain")
 TRIM = os.path.join(ROOT, "firmware", "apps", "gamut", "engine", "px_trim.h")
 B = dict(GT=0, CMP=1, PIT=2, SFX=3, DRV=4, AMP=5, CAB=6, EQ=7, MOD=8, DLY=9, REV=10, SYN=11)
 NT = dict(CMP=4, PIT=5, SFX=7, DRV=4, MOD=11, DLY=8, REV=8, SYN=11)
-TWIN = 1                            # the AMP block's MODEL knob for the first factory NAM model, TWIN (px_nam_knob(0))
+M0 = 1                              # the AMP block's MODEL knob for the first factory NAM model (px_nam_knob(0))
 
 
 def kweight(x):
@@ -72,9 +73,9 @@ def main():
     t = {k: [0.0] * n for k, n in NT.items()}
     write(t); build()
     noon = [50] * 5
-    amp = (B["AMP"], 0, [TWIN, 50, 50, 50, 50])
+    amp = (B["AMP"], 0, [M0, 50, 50, 50, 50])
     ref = loud(dis, [amp])
-    print("NAM TWIN at noon: %.2f LUFS" % ref)
+    print("the first NAM model at noon: %.2f LUFS" % ref)
     # every block's types, twice (blocks in front of the amp see its slight curve)
     for it in range(2):
         for k in NT:

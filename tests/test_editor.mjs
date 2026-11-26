@@ -8,7 +8,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { Editor, presetToJSON, presetFromJSON, filePresets, parsePresetFile, clonePreset } from "../docs/pxedit.js";
-import { parseNam, levelTrim, packModel, readDi, a2Run, a2Net, fitRange, namEntry, RANGE, KERNELS, DILATIONS, NW } from "../docs/pxnam.js";
+import { parseNam, levelTrim, packModel, readDi, a2Run, a2Net, fitRange, namEntry, RANGE, KERNELS, DILATIONS, NW, CAPTURE_CREDITS } from "../docs/pxnam.js";
 import { parseWav, prepareIr, packIr, irName, resample, IR_LEN } from "../docs/pxir.js";
 
 const ROOT = fileURLToPath(new URL("..", import.meta.url));
@@ -157,15 +157,15 @@ ok(odd.warn.length === 2 && odd.preset.p[amp][0] === 1, "file: unknown type and 
 const v33 = presetFromJSON({ name: "OLD", blocks: [{ block: "AMP", on: true, type: "RECTIFIED" }, { block: "DRV", on: true, type: "MUFF PI" }, { block: "CAB", on: true, type: "4x12 H30" }] }, cat, q);
 const tn = (b, t) => cat.blocks[b].types[t].name, model = (q) => cat.blocks[amp].types[0].params[0].texts[q.p[amp][0]];
 const ir1 = (q) => cat.blocks[6].types[0].params[0].texts[q.p[6][0]] === cat.blocks[6].types[0].params[0].texts[0];
-ok(v33.warn.length === 5 && tn(amp, v33.preset.type[amp]) === "NAM" && model(v33.preset) === "5150" && tn(4, v33.preset.type[4]) === "M77 OD" &&
+ok(v33.warn.length === 5 && tn(amp, v33.preset.type[amp]) === "NAM" && model(v33.preset) === "JRT GN 7" && tn(4, v33.preset.type[4]) === "M77 OD" &&
    tn(6, v33.preset.type[6]) === "USER IR" && ir1(v33.preset) && v33.preset.on[6] === 1,
-   "file: a v33 preset file -> the v34 amp / drive / cab -> NAM 5150, M77 OD, USER IR in IR1, each step reported");
+   "file: a v33 preset file -> the v34 amp / drive / cab -> NAM JRT GN 7, M77 OD, USER IR in IR1, each step reported");
 // store format 6: a file of v34..v42 naming a built-in amp or cabinet
 const v36 = presetFromJSON({ name: "OLD 36", v: 36, blocks: [{ block: "GT", on: true, type: "NOISE GATE", params: [40, 20, 50, 0, 0] },
   { block: "AMP", on: true, type: "JCM900", params: [60, 40, 55, 70, 80] }, { block: "CAB", on: true, type: "DI (NO CAB)", params: [50, 50, 50, 0, 0] }] }, cat, q);
-ok(v36.warn.length === 2 && tn(amp, v36.preset.type[amp]) === "NAM" && model(v36.preset) === "JCM900" && v36.preset.p[amp].slice(1).join() === "60,40,55,70" &&
+ok(v36.warn.length === 2 && tn(amp, v36.preset.type[amp]) === "NAM" && model(v36.preset) === "TM26 BLU" && v36.preset.p[amp].slice(1).join() === "60,40,55,70" &&
    tn(6, v36.preset.type[6]) === "USER IR" && v36.preset.on[6] === 0 && v36.preset.p[0][2] === 59,
-   "file: a built-in amp -> its NAM model (GAIN, BASS, MID, TREBLE kept); DI -> the CAB block off, LEVEL +2.7 dB");
+   "file: a built-in amp -> its nearest NAM model (GAIN, BASS, MID, TREBLE kept); DI -> the CAB block off, LEVEL +2.7 dB");
 const v42 = presetFromJSON({ name: "OLD 42", v: 36, blocks: [{ block: "CAB", on: false, type: "4x12 V30", params: [60, 40, 40, 0, 0] }] }, cat, q);
 ok(v42.warn.length === 1 && tn(6, v42.preset.type[6]) === "USER IR" && ir1(v42.preset) && v42.preset.on[6] === 0 && v42.preset.p[6].slice(1, 3).join() === "0,0",
    "file: a built-in cabinet -> USER IR in IR1, its cuts off, on or off as it was");
@@ -248,6 +248,15 @@ list = await ed.list();
   const packed = new Float32Array(namEntry(bigText, "big.nam", di).bytes.slice(64).buffer), again = fitRange(fit.weights, di);
   ok(packed.every((v, i) => v === fit.weights[i]) && again.halvings === 0 && again.weights === fit.weights,
      "NAM: the import stores the scaled weights; a capture in range is left as it is");
+  // the factory models (tools/nam_factory.txt, the generator's list, -> px_nam_factory.h): every capture that ships has its
+  // author and tone page in the editor's credits, and every credit is of a capture that ships
+  const rows = readFileSync(join(ROOT, "tools", "nam_factory.txt"), "utf8").split("\n").filter((l) => l && !l.startsWith("#")).map((l) => l.split("|"));
+  const hdr = readFileSync(join(ROOT, "firmware", "apps", "gamut", "engine", "px_nam_factory.h"), "utf8");
+  const fnames = [...hdr.match(/PXN_FNAME\[PX_NAM_NFACT\] = \{(.*?)\};/)[1].matchAll(/"([^"]*)"/g)].map((x) => x[1]);
+  const credited = new Set(CAPTURE_CREDITS.flatMap((c) => c.packs.map(([, url]) => `${c.author} ${url}`)));
+  const shipped = new Set(rows.map((r) => `${r[3]} ${r[4]}`));
+  ok(fnames.join() === rows.map((r) => r[0]).join() && [...shipped].every((k) => credited.has(k)) && [...credited].every((k) => shipped.has(k)),
+     `NAM: the ${rows.length} factory models' captures and the credits name the same ${credited.size} packs`);
 }
 // ---- 8. v38: cabinet IRs (a WAV file -> an IR slot -> the CAB block's USER IR type) ----
 {

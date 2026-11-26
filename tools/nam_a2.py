@@ -110,17 +110,55 @@ def causal_conv(x, w, d):
     return y
 
 
-def run(net, inp):
+def run(net, inp, peak=False):
+    """the network's output; with peak, (output, its largest internal value: the residual x, z, the head's sum and
+    the head's output before head_scale), as docs/pxnam.js a2Net"""
     u = np.asarray(inp, dtype=np.float64)[None, :]
     x = net["rechannel"][:, None] * u
     hs = np.zeros_like(x)
+    top = np.max(np.abs(x))
     for K, d, conv, cb, mix, one, ob in net["layers"]:
         z = causal_conv(x, conv, d) + cb[:, None] + mix[:, None] * u
         a = np.where(z >= 0, z, z * SLOPE)
         hs += a
         x = x + one @ a + ob[:, None]
+        top = max(top, np.max(np.abs(z)), np.max(np.abs(x)), np.max(np.abs(hs)))
     y = causal_conv(hs, net["head"][None, :, :], 1)[0] + net["head_b"]
-    return net["head_scale"] * y
+    top = max(top, np.max(np.abs(y)))
+    return (net["head_scale"] * y, float(top)) if peak else net["head_scale"] * y
+
+
+# The pedal's fixed point (px_nam.h: activations Q20) holds internal values up to +-RANGE. LeakyReLU passes a scale
+# through, so the network with the input rechannel, every bias, mixin and the head bias times s, and head_scale divided
+# by s, gives the same output with every internal value times s (exactly, s a power of two). fit_range halves until the
+# peak on the DI clip at the level the pedal feeds the network at GAIN +12 dB is below half the range, as the web
+# editor's import does (docs/pxnam.js fitRange): (weights, halvings)
+RANGE = 2048.0
+
+
+def fit_range(weights, di, C=3):
+    x = np.asarray(di, dtype=np.float64)[:44100] * (0.5 / 0.15 * 10 ** (12 / 20))
+    top = run(unpack(weights, C), x, peak=True)[1]
+    h = 0
+    while top / 2 ** h >= RANGE / 2:
+        h += 1
+    return (rescale(weights, 2.0 ** -h, C) if h else np.asarray(weights, dtype=np.float32)), h
+
+
+def rescale(weights, s, C=3):
+    w = np.array(weights, dtype=np.float32)
+    i = C
+    w[:C] *= s                                           # rechannel
+    for K in KERNELS:
+        i += C * C * K
+        w[i:i + 2 * C] *= s                              # conv bias, mixin
+        i += 2 * C + C * C
+        w[i:i + C] *= s                                  # layer1x1 bias
+        i += C
+    i += C * HEAD_K
+    w[i] *= s                                            # head bias
+    w[i + 1] /= s                                        # head_scale
+    return w
 
 
 def load(path, size="lite"):

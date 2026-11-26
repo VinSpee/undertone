@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Runs a DI guitar WAV through the OpenPocket engine -> processed WAV.
 #   render.sh  in.wav  out.wav  [preset 1..52]  [model 1..12]  [gain 0..100]
-# Presets (e.g. 1 = TWIN CLEAN, 17 = MODERN ROCK, 21 = DOOM): docs/SOUNDS-AND-CONTROLS.md; the factory NAM models: docs/NAM.md
+# Presets (e.g. 1 = SUPER CLEAN, 17 = MODERN ROCK, 21 = DOOM): docs/SOUNDS-AND-CONTROLS.md; the factory NAM models: docs/NAM.md
 set -e
 HERE="$(cd "$(dirname "$0")" && pwd)"
 cd "$HERE"
